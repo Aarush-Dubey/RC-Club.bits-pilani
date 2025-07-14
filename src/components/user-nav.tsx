@@ -2,7 +2,6 @@
 
 import { LogOut, Settings, User as UserIcon } from "lucide-react"
 
-import { users } from "@/lib/data"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,8 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// For demo purposes, we'll just use the first user
-const user = users[0]
+// For demo purposes, we'll just use a mock user
+const user = { 
+  id: 'user-1', 
+  name: 'Alex Doe', 
+  role: 'admin', 
+  avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d' 
+}
 
 export function UserNav() {
   return (

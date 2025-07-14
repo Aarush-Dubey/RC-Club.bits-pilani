@@ -1,11 +1,9 @@
-'use client'
-
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { ArrowUpRight, CheckCircle, Clock, HandCoins, KeyRound, ShoppingCart, ToyBrick, Users } from "lucide-react"
+import { CheckCircle, HandCoins, ShoppingCart, Users, ToyBrick } from "lucide-react"
+import { collection, getDocs, doc, getDoc, query, where, limit } from "firebase/firestore"
 
-import { projectStatusData, roomStatus, keyStatus, projects, inventory, reimbursements } from "@/lib/data"
+import { db } from "@/lib/firebase"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -13,14 +11,77 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-const onLoanCount = inventory.filter(item => item.status === 'On Loan' || item.status === 'Overdue').length;
-const pendingReimbursements = reimbursements.filter(r => r.status === 'Pending').length;
+async function getDashboardData() {
+  const projectsSnapshot = await getDocs(collection(db, "projects"));
+  const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
+  const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const roomStatusDoc = await getDoc(doc(db, "system", "room_status"));
+  const roomStatusData = roomStatusDoc.exists() ? roomStatusDoc.data() : { isOpen: false, openedById: null, openedAt: null };
+  
+  let roomOccupancyUser = 'N/A';
+  if (roomStatusData.isOpen && roomStatusData.openedById) {
+      const userDoc = await getDoc(doc(db, "users", roomStatusData.openedById));
+      if (userDoc.exists()) {
+          roomOccupancyUser = userDoc.data().name;
+      }
+  }
+  
+  const roomStatus = {
+      occupied: roomStatusData.isOpen,
+      user: roomOccupancyUser,
+      since: roomStatusData.openedAt ? roomStatusData.openedAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+  };
+
+  const projectStatusCounts = projects.reduce((acc, project) => {
+    const status = project.status.replace('_', ' ');
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const projectStatusData = Object.entries(projectStatusCounts).map(([name, value]) => ({ name, value }));
+
+  const onLoanCount = inventory.reduce((sum, item) => sum + (item.checkedOutQuantity || 0), 0);
+  
+  const overdueRequestsSnapshot = await getDocs(query(collection(db, "inventory_requests"), where("isOverdue", "==", true)));
+  const overdueCount = overdueRequestsSnapshot.size;
+
+  const pendingReimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), where("status", "==", "pending")));
+  const pendingReimbursements = pendingReimbursementsSnapshot.size;
+  
+  const recentProjectsQuery = query(collection(db, "projects"), limit(5));
+  const recentProjectsSnapshot = await getDocs(recentProjectsQuery);
+  const recentProjects = recentProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
 
-export default function DashboardPage() {
+  return { 
+    projects, 
+    inventory, 
+    roomStatus, 
+    projectStatusData,
+    onLoanCount,
+    overdueCount,
+    pendingReimbursements,
+    recentProjects
+  };
+}
+
+
+export default async function DashboardPage() {
+  const { 
+    projects, 
+    roomStatus,
+    projectStatusData,
+    onLoanCount,
+    overdueCount,
+    pendingReimbursements,
+    recentProjects
+  } = await getDashboardData();
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -32,9 +93,9 @@ export default function DashboardPage() {
             <ToyBrick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{projects.length}</div>
+            <div className="text-2xl font-bold">{projects.filter(p => p.status === 'active').length}</div>
             <p className="text-xs text-muted-foreground">
-              +2 since last month
+              {projects.length} total projects
             </p>
           </CardContent>
         </Card>
@@ -48,7 +109,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{onLoanCount}</div>
             <p className="text-xs text-muted-foreground">
-              {inventory.filter(i => i.status === 'Overdue').length} items overdue
+              {overdueCount} items overdue
             </p>
           </CardContent>
         </Card>
@@ -99,7 +160,7 @@ export default function DashboardPage() {
                   axisLine={false}
                   tickFormatter={(value) => `${value}`}
                 />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -117,18 +178,16 @@ export default function DashboardPage() {
                     <TableRow>
                         <TableHead>Project</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Budget</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {projects.slice(0, 5).map(project => (
+                    {recentProjects.map((project: any) => (
                         <TableRow key={project.id}>
                             <TableCell>
-                                <div className="font-medium">{project.name}</div>
+                                <div className="font-medium">{project.title}</div>
                                 <div className="text-sm text-muted-foreground">{project.description.substring(0,40)}...</div>
                             </TableCell>
-                            <TableCell><Badge variant={project.status === 'Completed' ? 'default' : 'secondary'}>{project.status}</Badge></TableCell>
-                            <TableCell className="text-right">${project.budget.toFixed(2)}</TableCell>
+                            <TableCell><Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge></TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

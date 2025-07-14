@@ -1,6 +1,7 @@
 import { PlusCircle } from "lucide-react"
+import { collection, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
-import { procurementRequests, users } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,20 +22,32 @@ import {
 
 const getStatusVariant = (status: string) => {
   switch (status) {
-    case 'Pending':
+    case 'pending':
       return 'secondary'
-    case 'Approved':
+    case 'approved':
       return 'default'
-    case 'Ordered':
+    case 'ordered':
       return 'outline'
-    case 'Rejected':
+    case 'rejected':
       return 'destructive'
     default:
       return 'outline'
   }
 }
 
-export default function ProcurementPage() {
+async function getData() {
+    const procurementRequestsSnapshot = await getDocs(collection(db, "new_item_requests"));
+    const procurementRequests = procurementRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return { procurementRequests, users };
+}
+
+export default async function ProcurementPage() {
+  const { procurementRequests, users } = await getData();
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
@@ -68,22 +81,22 @@ export default function ProcurementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {procurementRequests.map((req) => {
-                const user = users.find((u) => u.id === req.userId)
+              {procurementRequests.map((req: any) => {
+                const user = users.find((u: any) => u.id === req.requestedById)
                 return (
                   <TableRow key={req.id}>
                     <TableCell>
-                        <div className="font-medium">{req.item} (x{req.quantity})</div>
-                        <div className="text-sm text-muted-foreground">{req.reason}</div>
+                        <div className="font-medium">{req.itemName}</div>
+                        <div className="text-sm text-muted-foreground">{req.description}</div>
                     </TableCell>
                     <TableCell>{user?.name}</TableCell>
-                    <TableCell>{req.date}</TableCell>
+                    <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(req.status)}>{req.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" disabled={req.status !== 'Pending'}>Approve</Button>
-                        <Button variant="destructive" size="sm" disabled={req.status !== 'Pending'}>Reject</Button>
+                        <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
+                        <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
                     </TableCell>
                   </TableRow>
                 )

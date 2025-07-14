@@ -1,7 +1,8 @@
 import Image from "next/image"
 import { PlusCircle } from "lucide-react"
+import { collection, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
-import { projects, users } from "@/lib/data"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,24 +14,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 
 function getStatusColor(status: string) {
   switch (status) {
-    case 'In Progress':
+    case 'active':
       return 'bg-blue-500'
-    case 'Completed':
+    case 'completed':
       return 'bg-green-500'
-    case 'Planning':
+    case 'approved':
       return 'bg-yellow-500'
-    case 'On Hold':
+    case 'pending_approval':
       return 'bg-gray-500'
     default:
       return 'bg-gray-200'
   }
 }
 
-export default function ProjectsPage() {
+async function getData() {
+    const projectsSnapshot = await getDocs(collection(db, "projects"));
+    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return { projects, users };
+}
+
+export default async function ProjectsPage() {
+    const { projects, users } = await getData();
+  
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
@@ -45,41 +57,35 @@ export default function ProjectsPage() {
         </Button>
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => {
-          const projectLead = users.find((u) => u.id === project.leadId)
-          const progress = (project.spent / project.budget) * 100
+        {projects.map((project: any) => {
+          const projectLead = users.find((u: any) => u.id === project.teamLeadId)
 
           return (
             <Card key={project.id} className="overflow-hidden flex flex-col">
               <CardHeader className="p-0">
                 <Image
-                  src={project.imageUrl}
-                  alt={project.name}
+                  src={`https://placehold.co/600x400.png`}
+                  alt={project.title}
                   width={600}
                   height={400}
                   className="w-full h-48 object-cover"
-                  data-ai-hint={project.dataAiHint}
+                  data-ai-hint="rc project"
                 />
                  <div className="p-6">
-                    <Badge className={`${getStatusColor(project.status)} text-white mb-2`}>{project.status}</Badge>
-                    <CardTitle className="font-headline text-xl">{project.name}</CardTitle>
+                    <Badge className={`${getStatusColor(project.status)} text-white mb-2`}>{project.status.replace('_', ' ')}</Badge>
+                    <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
                     <CardDescription className="mt-1">{project.description}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  <span>Budget</span>
-                  <span>${project.spent.toFixed(2)} / ${project.budget.toFixed(2)}</span>
-                </div>
-                <Progress value={progress} aria-label={`${progress.toFixed(0)}% of budget spent`} />
               </CardContent>
               <CardFooter className="flex justify-between items-center">
                 <div className="flex -space-x-2">
-                  {project.members.map((memberId) => {
-                    const member = users.find((u) => u.id === memberId)
+                  {project.memberIds.map((memberId: string) => {
+                    const member: any = users.find((u: any) => u.id === memberId)
                     return (
                       <Avatar key={memberId} className="border-2 border-card">
-                        <AvatarImage src={member?.avatar} />
+                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
                         <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                     )

@@ -1,6 +1,7 @@
 import { PlusCircle } from "lucide-react"
+import { collection, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
-import { inventory, inventoryRequests, users } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,14 +25,30 @@ const getStatusVariant = (status: string) => {
         case 'Available': return 'default'
         case 'On Loan': return 'secondary'
         case 'Overdue': return 'destructive'
-        case 'Pending': return 'secondary'
-        case 'Approved': return 'default'
-        case 'Rejected': return 'destructive'
+        case 'pending': return 'secondary'
+        case 'approved': return 'default'
+        case 'fulfilled': return 'default'
+        case 'rejected': return 'destructive'
         default: return 'outline'
     }
 }
 
-export default function InventoryPage() {
+async function getData() {
+    const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
+    const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const inventoryRequestsSnapshot = await getDocs(collection(db, "inventory_requests"));
+    const inventoryRequests = inventoryRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return { inventory, inventoryRequests, users };
+}
+
+export default async function InventoryPage() {
+  const { inventory, inventoryRequests, users } = await getData();
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
@@ -64,25 +81,22 @@ export default function InventoryPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Borrower</TableHead>
-                    <TableHead>Due Date</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Available</TableHead>
+                    <TableHead>Checked Out</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {inventory.map((item) => {
-                    const borrower = users.find(u => u.id === item.borrowedBy)
+                  {inventory.map((item: any) => {
                     return (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell>{item.category}</TableCell>
-                            <TableCell><Badge variant={getStatusVariant(item.status)}>{item.status}</Badge></TableCell>
-                            <TableCell>{borrower?.name || 'N/A'}</TableCell>
-                            <TableCell>{item.dueDate || 'N/A'}</TableCell>
+                            <TableCell>{item.totalQuantity}</TableCell>
+                            <TableCell>{item.availableQuantity}</TableCell>
+                            <TableCell>{item.checkedOutQuantity}</TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm" disabled={item.status !== 'Available'}>Request</Button>
+                                <Button variant="outline" size="sm" disabled={item.availableQuantity === 0}>Request</Button>
                             </TableCell>
                         </TableRow>
                     )
@@ -112,18 +126,18 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {inventoryRequests.map(req => {
-                        const item = inventory.find(i => i.id === req.itemId)
-                        const user = users.find(u => u.id === req.userId)
+                    {inventoryRequests.map((req: any) => {
+                        const item = inventory.find((i: any) => i.id === req.itemId)
+                        const user = users.find((u: any) => u.id === req.requestedById)
                         return (
                             <TableRow key={req.id}>
                                 <TableCell className="font-medium">{item?.name}</TableCell>
                                 <TableCell>{user?.name}</TableCell>
-                                <TableCell>{req.date}</TableCell>
+                                <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                                 <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    <Button variant="outline" size="sm" disabled={req.status !== 'Pending'}>Approve</Button>
-                                    <Button variant="destructive" size="sm" disabled={req.status !== 'Pending'}>Reject</Button>
+                                    <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
+                                    <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
                                 </TableCell>
                             </TableRow>
                         )
