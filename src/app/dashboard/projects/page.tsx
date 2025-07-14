@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { PlusCircle, MoreVertical } from "lucide-react"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog"
 import { NewProjectForm } from "./new-project-form"
 
-type Project = {
+export type Project = {
   id: string
   title: string
   description: string
@@ -43,12 +43,20 @@ type Project = {
   [key: string]: any
 }
 
-type User = {
+export type User = {
   id: string
   name: string
   email: string
   [key: string]: any
 }
+
+export type InventoryItem = {
+    id: string;
+    name: string;
+    totalQuantity: number;
+    [key: string]: any;
+}
+
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -68,24 +76,33 @@ function getStatusBadge(status: string) {
 }
 
 async function getData() {
-    const projectsSnapshot = await getDocs(collection(db, "projects"));
+    const projectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+    const projectsSnapshot = await getDocs(projectsQuery);
     const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
     const usersSnapshot = await getDocs(collection(db, "users"));
     const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
 
-    return { projects, users };
+    const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
+    const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
+
+    return { projects, users, inventory };
 }
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
-    const { projects, users } = await getData();
+    setLoading(true);
+    const { projects, users, inventory } = await getData();
     setProjects(projects);
     setUsers(users);
+    setInventory(inventory);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -130,11 +147,12 @@ export default function ProjectsPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> New Project
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Create a New Project</DialogTitle>
+              <DialogTitle>Propose a New Project</DialogTitle>
+              <CardDescription>Fill out the details below to submit your project idea for approval.</CardDescription>
             </DialogHeader>
-            <NewProjectForm onFormSubmit={handleFormSubmit} />
+            <NewProjectForm onFormSubmit={handleFormSubmit} users={users} inventory={inventory} />
           </DialogContent>
         </Dialog>
       </div>
