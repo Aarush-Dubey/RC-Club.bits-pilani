@@ -335,7 +335,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                 </div>
                 <div className="flex items-center gap-4">
                     <Button type="button" variant="outline" size="sm" onClick={() => append({ itemId: "", quantity: 1 })}>
-                        <PlusCircle />
+                        <PlusCircle className="mr-2 h-4 w-4" />
                         Add Item
                     </Button>
                     <Button type="button" variant="link" className="text-primary p-0 h-auto" disabled>
