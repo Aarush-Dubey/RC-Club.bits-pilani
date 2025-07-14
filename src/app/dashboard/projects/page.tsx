@@ -1,5 +1,9 @@
+
+"use client"
+
+import { useState, useEffect } from "react"
 import Image from "next/image"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, MoreVertical } from "lucide-react"
 import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
@@ -9,39 +13,107 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription
 } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { NewProjectForm } from "./new-project-form"
 
-function getStatusColor(status: string) {
+type Project = {
+  id: string
+  title: string
+  description: string
+  status: 'pending_approval' | 'approved' | 'active' | 'completed' | 'closed'
+  leadId: string
+  memberIds: string[]
+  [key: string]: any
+}
+
+type User = {
+  id: string
+  name: string
+  email: string
+  [key: string]: any
+}
+
+function getStatusBadge(status: string) {
   switch (status) {
-    case 'active':
-      return 'bg-blue-500'
-    case 'completed':
-      return 'bg-green-500'
-    case 'approved':
-      return 'bg-yellow-500'
     case 'pending_approval':
-      return 'bg-gray-500'
+      return <Badge variant="secondary">Pending Approval</Badge>
+    case 'approved':
+      return <Badge className="bg-yellow-500 text-white">Approved</Badge>
+    case 'active':
+      return <Badge className="bg-blue-500 text-white">Active</Badge>
+    case 'completed':
+      return <Badge className="bg-green-500 text-white">Completed</Badge>
+    case 'closed':
+      return <Badge variant="outline">Closed</Badge>
     default:
-      return 'bg-gray-200'
+      return <Badge variant="outline">{status.replace('_', ' ')}</Badge>
   }
 }
 
 async function getData() {
     const projectsSnapshot = await getDocs(collection(db, "projects"));
-    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
     const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
 
     return { projects, users };
 }
 
-export default async function ProjectsPage() {
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [isFormOpen, setIsFormOpen] = useState(false)
+
+  const fetchData = async () => {
     const { projects, users } = await getData();
+    setProjects(projects);
+    setUsers(users);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  const handleFormSubmit = () => {
+    fetchData(); // Refetch data after a new submission
+    setIsFormOpen(false);
+  }
+
+  // Mock user for role-based actions. In a real app, this would come from auth context.
+  const currentUser = { role: 'coordinator' };
+
+  const getAvailableActions = (status: Project['status']) => {
+    const actions: string[] = [];
+    if (currentUser.role === 'coordinator' || currentUser.role === 'core') {
+      if (status === 'pending_approval') actions.push('Approve', 'Reject');
+    }
+    if (status === 'approved') actions.push('Start Project');
+    if (status === 'active') actions.push('Post Update');
+    if (status === 'completed') {
+       if (currentUser.role === 'admin' || currentUser.role === 'core') actions.push('Close Project');
+    } else {
+       if (status !== 'closed') actions.push('Mark as Completed');
+    }
+    return actions;
+  }
   
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
@@ -52,13 +124,24 @@ export default async function ProjectsPage() {
             Track and manage all RC projects in the club.
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> New Project
-        </Button>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create a New Project</DialogTitle>
+            </DialogHeader>
+            <NewProjectForm onFormSubmit={handleFormSubmit} />
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project: any) => {
-          const projectLead = users.find((u: any) => u.id === project.teamLeadId)
+          const projectLead = users.find((u: any) => u.id === project.leadId)
+          const actions = getAvailableActions(project.status);
 
           return (
             <Card key={project.id} className="overflow-hidden flex flex-col">
@@ -73,9 +156,23 @@ export default async function ProjectsPage() {
                   />
                 </div>
                  <div className="p-6">
-                    <Badge className={`${getStatusColor(project.status)} text-white mb-2`}>{project.status.replace('_', ' ')}</Badge>
-                    <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
-                    <CardDescription className="mt-1">{project.description}</CardDescription>
+                    <div className="flex justify-between items-start">
+                      {getStatusBadge(project.status)}
+                      {actions.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {actions.map(action => <DropdownMenuItem key={action}>{action}</DropdownMenuItem>)}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                    <CardTitle className="font-headline text-xl mt-2">{project.title}</CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2">{project.description}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
@@ -93,7 +190,7 @@ export default async function ProjectsPage() {
                   })}
                 </div>
                 {projectLead && (
-                  <div className="text-sm">
+                  <div className="text-sm text-right">
                     <span className="text-muted-foreground">Lead: </span>
                     <span className="font-semibold">{projectLead.name}</span>
                   </div>
