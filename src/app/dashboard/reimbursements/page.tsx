@@ -80,7 +80,7 @@ export default async function ReimbursementsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Submitted By</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Details</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -89,19 +89,19 @@ export default async function ReimbursementsPage() {
             <TableBody>
               {reimbursements.map((req: any) => {
                 const user = users.find((u: any) => u.id === req.submittedById);
-                let description = req.description;
+                let details = req.notes || '';
                 if (req.newItemRequestId) {
                     const newItem: any = newItems.find((i: any) => i.id === req.newItemRequestId);
                     if (newItem) {
                         const project: any = projects.find((p: any) => p.id === newItem.projectId);
-                        description = `Purchase: ${newItem.itemName} for ${project?.title}`;
+                        details = `Purchase: ${newItem.itemName} for ${project?.title}`;
                     }
                 }
                 
                 return (
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{user?.name}</TableCell>
-                    <TableCell>{description}</TableCell>
+                    <TableCell>{details}</TableCell>
                     <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>

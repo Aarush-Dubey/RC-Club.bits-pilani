@@ -79,8 +79,26 @@ const newItemRequests = [
 ];
 
 const reimbursements = [
-    { id: 'reimb-1', submittedById: 'user-4', newItemRequestId: 'new-req-1', amount: 23.50, status: 'pending', createdAt: serverTimestamp() },
-    { id: 'reimb-2', submittedById: 'user-5', description: 'Travel for parts pickup', amount: 15.00, status: 'approved', createdAt: Timestamp.fromDate(new Date('2024-07-26')), approvedAt: Timestamp.fromDate(new Date('2024-07-27')) }
+    { 
+        id: 'reimb-1', 
+        submittedById: 'user-4', 
+        newItemRequestId: 'new-req-1', 
+        amount: 23.50, 
+        status: 'pending', 
+        createdAt: serverTimestamp(),
+        proofImageUrls: []
+    },
+    { 
+        id: 'reimb-2', 
+        submittedById: 'user-5', 
+        amount: 15.00, 
+        status: 'approved', 
+        createdAt: Timestamp.fromDate(new Date('2024-07-26')),
+        reviewedAt: Timestamp.fromDate(new Date('2024-07-27')),
+        reviewedById: 'user-2',
+        notes: 'Travel for parts pickup',
+        proofImageUrls: []
+    }
 ];
 
 const seedCollection = async (collectionName: string, data: any[]) => {
