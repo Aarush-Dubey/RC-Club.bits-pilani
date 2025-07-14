@@ -134,7 +134,7 @@ export default async function InventoryPage() {
                                 <TableCell className="font-medium">{item?.name}</TableCell>
                                 <TableCell>{user?.name}</TableCell>
                                 <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                                <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
+                                <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
                                     <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>

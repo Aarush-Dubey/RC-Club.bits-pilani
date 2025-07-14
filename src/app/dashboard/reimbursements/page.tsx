@@ -104,7 +104,7 @@ export default async function ReimbursementsPage() {
                     <TableCell>{description}</TableCell>
                     <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(req.status)}>{req.status}</Badge>
+                      <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">${req.amount.toFixed(2)}</TableCell>
                   </TableRow>
