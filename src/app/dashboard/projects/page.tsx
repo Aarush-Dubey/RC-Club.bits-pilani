@@ -27,6 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -147,16 +148,16 @@ export default function ProjectsPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> New Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Propose a New Project</DialogTitle>
-              <CardDescription>Fill out the details below to submit your project idea for approval.</CardDescription>
+              <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
+              <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>
             </DialogHeader>
             <NewProjectForm onFormSubmit={handleFormSubmit} users={users} inventory={inventory} />
           </DialogContent>
         </Dialog>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {projects.map((project: any) => {
           const projectLead = users.find((u: any) => u.id === project.leadId)
           const actions = getAvailableActions(project.status);
@@ -193,9 +194,9 @@ export default function ProjectsPage() {
                     <CardDescription className="mt-1 line-clamp-2">{project.description}</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="flex-grow">
+              <CardContent className="flex-grow p-6 pt-0">
               </CardContent>
-              <CardFooter className="flex justify-between items-center">
+              <CardFooter className="flex justify-between items-center bg-muted/30 p-4">
                 <div className="flex -space-x-2">
                   {project.memberIds.map((memberId: string) => {
                     const member: any = users.find((u: any) => u.id === memberId)

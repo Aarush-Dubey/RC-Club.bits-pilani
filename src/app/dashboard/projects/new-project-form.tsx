@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler, Controller } from "react-ho
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { addDoc, collection, doc, serverTimestamp, writeBatch } from "firebase/firestore"
-import { CalendarIcon, Loader2, Sparkles, Trash2 } from "lucide-react"
+import { CalendarIcon, Loader2, Sparkles, Trash2, PlusCircle } from "lucide-react"
 import { format } from "date-fns"
 
 import { db } from "@/lib/firebase"
@@ -146,7 +146,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
   return (
     <Form {...form}>
        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ScrollArea className="h-[60vh] pr-4">
+        <ScrollArea className="h-[65vh] pr-4">
           <div className="space-y-6">
             <FormField
               control={form.control}
@@ -162,85 +162,92 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="memberIds"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Team Members</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value?.length && "text-muted-foreground")}>
-                          {field.value?.length ? `${field.value.length} selected` : "Select team members..."}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <div className="p-2 space-y-1">
-                      {users.map((user) => (
-                        <FormField
-                          key={user.id}
-                          control={form.control}
-                          name="memberIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={user.id}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(user.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), user.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== user.id
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {user.name}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="memberIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Team Members</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" role="combobox" className={cn("w-full justify-start", !field.value?.length && "text-muted-foreground")}>
+                            {field.value?.length > 0
+                              ? users.filter(u => field.value.includes(u.id)).map(u => u.name.split(' ')[0]).join(', ')
+                              : "Select team members..."
+                            }
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <ScrollArea className="h-48">
+                          <div className="p-2 space-y-1">
+                          {users.map((user) => (
+                            <FormField
+                              key={user.id}
+                              control={form.control}
+                              name="memberIds"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={user.id}
+                                    className="flex flex-row items-start space-x-3 space-y-0 p-2 hover:bg-accent rounded-md"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(user.id)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...(field.value || []), user.id])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== user.id
+                                                )
+                                              )
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal w-full cursor-pointer">
+                                      {user.name}
+                                    </FormLabel>
+                                  </FormItem>
+                                )
+                              }}
+                            />
+                          ))}
+                          </div>
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="leadId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Lead</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableLeads.length === 0}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project lead from the team" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableLeads.map(user => (
-                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="leadId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Lead</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableLeads.length === 0}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a project lead from the team" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableLeads.map(user => (
+                          <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -282,54 +289,57 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
 
-            <div className="space-y-2">
+            <div className="space-y-4">
                 <FormLabel>Requested Inventory</FormLabel>
-                {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md">
-                        <FormField
-                            control={form.control}
-                            name={`requestedInventory.${index}.itemId`}
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select an item" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {inventory.map(item => (
-                                                <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name={`requestedInventory.${index}.quantity`}
-                            render={({ field }) => (
-                                <FormItem className="w-24">
-                                    <FormControl>
-                                        <Input type="number" placeholder="Qty" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                    </div>
-                ))}
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  {fields.map((field, index) => (
+                      <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md bg-muted/20">
+                          <FormField
+                              control={form.control}
+                              name={`requestedInventory.${index}.itemId`}
+                              render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                          <FormControl>
+                                              <SelectTrigger>
+                                                  <SelectValue placeholder="Select an item" />
+                                              </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                              {inventory.map(item => (
+                                                  <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                                              ))}
+                                          </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField
+                              control={form.control}
+                              name={`requestedInventory.${index}.quantity`}
+                              render={({ field }) => (
+                                  <FormItem className="w-24">
+                                      <FormControl>
+                                          <Input type="number" placeholder="Qty" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                      </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4">
                     <Button type="button" variant="outline" size="sm" onClick={() => append({ itemId: "", quantity: 1 })}>
+                        <PlusCircle />
                         Add Item
                     </Button>
-                    <Button type="button" variant="outline" size="sm" disabled>
-                        Request a New Item
+                    <Button type="button" variant="link" className="text-primary p-0 h-auto" disabled>
+                        or Request a New Item
                     </Button>
                 </div>
             </div>
@@ -360,10 +370,12 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
             />
           </div>
         </ScrollArea>
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Submit for Approval
-        </Button>
+        <div className="pt-4 border-t">
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Submit for Approval
+          </Button>
+        </div>
       </form>
     </Form>
   )
