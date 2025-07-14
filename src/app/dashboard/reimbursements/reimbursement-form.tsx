@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from 'react'
@@ -7,6 +8,13 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
+import {
+    ImageKitAbortError,
+    ImageKitInvalidRequestError,
+    ImageKitServerError,
+    ImageKitUploadNetworkError,
+    upload,
+} from "@imagekit/next";
 
 import { db } from '@/lib/firebase'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -46,6 +54,22 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
     }
   }
 
+  const authenticator = async () => {
+    try {
+      const response = await fetch('/api/upload-auth');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Request failed with status ${response.status}: ${errorText}`);
+      }
+      const data = await response.json();
+      const { signature, expire, token } = data;
+      return { signature, expire, token };
+    } catch (error) {
+      console.error("Authentication error:", error);
+      throw new Error("Authentication request failed. Check your server logs.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!amount || !selectedFile) {
@@ -57,26 +81,23 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
     setMessage({ text: 'Submitting request...', type: 'info' })
 
     try {
-      // 1. Upload image to Imgur
-      const formData = new FormData()
-      formData.append('image', selectedFile)
+       // 1. Get Authentication Parameters
+      const authParams = await authenticator();
+      const { signature, expire, token } = authParams;
 
-      const imgurResponse = await fetch('https://api.imgur.com/3/image', {
-        method: 'POST',
-        headers: {
-          Authorization: `Client-ID ${process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID}`,
-        },
-        body: formData,
-      })
+      // 2. Upload image to ImageKit
+      const uploadResponse = await upload({
+        publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
+        signature,
+        expire,
+        token,
+        file: selectedFile,
+        fileName: selectedFile.name,
+      });
 
-      if (!imgurResponse.ok) {
-        throw new Error('Image upload to Imgur failed.')
-      }
+      const downloadURL = uploadResponse.url;
 
-      const imgurData = await imgurResponse.json()
-      const downloadURL = imgurData.data.link
-
-      // 2. Save reimbursement request to Firestore
+      // 3. Save reimbursement request to Firestore
       await addDoc(collection(db, 'reimbursements'), {
         amount: parseFloat(amount),
         notes,
@@ -92,8 +113,16 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
         setOpen(false)
       }, 1500)
     } catch (error) {
-      console.error('Submission error:', error)
-      setMessage({ text: 'Submission failed. Please check your Imgur Client ID and try again.', type: 'error' })
+        console.error('Submission error:', error)
+        let errorMessage = 'Submission failed. Please try again.';
+        if (error instanceof ImageKitInvalidRequestError) {
+          errorMessage = "Invalid request to ImageKit. Check your public key and authentication."
+        } else if (error instanceof ImageKitUploadNetworkError || error instanceof ImageKitServerError) {
+          errorMessage = "Network or server error during upload. Please try again."
+        } else if (error instanceof Error && error.message.includes("Authentication")) {
+          errorMessage = "Could not authenticate with ImageKit. Please check your API keys and endpoint configuration."
+        }
+      setMessage({ text: errorMessage, type: 'error' })
     } finally {
       setUploading(false)
     }
