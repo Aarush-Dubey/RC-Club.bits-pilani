@@ -106,7 +106,7 @@ export default function FinancialInsightsClient() {
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap">{result.budgetForecast}</p>
-            </CardContent>
+            </Content>
           </Card>
         </div>
       )}
