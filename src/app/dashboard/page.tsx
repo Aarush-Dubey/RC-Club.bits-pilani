@@ -1,4 +1,3 @@
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { CheckCircle, HandCoins, ShoppingCart, Users, ToyBrick } from "lucide-react"
 import { collection, getDocs, doc, getDoc, query, where, limit } from "firebase/firestore"
 
@@ -12,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ProjectOverviewChart } from "./project-overview-chart"
 
 async function getDashboardData() {
   const projectsSnapshot = await getDocs(collection(db, "projects"));
@@ -139,32 +139,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle className="font-headline">Project Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={projectStatusData}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <ProjectOverviewChart data={projectStatusData} />
         <Card className="col-span-4 lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-headline">Recent Projects</CardTitle>
