@@ -63,14 +63,15 @@ export default async function ProjectsPage() {
           return (
             <Card key={project.id} className="overflow-hidden flex flex-col">
               <CardHeader className="p-0">
-                <Image
-                  src={`https://placehold.co/600x400.png`}
-                  alt={project.title}
-                  width={600}
-                  height={400}
-                  className="w-full h-48 object-cover"
-                  data-ai-hint="rc project"
-                />
+                <div className="relative w-full h-48">
+                  <Image
+                    src={`https://placehold.co/600x400.png`}
+                    alt={project.title}
+                    fill
+                    className="object-cover"
+                    data-ai-hint="rc project"
+                  />
+                </div>
                  <div className="p-6">
                     <Badge className={`${getStatusColor(project.status)} text-white mb-2`}>{project.status.replace('_', ' ')}</Badge>
                     <CardTitle className="font-headline text-xl">{project.title}</CardTitle>
