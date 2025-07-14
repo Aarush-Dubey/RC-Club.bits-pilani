@@ -1,3 +1,7 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -12,6 +16,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   Table,
   TableBody,
   TableCell,
@@ -19,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ReimbursementForm } from "./reimbursement-form"
 
 const getStatusVariant = (status: string) => {
   switch (status) {
@@ -51,9 +63,33 @@ async function getData() {
     return { reimbursements, users, projects, newItems };
 }
 
-export default async function ReimbursementsPage() {
-  const { reimbursements, users, projects, newItems } = await getData();
+// Note: This page is converted to a Client Component to handle dialog state and data refresh.
+// For a production app, you might use server components for the initial load and client components for interactions.
+export default function ReimbursementsPage() {
+  const [reimbursements, setReimbursements] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [projects, setProjects] = useState<any[]>([])
+  const [newItems, setNewItems] = useState<any[]>([])
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const router = useRouter()
   
+  const fetchData = async () => {
+    const { reimbursements, users, projects, newItems } = await getData();
+    setReimbursements(reimbursements);
+    setUsers(users);
+    setProjects(projects);
+    setNewItems(newItems);
+  };
+
+  useState(() => {
+    fetchData()
+  });
+  
+  const handleFormSubmit = () => {
+    fetchData(); // Refetch data after a new submission
+    router.refresh(); // Revalidate the page
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
@@ -63,9 +99,19 @@ export default async function ReimbursementsPage() {
             Submit and track expense reimbursement requests.
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
-        </Button>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>New Reimbursement Request</DialogTitle>
+            </DialogHeader>
+            <ReimbursementForm setOpen={setIsFormOpen} onFormSubmit={handleFormSubmit} />
+          </DialogContent>
+        </Dialog>
       </div>
       
       <Card>
@@ -102,7 +148,7 @@ export default async function ReimbursementsPage() {
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">{user?.name}</TableCell>
                     <TableCell>{details}</TableCell>
-                    <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
+                    <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
                     </TableCell>
