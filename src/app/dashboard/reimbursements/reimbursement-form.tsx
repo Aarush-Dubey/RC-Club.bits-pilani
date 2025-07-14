@@ -6,10 +6,9 @@ import {
   collection,
   serverTimestamp,
 } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
 
-import { db, storage } from '@/lib/firebase'
+import { db } from '@/lib/firebase'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,10 +57,24 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
     setMessage({ text: 'Submitting request...', type: 'info' })
 
     try {
-      // 1. Upload image to Firebase Storage
-      const storageRef = ref(storage, `receipts/${Date.now()}_${selectedFile.name}`)
-      const snapshot = await uploadBytes(storageRef, selectedFile)
-      const downloadURL = await getDownloadURL(snapshot.ref)
+      // 1. Upload image to Imgur
+      const formData = new FormData()
+      formData.append('image', selectedFile)
+
+      const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+          Authorization: `Client-ID ${process.env.NEXT_PUBLIC_IMGUR_CLIENT_ID}`,
+        },
+        body: formData,
+      })
+
+      if (!imgurResponse.ok) {
+        throw new Error('Image upload to Imgur failed.')
+      }
+
+      const imgurData = await imgurResponse.json()
+      const downloadURL = imgurData.data.link
 
       // 2. Save reimbursement request to Firestore
       await addDoc(collection(db, 'reimbursements'), {
@@ -80,7 +93,7 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
       }, 1500)
     } catch (error) {
       console.error('Submission error:', error)
-      setMessage({ text: 'Submission failed. Please try again.', type: 'error' })
+      setMessage({ text: 'Submission failed. Please check your Imgur Client ID and try again.', type: 'error' })
     } finally {
       setUploading(false)
     }
