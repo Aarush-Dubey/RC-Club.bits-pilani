@@ -293,7 +293,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                             <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
                                             {isManager && bucket.status === 'closed' && (
                                                 <TableCell className="text-right">
-                                                   {req.status === 'pending' ? <BucketItemActions requestId={req.id} /> : '-'}
+                                                   {req.status === 'pending' ? <BucketItemActions requestId={req.id} itemName={req.itemName} /> : '-'}
                                                 </TableCell>
                                             )}
                                         </TableRow>

@@ -3,7 +3,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, X, Loader2 } from "lucide-react"
+import { Check, X, Loader2, Sparkles } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
 import { approveNewItemRequest, rejectNewItemRequest } from "../actions"
@@ -22,10 +22,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { enhanceRejectionReason } from "@/ai/flows/enhance-rejection-reason"
 
 
-export function ApprovalActions({ requestId }: { requestId: string }) {
+export function ApprovalActions({ requestId, itemName }: { requestId: string, itemName: string }) {
   const [isLoading, setIsLoading] = useState<"approve" | "reject" | null>(null)
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const router = useRouter()
   const { toast } = useToast()
@@ -60,6 +62,24 @@ export function ApprovalActions({ requestId }: { requestId: string }) {
     }
   }
 
+  const handleEnhanceReason = async () => {
+    if (!rejectionReason) {
+      toast({ variant: "destructive", title: "Cannot Enhance", description: "Please provide a basic reason first." });
+      return;
+    }
+    setIsEnhancing(true);
+    try {
+      const result = await enhanceRejectionReason({ itemName, reason: rejectionReason });
+      setRejectionReason(result.enhancedReason);
+      toast({ title: "Reason Enhanced", description: "The rejection reason has been updated with AI." });
+    } catch (error) {
+      console.error("Error enhancing reason:", error);
+      toast({ variant: "destructive", title: "Enhancement Failed", description: "Could not enhance the reason." });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const onApprove = () => handleAction(() => approveNewItemRequest(requestId, currentUser!.uid), "approve");
   const onReject = () => handleAction(() => rejectNewItemRequest(requestId, currentUser!.uid, rejectionReason), "reject");
 
@@ -85,7 +105,13 @@ export function ApprovalActions({ requestId }: { requestId: string }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="rejection-reason">Rejection Reason</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="rejection-reason">Rejection Reason</Label>
+              <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceReason} disabled={isEnhancing || isLoading === 'reject'}>
+                {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Enhance
+              </Button>
+            </div>
             <Textarea 
               id="rejection-reason"
               value={rejectionReason}
@@ -98,7 +124,7 @@ export function ApprovalActions({ requestId }: { requestId: string }) {
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={onReject}
-              disabled={!rejectionReason}
+              disabled={!rejectionReason || isEnhancing}
             >
               Confirm Rejection
             </AlertDialogAction>

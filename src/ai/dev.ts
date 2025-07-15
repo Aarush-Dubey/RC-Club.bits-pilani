@@ -5,3 +5,4 @@ import '@/ai/flows/financial-insights.ts';
 import '@/ai/flows/enhance-description.ts';
 import '@/ai/flows/enhance-update.ts';
 import '@/ai/flows/enhance-justification.ts';
+import '@/ai/flows/enhance-rejection-reason.ts';

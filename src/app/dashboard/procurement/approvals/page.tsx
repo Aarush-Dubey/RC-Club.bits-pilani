@@ -108,7 +108,7 @@ export default async function ProcurementApprovalsPage() {
                                                 <TableCell>{user?.name || 'Unknown User'}</TableCell>
                                                 <TableCell>{item.createdAt ? format(item.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <ApprovalActions requestId={item.id} />
+                                                    <ApprovalActions requestId={item.id} itemName={item.itemName} />
                                                 </TableCell>
                                             </TableRow>
                                         )
