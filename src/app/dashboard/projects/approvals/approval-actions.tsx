@@ -39,20 +39,20 @@ export function ApprovalActions({ projectId }: { projectId: string }) {
   const onReject = () => handleAction(() => rejectProject(projectId), "reject")
 
   return (
-    <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
-      <Link href={`/dashboard/projects/${projectId}`} className="w-full sm:w-auto">
-        <Button variant="outline" className="w-full">
-            <Eye className="mr-2 h-4 w-4" />
-            View
+    <div className="flex w-full sm:w-auto items-center gap-2">
+      <Link href={`/dashboard/projects/${projectId}`} passHref>
+         <Button variant="outline" size="icon">
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">View Project</span>
         </Button>
       </Link>
-      <Button onClick={onApprove} disabled={!!isLoading}>
-        {isLoading === "approve" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-        Approve
+      <Button onClick={onApprove} disabled={!!isLoading} size="icon">
+        {isLoading === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+         <span className="sr-only">Approve</span>
       </Button>
-      <Button variant="destructive" onClick={onReject} disabled={!!isLoading}>
-        {isLoading === "reject" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
-        Reject
+      <Button variant="destructive" onClick={onReject} disabled={!!isLoading} size="icon">
+        {isLoading === "reject" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+         <span className="sr-only">Reject</span>
       </Button>
     </div>
   )
