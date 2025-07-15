@@ -147,12 +147,12 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
     <Form {...form}>
        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <ScrollArea className="h-[calc(100vh-12rem)] sm:h-[65vh]">
-          <div className="space-y-6 pr-6">
+          <div className="space-y-6 pr-4">
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="m-2">
                   <FormLabel>Project Title</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Autonomous Drone Swarm" {...field} />
@@ -162,12 +162,12 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="memberIds"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="m-2">
                     <FormLabel>Team Members</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -229,7 +229,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                 control={form.control}
                 name="leadId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="m-2">
                     <FormLabel>Project Lead</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableLeads.length === 0}>
                       <FormControl>
@@ -253,7 +253,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               control={form.control}
               name="targetCompletionDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem className="flex flex-col m-2">
                   <FormLabel>Target Completion Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -289,11 +289,11 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
 
-            <div className="space-y-4">
+            <div className="space-y-4 m-2">
                 <FormLabel>Requested Inventory</FormLabel>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-end gap-2 p-2 border rounded-md bg-muted/20">
+                      <div key={field.id} className="flex items-end gap-2 rounded-md border bg-muted/20 p-2">
                           <FormField
                               control={form.control}
                               name={`requestedInventory.${index}.itemId`}
@@ -349,7 +349,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="m-2">
                   <div className="flex justify-between items-center">
                     <FormLabel>Project Description</FormLabel>
                     <Button type="button" variant="ghost" size="sm" disabled>
