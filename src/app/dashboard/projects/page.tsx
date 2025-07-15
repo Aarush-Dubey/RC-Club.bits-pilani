@@ -23,26 +23,27 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ProjectCard, type Project, type User, type InventoryItem } from "./project-card"
 
 async function getData(currentUser: AppUser | null) {
-    if (!currentUser) return { myProjects: [], users: [], inventory: [] };
-    
-    // Fetch projects the current user is a member of
-    const myProjectsQuery = query(
-        collection(db, "projects"), 
-        where("memberIds", "array-contains", currentUser.uid)
-    );
-    const myProjectsSnapshot = await getDocs(myProjectsQuery);
-    const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+  if (!currentUser) return { myProjects: [], allUsers: [], inventory: [] };
 
-    // Fetch ALL users so they can be added to new projects
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-    
-    // Fetch all inventory items for the new project form
-    const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
-    const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
+  // Fetch projects the current user is a member of
+  const myProjectsQuery = query(
+    collection(db, "projects"),
+    where("memberIds", "array-contains", currentUser.uid)
+  );
+  const myProjectsSnapshot = await getDocs(myProjectsQuery);
+  const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
-    return { myProjects, users, inventory };
+  // Fetch ALL users so they can be added to new projects
+  const allUsersSnapshot = await getDocs(collection(db, "users"));
+  const allUsers = allUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+
+  // Fetch all inventory items for the new project form
+  const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
+  const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
+
+  return { myProjects, allUsers, inventory };
 }
+
 
 const ProjectListSkeleton = () => (
   <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
@@ -60,7 +61,7 @@ const ProjectListSkeleton = () => (
 
 export default function ProjectsPage() {
   const [myProjects, setMyProjects] = useState<Project[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loading, setLoading] = useState(true);
@@ -70,9 +71,9 @@ export default function ProjectsPage() {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const { myProjects, users, inventory } = await getData(currentUser);
+      const { myProjects, allUsers, inventory } = await getData(currentUser);
       setMyProjects(myProjects);
-      setUsers(users);
+      setAllUsers(allUsers);
       setInventory(inventory);
     } catch(err) {
         console.error(err);
@@ -108,9 +109,11 @@ export default function ProjectsPage() {
                 <Button variant="outline">Manage Approvals</Button>
               </Link>
             )}
-            <Button onClick={() => setIsFormOpen(true)}>
-                <PlusCircle className="mr-2 h-4 w-4" /> New Project
-            </Button>
+            <DialogTrigger asChild>
+              <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" /> New Project
+              </Button>
+            </DialogTrigger>
           </div>
         </div>
 
@@ -121,7 +124,7 @@ export default function ProjectsPage() {
               {myProjects.length > 0 ? (
                 <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
                   {myProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} users={users} currentUser={currentUser}/>
+                    <ProjectCard key={project.id} project={project} users={allUsers} currentUser={currentUser}/>
                   ))}
                 </div>
               ) : (
@@ -145,8 +148,10 @@ export default function ProjectsPage() {
           <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
           <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>
         </DialogHeader>
-        <NewProjectForm onFormSubmit={handleFormSubmit} users={users} inventory={inventory} />
+        <NewProjectForm onFormSubmit={handleFormSubmit} users={allUsers} inventory={inventory} currentUser={currentUser} />
       </DialogContent>
     </Dialog>
   )
 }
+
+    

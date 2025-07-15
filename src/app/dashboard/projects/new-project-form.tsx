@@ -31,10 +31,8 @@ import { cn } from "@/lib/utils"
 import type { User, InventoryItem } from "./page"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import type { AppUser } from "@/context/auth-context"
 
-
-// Mock current user - in a real app, this would come from an auth provider
-const mockCurrentUser = { id: "user-5", name: "Mary Jane" }
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -60,9 +58,10 @@ interface NewProjectFormProps {
   onFormSubmit: () => void
   users: User[]
   inventory: InventoryItem[]
+  currentUser: AppUser | null
 }
 
-export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFormProps) {
+export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: NewProjectFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [memberSearch, setMemberSearch] = useState("")
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false)
@@ -75,8 +74,8 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
       title: "",
       type: "plane",
       description: "",
-      memberIds: [mockCurrentUser.id], // Default to current user
-      leadId: mockCurrentUser.id,
+      memberIds: currentUser ? [currentUser.uid] : [],
+      leadId: currentUser ? currentUser.uid : "",
       requestedInventory: [],
     },
   })
@@ -92,6 +91,14 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
   const filteredUsers = users.filter(user => user.name.toLowerCase().includes(memberSearch.toLowerCase()))
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    if (!currentUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be logged in to create a project.",
+      });
+      return;
+    }
     setIsSubmitting(true)
     try {
       const batch = writeBatch(db);
@@ -106,7 +113,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
         leadId: data.leadId,
         memberIds: data.memberIds,
         targetCompletionDate: data.targetCompletionDate || null,
-        createdById: mockCurrentUser.id,
+        createdById: currentUser.uid,
         status: "pending_approval",
         createdAt: serverTimestamp(),
         hasPendingReturns: false,
@@ -122,7 +129,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               batch.set(requestRef, {
                   id: requestRef.id, // Store readable ID
                   projectId: projectRef.id,
-                  requestedById: mockCurrentUser.id,
+                  requestedById: currentUser.uid,
                   itemId: req.itemId,
                   quantity: req.quantity,
                   reason: `Initial request for project: ${data.title}`,
@@ -446,3 +453,5 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
     </Form>
   )
 }
+
+    
