@@ -3,18 +3,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/auth-context";
+import Image from 'next/image';
+import { useAuth, type AppUser } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut } from "lucide-react";
+import { Loader2, UserPlus, LogOut, Flag } from "lucide-react";
 import { joinProject, leaveProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { format } from "date-fns";
 
 
 function getStatusBadge(status: string) {
@@ -60,6 +62,10 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
                         <Card>
+                            <CardHeader><CardTitle>Updates</CardTitle></CardHeader>
+                            <CardContent><Skeleton className="h-48 w-full" /></CardContent>
+                        </Card>
+                        <Card>
                             <CardHeader><CardTitle>Requested Inventory</CardTitle></CardHeader>
                             <CardContent><Skeleton className="h-24 w-full" /></CardContent>
                         </Card>
@@ -79,7 +85,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         return null;
     }
 
-    const { project, members, inventoryRequests, inventoryItems } = initialData;
+    const { project, members, inventoryRequests, inventoryItems, updates } = initialData;
     
     const isMember = currentUser && project.memberIds.includes(currentUser.uid);
     const isLead = currentUser && currentUser.uid === project.leadId;
@@ -132,7 +138,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                 <div className="flex items-center gap-2">
                     {isMember ? (
                         <>
-                           <ProjectActions project={project as any} currentUser={currentUser} />
+                           <ProjectActions project={project as any} currentUser={currentUser} onUpdate={() => router.refresh()}/>
                            {!isLead && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
@@ -167,6 +173,49 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Project Updates</CardTitle>
+                            <CardDescription>A timeline of progress and milestones.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {updates?.length > 0 ? (
+                                <div className="space-y-6">
+                                    {updates.map((update: any) => {
+                                        const author = members.find((m: AppUser) => m.uid === update.postedById);
+                                        return (
+                                            <div key={update.id} className="flex gap-4">
+                                                <Avatar>
+                                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
+                                                    <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex items-baseline justify-between">
+                                                        <p className="font-semibold">{author?.name}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                                                        </p>
+                                                    </div>
+                                                    {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
+                                                    {update.imageUrl && (
+                                                        <div className="relative aspect-video mt-2">
+                                                          <Image src={update.imageUrl} alt="Project update image" layout="fill" objectFit="cover" className="rounded-md border"/>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <Flag className="mx-auto h-8 w-8 mb-2" />
+                                    <p>No updates have been posted for this project yet.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader><CardTitle>Requested Inventory</CardTitle></CardHeader>
                         <CardContent>

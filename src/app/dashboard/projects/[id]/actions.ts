@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -25,13 +25,17 @@ export async function approveProject(projectId: string) {
             const itemRefs: { [key: string]: any } = {};
             const itemDocs: { [key: string]: any } = {};
             
-            for (const requestDoc of requestsSnapshot.docs) {
-                const requestData = requestDoc.data();
-                if (!itemRefs[requestData.itemId]) {
-                    itemRefs[requestData.itemId] = doc(db, "inventory_items", requestData.itemId);
-                    itemDocs[requestData.itemId] = await transaction.get(itemRefs[requestData.itemId]);
-                }
+            // Batch read all unique item documents
+            const uniqueItemIds = [...new Set(requestsSnapshot.docs.map(d => d.data().itemId))];
+            if (uniqueItemIds.length > 0) {
+                const itemQuery = query(collection(db, "inventory_items"), where("id", "in", uniqueItemIds));
+                const itemSnapshots = await getDocs(itemQuery);
+                itemSnapshots.docs.forEach(doc => {
+                    itemRefs[doc.id] = doc.ref;
+                    itemDocs[doc.id] = doc;
+                });
             }
+
 
             // --- 2. VALIDATION PHASE ---
             for (const requestDoc of requestsSnapshot.docs) {
@@ -52,7 +56,7 @@ export async function approveProject(projectId: string) {
             transaction.update(projectRef, { 
                 status: 'approved',
                 approvedAt: serverTimestamp(),
-                approvedById: 'system-admin',
+                approvedById: 'system-admin', // This should be the current user's ID
                 hasPendingReturns: hasInventoryRequests
             });
 
@@ -220,4 +224,28 @@ export async function leaveProject(projectId: string, userId: string) {
 
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
+}
+
+export async function addProjectUpdate({ projectId, text, imageUrl, userId }: { projectId: string, text: string, imageUrl: string | null, userId: string }) {
+    if (!userId) {
+        throw new Error("User is not authenticated.");
+    }
+    if (!text && !imageUrl) {
+        throw new Error("Update must contain text or an image.");
+    }
+
+    try {
+        const updatesCollectionRef = collection(db, "projects", projectId, "updates");
+        await addDoc(updatesCollectionRef, {
+            text: text || "",
+            imageUrl: imageUrl || null,
+            postedById: userId,
+            createdAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Failed to add project update:", error);
+        throw new Error(`Failed to post update: ${(error as Error).message}`);
+    }
+
+    revalidatePath(`/dashboard/projects/${projectId}`);
 }

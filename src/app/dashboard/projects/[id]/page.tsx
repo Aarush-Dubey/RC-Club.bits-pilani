@@ -1,8 +1,9 @@
 
-import { doc, getDoc, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, Timestamp, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { notFound } from "next/navigation";
 import ProjectDetailsClient from "./project-details-client";
+import { AppUser } from "@/context/auth-context";
 
 // Helper to convert Firestore Timestamps to strings
 const serializeFirestoreTimestamps = (data: any): any => {
@@ -38,17 +39,20 @@ async function getProjectData(projectId: string) {
 
     const project = serializeFirestoreTimestamps({ id: projectSnap.id, ...projectData, memberIds });
 
-    const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
-    const usersSnap = await getDocs(usersQuery);
-    const members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
-
+    let members: AppUser[] = [];
+    if (memberIds.length > 0) {
+        const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
+        const usersSnap = await getDocs(usersQuery);
+        members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
+    }
+    
     const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
     const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
     const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
     const inventoryItems = [];
     if(inventoryRequests.length > 0) {
-        const itemIds = inventoryRequests.map(req => req.itemId).filter(id => id);
+        const itemIds = [...new Set(inventoryRequests.map(req => req.itemId).filter(id => id))];
         if (itemIds.length > 0) {
             // Firestore 'in' queries are limited to 30 items. For more, chunking would be needed.
             const inventoryItemsQuery = query(collection(db, "inventory_items"), where("id", "in", itemIds.slice(0, 30)));
@@ -56,8 +60,13 @@ async function getProjectData(projectId: string) {
             inventoryItems.push(...inventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })));
         }
     }
+    
+    // Fetch project updates
+    const updatesQuery = query(collection(db, "projects", projectId, "updates"), orderBy("createdAt", "desc"));
+    const updatesSnap = await getDocs(updatesQuery);
+    const updates = updatesSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
-    return { project, members, inventoryRequests, inventoryItems };
+    return { project, members, inventoryRequests, inventoryItems, updates };
 }
 
 
