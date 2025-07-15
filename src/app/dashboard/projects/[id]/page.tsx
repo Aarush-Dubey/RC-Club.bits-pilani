@@ -1,5 +1,5 @@
 
-import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { notFound } from "next/navigation";
 import { ProjectActions } from "./project-actions";
+
+// Helper to convert Firestore Timestamps to strings
+const serializeFirestoreTimestamps = (data: any): any => {
+    if (!data) return data;
+    if (Array.isArray(data)) {
+        return data.map(serializeFirestoreTimestamps);
+    }
+    if (typeof data === 'object' && data !== null) {
+        if (data instanceof Timestamp) {
+            return data.toDate().toISOString();
+        }
+        const newObj: { [key: string]: any } = {};
+        for (const key in data) {
+            newObj[key] = serializeFirestoreTimestamps(data[key]);
+        }
+        return newObj;
+    }
+    return data;
+};
+
 
 async function getProjectData(projectId: string) {
     const projectRef = doc(db, "projects", projectId);
@@ -22,7 +42,7 @@ async function getProjectData(projectId: string) {
         ? projectData.memberIds
         : [projectData.leadId]; // Fallback to leadId if memberIds is empty or not an array
 
-    const project = { id: projectSnap.id, ...projectData, memberIds };
+    const project = serializeFirestoreTimestamps({ id: projectSnap.id, ...projectData, memberIds });
 
     const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
     const usersSnap = await getDocs(usersQuery);
@@ -30,7 +50,7 @@ async function getProjectData(projectId: string) {
 
     const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
     const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
-    const inventoryRequests = inventoryRequestsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
     const inventoryItems = [];
     if(inventoryRequests.length > 0) {
