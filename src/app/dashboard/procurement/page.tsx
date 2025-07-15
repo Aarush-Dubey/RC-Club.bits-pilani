@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket, ClipboardCheck, FileText } from "lucide-react";
-import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
+import { PlusCircle, ShoppingBasket, ClipboardCheck } from "lucide-react";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth, type AppUser } from "@/context/auth-context";
 import { format } from "date-fns";
@@ -183,24 +183,26 @@ export default function ProcurementPage() {
                         <CardDescription>Standalone requests not part of a purchasing bucket.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Item</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Est. Cost</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {data.singleRequests.map((req: any) => (
-                                    <TableRow key={req.id}>
-                                        <TableCell className="font-medium">{req.itemName} (x{req.quantity})</TableCell>
-                                        <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
-                                        <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Item</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Est. Cost</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {data.singleRequests.map((req: any) => (
+                                        <TableRow key={req.id}>
+                                            <TableCell className="font-medium whitespace-nowrap">{req.itemName} (x{req.quantity})</TableCell>
+                                            <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
+                                            <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             )}
