@@ -71,6 +71,10 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         }
     };
 
+    useEffect(() => {
+        setData(initialData);
+    }, [initialData]);
+
     if (authLoading || !data) {
         return (
              <div className="space-y-6">
