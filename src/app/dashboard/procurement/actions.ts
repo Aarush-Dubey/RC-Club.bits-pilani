@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc, getDoc } from "firebase/firestore";
 
 export async function createProcurementBucket({ description, createdById }: { description: string; createdById: string }) {
     if (!createdById) {
@@ -68,15 +68,12 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
         batch.update(bucketRef, {
             members: arrayUnion(requestedById)
         });
-        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+        // No need for revalidatePath here, as onSnapshot will handle UI updates
     } else {
         revalidatePath(`/dashboard/procurement/approvals`);
     }
 
     await batch.commit();
-
-    
-    revalidatePath(`/dashboard/procurement/new`);
 }
 
 export async function updateBucketStatus(bucketId: string, status: "open" | "closed" | "ordered" | "received") {
@@ -88,7 +85,6 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
     if (status === 'received') data.receivedAt = serverTimestamp();
     
     await updateDoc(bucketRef, data);
-    revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
     revalidatePath(`/dashboard/procurement`);
     revalidatePath(`/dashboard/procurement/approvals`);
 }
@@ -102,7 +98,16 @@ export async function approveNewItemRequest(requestId: string, approverId: strin
         approvedAt: serverTimestamp(),
         approvedById: approverId,
     });
-    revalidatePath('/dashboard/procurement/approvals');
+
+    const requestDoc = await getDoc(requestRef);
+    const bucketId = requestDoc.data()?.linkedBucketId;
+    
+    // Revalidate paths if not part of a bucket or if the bucket itself needs updating
+    if (bucketId) {
+        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+    } else {
+        revalidatePath('/dashboard/procurement/approvals');
+    }
 }
 
 export async function rejectNewItemRequest(requestId: string, rejectorId: string, reason: string) {
@@ -115,5 +120,13 @@ export async function rejectNewItemRequest(requestId: string, rejectorId: string
         rejectedById: rejectorId,
         rejectionReason: reason,
     });
-    revalidatePath('/dashboard/procurement/approvals');
+    
+    const requestDoc = await getDoc(requestRef);
+    const bucketId = requestDoc.data()?.linkedBucketId;
+
+    if (bucketId) {
+        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+    } else {
+        revalidatePath('/dashboard/procurement/approvals');
+    }
 }

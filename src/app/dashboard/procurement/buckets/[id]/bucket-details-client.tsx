@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BucketItemActions } from "./bucket-item-actions";
 
 
 const getStatusVariant = (status: string) => {
@@ -79,6 +80,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         setLoading(true);
 
         const bucketRef = doc(db, "procurement_buckets", bucketId);
+        
         const unsubscribeBucket = onSnapshot(bucketRef, async (bucketSnap) => {
             if (!bucketSnap.exists()) {
                 setData(null);
@@ -95,18 +97,24 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                 const usersSnap = await getDocs(usersQuery);
                 members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
             }
-            
+
+            // Also listen to requests
             const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
-            const requestsSnap = await getDocs(requestsQuery);
-            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+            const unsubscribeRequests = onSnapshot(requestsQuery, (requestsSnap) => {
+                const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
-
-            setData({
-                bucket: serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData }),
-                members,
-                requests,
+                setData({
+                    bucket: serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData }),
+                    members,
+                    requests,
+                });
+                setLoading(false);
             });
-            setLoading(false);
+            
+            // Return a function to cleanup both listeners
+            return () => {
+                unsubscribeRequests();
+            };
         });
 
         // Cleanup subscription on unmount
@@ -117,7 +125,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
 
 
     const handleFormSubmit = () => {
-        router.refresh();
         setIsFormOpen(false);
     };
 
@@ -164,6 +171,9 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
     
     const creator = members.find((m: any) => m.id === bucket.createdBy);
     const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
+    const totalApprovedCost = requests
+        .filter((req: any) => req.status === 'approved')
+        .reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
 
     return (
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -224,6 +234,9 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     <Card>
                         <CardHeader>
                             <CardTitle>Manager Actions</CardTitle>
+                            <CardDescription>
+                                Total cost for approved items: <span className="font-bold font-mono text-foreground">₹{totalApprovedCost.toFixed(2)}</span>
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="flex items-center gap-2">
                             {bucket.status === 'closed' && (
@@ -247,7 +260,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     <CardHeader>
                         <CardTitle>Requested Items</CardTitle>
                         <CardDescription>
-                            Total Estimated Cost: <span className="font-bold font-mono text-foreground">₹{totalEstimatedCost.toFixed(2)}</span>
+                            Total Estimated Cost (All Items): <span className="font-bold font-mono text-foreground">₹{totalEstimatedCost.toFixed(2)}</span>
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -257,8 +270,9 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     <TableHead>Item</TableHead>
                                     <TableHead>Requested By</TableHead>
                                     <TableHead>Qty</TableHead>
-                                    <TableHead>Est. cost / piece</TableHead>
+                                    <TableHead>Est. Cost</TableHead>
                                     <TableHead>Status</TableHead>
+                                    {isManager && bucket.status === 'closed' && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -269,16 +283,24 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                             <TableCell>
                                                 <div className="font-medium">{req.itemName}</div>
                                                 <div className="text-sm text-muted-foreground">{req.justification}</div>
+                                                {req.rejectionReason && (
+                                                    <div className="text-xs text-destructive mt-1">Reason: {req.rejectionReason}</div>
+                                                )}
                                             </TableCell>
                                             <TableCell>{user?.name || 'Unknown'}</TableCell>
                                             <TableCell>{req.quantity}</TableCell>
-                                            <TableCell>₹{req.estimatedCost.toFixed(2)}</TableCell>
+                                            <TableCell>₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
                                             <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
+                                            {isManager && bucket.status === 'closed' && (
+                                                <TableCell className="text-right">
+                                                   {req.status === 'pending' ? <BucketItemActions requestId={req.id} /> : '-'}
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     )
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center h-24">
+                                        <TableCell colSpan={isManager && bucket.status === 'closed' ? 6 : 5} className="text-center h-24">
                                             No items have been requested in this bucket yet.
                                         </TableCell>
                                     </TableRow>
