@@ -6,8 +6,10 @@ const users = [
   { id: 'user-1', name: 'Alex Doe', email: 'alex.doe@example.com', role: 'admin', joinedProjects: ['proj-1', 'proj-3'] },
   { id: 'user-2', name: 'Jane Smith', email: 'jane.smith@example.com', role: 'coordinator', joinedProjects: ['proj-2', 'proj-4'] },
   { id: 'user-3', name: 'Sam Wilson', email: 'sam.wilson@example.com', role: 'inventory_manager', joinedProjects: ['proj-2'] },
-  { id: 'user-4', name: 'Peter Jones', email: 'peter.jones@example.com', role: 'lead', joinedProjects: ['proj-1', 'proj-4'] },
-  { id: 'user-5', name: 'Mary Jane', email: 'mary.jane@example.com', role: 'member', joinedProjects: ['proj-1', 'proj-3'] },
+  { id: 'user-4', name: 'Peter Jones', email: 'peter.jones@example.com', role: 'drone_lead', joinedProjects: ['proj-1', 'proj-4'] },
+  { id: 'user-5', name: 'Mary Jane', email: 'mary.jane@example.com', role: 'plane_lead', joinedProjects: ['proj-1', 'proj-3'] },
+  { id: 'user-6', name: 'Member Fresh', email: 'member.fresh@example.com', role: 'member', joinedProjects: [] },
+
 ];
 
 const projects = [
@@ -15,12 +17,9 @@ const projects = [
     id: 'proj-1',
     title: 'Project Phoenix - FPV Drone',
     description: 'Building a high-speed FPV racing drone from scratch.',
+    type: 'drone',
     createdById: 'user-4',
-    status: 'active',
-    approvedAt: Timestamp.fromDate(new Date('2024-07-10')),
-    approvedById: 'user-2',
-    activatedAt: Timestamp.fromDate(new Date('2024-07-15')),
-    activatedById: 'user-4',
+    status: 'pending_approval',
     leadId: 'user-4',
     memberIds: ['user-4', 'user-5'],
     newItemRequestIds: ['new-req-1'],
@@ -31,6 +30,7 @@ const projects = [
     id: 'proj-2',
     title: 'The Crawler King - RC Rock Crawler',
     description: 'A custom-built RC rock crawler for extreme terrain.',
+    type: 'other',
     createdById: 'user-3',
     status: 'completed',
     approvedAt: Timestamp.fromDate(new Date('2024-05-01')),
@@ -47,13 +47,12 @@ const projects = [
   },
   {
     id: 'proj-3',
-    title: 'Sea Serpent - RC Boat',
-    description: 'Designing a fast and agile RC boat for lake races.',
-    createdById: 'user-1',
-    status: 'approved',
-    approvedAt: Timestamp.fromDate(new Date('2024-07-25')),
-    approvedById: 'user-2',
-    leadId: 'user-1',
+    title: 'Stealth Wing - Glider Project',
+    description: 'Designing a fast and agile RC plane for lake races.',
+    type: 'plane',
+    createdById: 'user-5',
+    status: 'pending_approval',
+    leadId: 'user-5',
     memberIds: ['user-1', 'user-5'],
     newItemRequestIds: [],
     inventoryUsedIds: ['req-2'],
@@ -61,12 +60,15 @@ const projects = [
   },
   {
     id: 'proj-4',
-    title: 'Stealth Wing - Glider Project',
+    title: 'Sea Serpent - RC Boat',
     description: 'A new project waiting for the green light.',
-    createdById: 'user-5',
-    status: 'pending_approval',
-    leadId: 'user-5',
-    memberIds: ['user-5'],
+    type: 'other',
+    createdById: 'user-1',
+    status: 'approved',
+    approvedAt: Timestamp.fromDate(new Date('2024-07-25')),
+    approvedById: 'user-2',
+    leadId: 'user-1',
+    memberIds: ['user-1', 'user-2'],
     newItemRequestIds: [],
     inventoryUsedIds: [],
     hasPendingReturns: false,
@@ -86,8 +88,8 @@ const inventoryItems = [
 ];
 
 const inventoryRequests = [
-    { id: 'req-1', projectId: 'proj-1', requestedById: 'user-5', itemId: 'inv-1', quantity: 1, reason: 'Need for flight testing.', status: 'fulfilled', fulfilledAt: Timestamp.fromDate(new Date('2024-07-28')), isOverdue: false },
-    { id: 'req-2', projectId: 'proj-3', requestedById: 'user-1', itemId: 'inv-4', quantity: 1, reason: 'For initial boat camera setup.', status: 'pending', isOverdue: false },
+    { id: 'req-1', projectId: 'proj-1', requestedById: 'user-4', itemId: 'inv-2', quantity: 2, reason: 'Need for motor testing.', status: 'pending', isOverdue: false },
+    { id: 'req-2', projectId: 'proj-3', requestedById: 'user-5', itemId: 'inv-4', quantity: 1, reason: 'For initial boat camera setup.', status: 'pending', isOverdue: false },
 ];
 
 const newItemRequests = [

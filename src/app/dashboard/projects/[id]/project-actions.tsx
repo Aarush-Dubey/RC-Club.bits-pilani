@@ -50,9 +50,25 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
   const onComplete = () => handleAction(() => completeProject(project.id), "Project Completed", "The project has been marked as completed.", "Failed to Complete Project");
   const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
 
-  const isAdmin = currentUserRole === 'coordinator' || currentUserRole === 'admin';
+  const canApprove = () => {
+    if (!project || project.status !== 'pending_approval') return false;
 
-  if (project.status === 'pending_approval' && isAdmin) {
+    const role = currentUserRole;
+    if (role === 'admin' || role === 'coordinator') {
+      return true;
+    }
+    if (role === 'drone_lead' && project.type === 'drone') {
+      return true;
+    }
+    if (role === 'plane_lead' && project.type === 'plane') {
+      return true;
+    }
+    return false;
+  };
+
+  const canManage = ['admin', 'coordinator'].includes(currentUserRole);
+
+  if (canApprove()) {
     return (
       <div className="flex gap-2">
         <AlertDialog>
@@ -100,6 +116,7 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
     );
   }
 
+  // Other actions for project lifecycle
   return (
     <div className="flex gap-2">
         {project.status === 'approved' && (
@@ -117,7 +134,7 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
             </Button>
           </>
         )}
-        {project.status === 'completed' && isAdmin && (
+        {project.status === 'completed' && canManage && (
             <Button onClick={onClose} disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}
                 Close Project

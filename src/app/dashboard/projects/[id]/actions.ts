@@ -1,6 +1,7 @@
 
 "use server"
 
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
 import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, serverTimestamp, updateDoc } from "firebase/firestore";
 
@@ -73,6 +74,8 @@ export async function approveProject(projectId: string) {
         console.error("Transaction failed: ", error);
         throw new Error(`Failed to approve project: ${(error as Error).message}`);
     }
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
 }
 
 
@@ -97,6 +100,8 @@ export async function rejectProject(projectId: string) {
         console.error("Transaction failed: ", e);
         throw new Error(`Failed to reject project: ${(e as Error).message}`);
     }
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
 }
 
 export async function startProject(projectId: string) {
@@ -107,6 +112,8 @@ export async function startProject(projectId: string) {
         // In a real app, this should be the current user's ID
         activatedById: 'system-lead'
     });
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
 }
 
 export async function completeProject(projectId: string) {
@@ -117,6 +124,8 @@ export async function completeProject(projectId: string) {
         // In a real app, this should be the current user's ID
         completedById: 'system-lead'
     });
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
 }
 
 export async function closeProject(projectId: string) {
@@ -127,4 +136,6 @@ export async function closeProject(projectId: string) {
         // In a real app, this should be the current user's ID
         closedById: 'system-admin'
     });
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
 }
