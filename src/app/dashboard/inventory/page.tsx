@@ -1,16 +1,17 @@
-import { PlusCircle } from "lucide-react"
-import { collection, getDocs } from "firebase/firestore"
+
+"use client"
+
+import { useState, useEffect } from "react"
+import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { PlusCircle, Check, X, Loader2 } from "lucide-react"
+
+import { useAuth, type AppUser } from "@/context/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { approveInventoryRequest, rejectInventoryRequest } from "./actions"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -32,7 +33,6 @@ const getStatusVariant = (status: string) => {
         case 'On Loan': return 'secondary'
         case 'Overdue': return 'destructive'
         case 'pending': return 'secondary'
-        case 'approved': return 'default'
         case 'fulfilled': return 'default'
         case 'rejected': return 'destructive'
         default: return 'outline'
@@ -43,17 +43,78 @@ async function getData() {
     const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
     const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const inventoryRequestsSnapshot = await getDocs(collection(db, "inventory_requests"));
+    const requestsQuery = query(collection(db, "inventory_requests"), orderBy("createdAt", "desc"));
+    const inventoryRequestsSnapshot = await getDocs(requestsQuery);
     const inventoryRequests = inventoryRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
     const usersSnapshot = await getDocs(collection(db, "users"));
     const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    return { inventory, inventoryRequests, users };
+    const projectsSnapshot = await getDocs(collection(db, "projects"));
+    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+
+    return { inventory, inventoryRequests, users, projects };
 }
 
-export default async function InventoryPage() {
-  const { inventory, inventoryRequests, users } = await getData();
+function RequestActions({ request, canApprove }: { request: any, canApprove: boolean }) {
+    const { user: currentUser } = useAuth();
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState<"approve" | "reject" | null>(null);
+
+    const handleAction = async (action: () => Promise<void>, type: 'approve' | 'reject') => {
+        if (!currentUser) return;
+        setIsLoading(type);
+        try {
+            await action();
+            toast({
+                title: `Request ${type === 'approve' ? 'Approved' : 'Rejected'}`,
+                description: "The inventory status has been updated.",
+            });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
+        } finally {
+            setIsLoading(null);
+        }
+    };
+
+    const onApprove = () => handleAction(() => approveInventoryRequest(request.id, currentUser!.uid), 'approve');
+    const onReject = () => handleAction(() => rejectInventoryRequest(request.id, currentUser!.uid), 'reject');
+
+    if (!canApprove || request.status !== 'pending') {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            <Button size="icon" variant="outline" onClick={onApprove} disabled={!!isLoading}>
+                {isLoading === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </Button>
+            <Button size="icon" variant="destructive" onClick={onReject} disabled={!!isLoading}>
+                {isLoading === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+            </Button>
+        </div>
+    );
+}
+
+
+export default function InventoryPage() {
+    const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
+    const [loading, setLoading] = useState(true);
+    const { user: currentUser } = useAuth();
+    
+    const fetchData = async () => {
+        setLoading(true);
+        const fetchedData = await getData();
+        setData(fetchedData);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const canApprove = currentUser?.permissions?.canApproveInventory;
 
   return (
     <div className="space-y-8">
@@ -64,15 +125,15 @@ export default async function InventoryPage() {
             Manage equipment, track loans, and approve requests.
           </p>
         </div>
-        <Button>
+        <Button disabled>
           <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
         </Button>
       </div>
 
       <Tabs defaultValue="all">
-        <TabsList className="border-b rounded-none p-0 bg-transparent">
-          <TabsTrigger value="all" className="rounded-none data-[state=active]:border-b-2 border-primary data-[state=active]:shadow-none">All Items</TabsTrigger>
-          <TabsTrigger value="requests" className="rounded-none data-[state=active]:border-b-2 border-primary data-[state=active]:shadow-none">Requests</TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="all">All Items</TabsTrigger>
+          <TabsTrigger value="requests">Requests</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="mt-6">
             <Table>
@@ -86,7 +147,7 @@ export default async function InventoryPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {inventory.map((item: any) => {
+                    {data.inventory.map((item: any) => {
                     return (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
@@ -94,7 +155,7 @@ export default async function InventoryPage() {
                             <TableCell>{item.availableQuantity}</TableCell>
                             <TableCell>{item.checkedOutQuantity}</TableCell>
                             <TableCell className="text-right">
-                                <Button variant="outline" size="sm" disabled={item.availableQuantity === 0}>Request</Button>
+                                <Button variant="outline" size="sm" disabled>Request</Button>
                             </TableCell>
                         </TableRow>
                     )
@@ -106,27 +167,32 @@ export default async function InventoryPage() {
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead>Item</TableHead>
+                <TableHead>Request Details</TableHead>
                 <TableHead>Requested By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {canApprove && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {inventoryRequests.map((req: any) => {
-                    const item = inventory.find((i: any) => i.id === req.itemId)
-                    const user = users.find((u: any) => u.id === req.requestedById)
+                {data.inventoryRequests.map((req: any) => {
+                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                    const user = data.users.find((u: any) => u.id === req.requestedById);
+                    const project = data.projects.find((p: any) => p.id === req.projectId);
                     return (
                         <TableRow key={req.id}>
-                            <TableCell className="font-medium">{item?.name}</TableCell>
+                            <TableCell>
+                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                <div className="text-sm text-muted-foreground">For: {project?.title || 'N/A'}</div>
+                            </TableCell>
                             <TableCell>{user?.name}</TableCell>
                             <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
-                            <TableCell className="text-right space-x-2">
-                                <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
-                                <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
-                            </TableCell>
+                            {canApprove && (
+                                <TableCell className="text-right space-x-2">
+                                    <RequestActions request={req} canApprove={!!canApprove} />
+                                </TableCell>
+                            )}
                         </TableRow>
                     )
                 })}

@@ -12,12 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut, Flag } from "lucide-react";
+import { Loader2, UserPlus, LogOut, Flag, ShoppingCart } from "lucide-react";
 import { joinProject, leaveProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RequestInventoryForm } from "./request-inventory-form";
 
 
 function getStatusBadge(status: string) {
@@ -43,6 +45,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const { user: currentUser, loading: authLoading } = useAuth();
     const [isJoining, setIsJoining] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
+    const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
 
@@ -124,161 +127,187 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
             setIsLeaving(false);
         }
     };
+    
+    const handleRequestSubmit = () => {
+        router.refresh();
+        setIsRequestFormOpen(false);
+    }
 
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-3xl font-bold tracking-tight font-headline">{project.title}</h2>
-                        {getStatusBadge(project.status)}
+        <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
+            <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-3xl font-bold tracking-tight font-headline">{project.title}</h2>
+                            {getStatusBadge(project.status)}
+                        </div>
+                        <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                     </div>
-                    <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isMember ? (
-                        <>
-                           <ProjectActions project={project as any} currentUser={currentUser} onUpdate={() => router.refresh()}/>
-                           {!isLead && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" disabled={isLeaving}>
-                                            {isLeaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                                            Leave Team
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                You will be removed from the project team. This action can be reversed by joining the team again.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleLeave}>Confirm</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                           )}
-                        </>
-                    ) : (
-                        <Button onClick={handleJoin} disabled={isJoining}>
-                            {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                            Join Team
-                        </Button>
-                    )}
-                </div>
-            </div>
+                    <div className="flex items-center gap-2">
+                        {isMember ? (
+                            <>
+                               <ProjectActions project={project as any} currentUser={currentUser} onUpdate={() => router.refresh()}/>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Project Updates</CardTitle>
-                            <CardDescription>A timeline of progress and milestones.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {updates?.length > 0 ? (
-                                <div className="space-y-6">
-                                    {updates.map((update: any) => {
-                                        const author = members.find((m: AppUser) => m.uid === update.postedById);
-                                        return (
-                                            <div key={update.id} className="flex gap-4">
-                                                <Avatar>
-                                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
-                                                    <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="flex items-baseline justify-between">
-                                                        <p className="font-semibold">{author?.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                                                        </p>
+                               {project.status === 'active' && (
+                                   <DialogTrigger asChild>
+                                        <Button variant="outline"><ShoppingCart className="mr-2"/>Request Inventory</Button>
+                                   </DialogTrigger>
+                               )}
+
+                               {!isLead && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" disabled={isLeaving}>
+                                                {isLeaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                                                Leave Team
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    You will be removed from the project team. This action can be reversed by joining the team again.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleLeave}>Confirm</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                               )}
+                            </>
+                        ) : (
+                            <Button onClick={handleJoin} disabled={isJoining}>
+                                {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                Join Team
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Project Updates</CardTitle>
+                                <CardDescription>A timeline of progress and milestones.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {updates?.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {updates.map((update: any) => {
+                                            const author = members.find((m: AppUser) => m.uid === update.postedById);
+                                            return (
+                                                <div key={update.id} className="flex gap-4">
+                                                    <Avatar>
+                                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
+                                                        <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="flex items-baseline justify-between">
+                                                            <p className="font-semibold">{author?.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                                                            </p>
+                                                        </div>
+                                                        {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
+                                                        {update.imageUrls && update.imageUrls.length > 0 && (
+                                                            <Carousel className="w-full mt-2">
+                                                                <CarouselContent>
+                                                                    {update.imageUrls.map((url: string, index: number) => (
+                                                                        <CarouselItem key={index}>
+                                                                            <div className="relative aspect-video">
+                                                                                <Image src={url} alt={`Project update image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border"/>
+                                                                            </div>
+                                                                        </CarouselItem>
+                                                                    ))}
+                                                                </CarouselContent>
+                                                                {update.imageUrls.length > 1 && <>
+                                                                    <CarouselPrevious className="left-2" />
+                                                                    <CarouselNext className="right-2" />
+                                                                </>}
+                                                            </Carousel>
+                                                        )}
                                                     </div>
-                                                    {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
-                                                    {update.imageUrls && update.imageUrls.length > 0 && (
-                                                        <Carousel className="w-full mt-2">
-                                                            <CarouselContent>
-                                                                {update.imageUrls.map((url: string, index: number) => (
-                                                                    <CarouselItem key={index}>
-                                                                        <div className="relative aspect-video">
-                                                                            <Image src={url} alt={`Project update image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border"/>
-                                                                        </div>
-                                                                    </CarouselItem>
-                                                                ))}
-                                                            </CarouselContent>
-                                                            {update.imageUrls.length > 1 && <>
-                                                                <CarouselPrevious className="left-2" />
-                                                                <CarouselNext className="right-2" />
-                                                            </>}
-                                                        </Carousel>
-                                                    )}
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-center text-muted-foreground py-8">
-                                    <Flag className="mx-auto h-8 w-8 mb-2" />
-                                    <p>No updates have been posted for this project yet.</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader><CardTitle>Requested Inventory</CardTitle></CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Item</TableHead>
-                                        <TableHead>Quantity</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {inventoryRequests.length === 0 ? (
-                                        <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No inventory requested.</TableCell></TableRow>
-                                    ) : inventoryRequests.map((req: any) => {
-                                        const item = inventoryItems.find((i: any) => i.id === req.itemId);
-                                        return (
-                                            <TableRow key={req.id}>
-                                                <TableCell>{item?.name || 'Unknown Item'}</TableCell>
-                                                <TableCell>{req.quantity}</TableCell>
-                                                <TableCell><Badge variant={req.status === 'pending' ? 'secondary' : 'default'}>{req.status}</Badge></TableCell>
-                                            </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
-                
-                <div className="space-y-8">
-                    <Card>
-                        <CardHeader><CardTitle>Team</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            {members.map((member: any) => (
-                                <div key={member.id} className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
-                                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-semibold">{member.name}</p>
-                                        <p className="text-sm text-muted-foreground">{member.id === project.leadId ? 'Project Lead' : 'Member'}</p>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
+                                ) : (
+                                    <div className="text-center text-muted-foreground py-8">
+                                        <Flag className="mx-auto h-8 w-8 mb-2" />
+                                        <p>No updates have been posted for this project yet.</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader><CardTitle>Requested Inventory</CardTitle></CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Item</TableHead>
+                                            <TableHead>Quantity</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {inventoryRequests.length === 0 ? (
+                                            <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No inventory requested.</TableCell></TableRow>
+                                        ) : inventoryRequests.map((req: any) => {
+                                            const item = inventoryItems.find((i: any) => i.id === req.itemId);
+                                            return (
+                                                <TableRow key={req.id}>
+                                                    <TableCell>{item?.name || 'Unknown Item'}</TableCell>
+                                                    <TableCell>{req.quantity}</TableCell>
+                                                    <TableCell><Badge variant={req.status === 'pending' ? 'secondary' : req.status === 'fulfilled' ? 'default' : 'destructive'}>{req.status}</Badge></TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    
+                    <div className="space-y-8">
+                        <Card>
+                            <CardHeader><CardTitle>Team</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                {members.map((member: any) => (
+                                    <div key={member.id} className="flex items-center gap-4">
+                                        <Avatar>
+                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
+                                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-semibold">{member.name}</p>
+                                            <p className="text-sm text-muted-foreground">{member.id === project.leadId ? 'Project Lead' : 'Member'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
-        </div>
+             <DialogContent>
+                <DialogHeader>
+                <DialogTitle>Request Additional Inventory</DialogTitle>
+                <DialogDescription>Select the items and quantities needed for your project.</DialogDescription>
+                </DialogHeader>
+                <RequestInventoryForm 
+                    project={project}
+                    inventory={inventoryItems}
+                    currentUser={currentUser}
+                    onFormSubmit={handleRequestSubmit}
+                />
+            </DialogContent>
+        </Dialog>
     );
 }

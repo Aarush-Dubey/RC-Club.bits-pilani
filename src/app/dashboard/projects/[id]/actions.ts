@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc, writeBatch } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -42,7 +42,7 @@ export async function approveProject(projectId: string) {
                 const requestData = requestDoc.data();
                 const itemDoc = itemDocs[requestData.itemId];
 
-                if (!itemDoc.exists()) {
+                if (!itemDoc || !itemDoc.exists()) {
                     throw new Error(`Inventory item ${requestData.itemId} not found.`);
                 }
                 const itemData = itemDoc.data();
@@ -248,4 +248,51 @@ export async function addProjectUpdate({ projectId, text, imageUrls, userId }: {
     }
 
     revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+export async function addInventoryRequest({
+  projectId,
+  projectTitle,
+  userId,
+  requests,
+}: {
+  projectId: string;
+  projectTitle: string;
+  userId: string;
+  requests: { itemId: string; quantity: number }[];
+}) {
+  if (!userId) {
+    throw new Error("User is not authenticated.");
+  }
+  if (requests.length === 0) {
+    throw new Error("No inventory items were requested.");
+  }
+
+  try {
+    const batch = writeBatch(db);
+    const reason = `Additional request for project: ${projectTitle}`;
+
+    for (const req of requests) {
+      const requestRef = doc(collection(db, "inventory_requests"));
+      batch.set(requestRef, {
+        id: requestRef.id,
+        projectId: projectId,
+        requestedById: userId,
+        itemId: req.itemId,
+        quantity: req.quantity,
+        reason,
+        status: "pending",
+        isOverdue: false,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  } catch (error) {
+    console.error("Failed to create inventory request:", error);
+    throw new Error(`Failed to submit request: ${(error as Error).message}`);
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  revalidatePath("/dashboard/inventory");
 }

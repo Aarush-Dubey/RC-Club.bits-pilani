@@ -46,20 +46,14 @@ async function getProjectData(projectId: string) {
         members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
     }
     
-    const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
+    const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), orderBy("createdAt", "desc"));
     const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
     const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
     const inventoryItems = [];
-    if(inventoryRequests.length > 0) {
-        const itemIds = [...new Set(inventoryRequests.map(req => req.itemId).filter(id => id))];
-        if (itemIds.length > 0) {
-            // Firestore 'in' queries are limited to 30 items. For more, chunking would be needed.
-            const inventoryItemsQuery = query(collection(db, "inventory_items"), where("id", "in", itemIds.slice(0, 30)));
-            const inventoryItemsSnap = await getDocs(inventoryItemsQuery);
-            inventoryItems.push(...inventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })));
-        }
-    }
+    // To show all items in request form, we fetch all, not just requested ones.
+    const allInventoryItemsSnap = await getDocs(collection(db, "inventory_items"));
+    inventoryItems.push(...allInventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })));
     
     // Fetch project updates
     const updatesQuery = query(collection(db, "projects", projectId, "updates"), orderBy("createdAt", "desc"));
