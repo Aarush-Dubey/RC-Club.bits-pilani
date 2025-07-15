@@ -39,7 +39,7 @@ import { enhanceJustification } from "@/ai/flows/enhance-justification"
 const getStatusConfig = (status: string) => {
     switch (status) {
         case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' }
-        case 'fulfilled': return { color: 'bg-blue-500', tooltip: 'Fulfilled' }
+        case 'fulfilled': return { color: 'bg-blue-500', tooltip: 'In Possession' }
         case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' }
         case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' }
         case 'returned': return { color: 'bg-green-500', tooltip: 'Returned' }
@@ -435,8 +435,7 @@ export default function InventoryPage() {
                                                     <TableHead>Item Details</TableHead>
                                                     <TableHead>Checked Out To</TableHead>
                                                     <TableHead>Project</TableHead>
-                                                    <TableHead>Status</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
+                                                    <TableHead className="text-right">Status</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -452,9 +451,8 @@ export default function InventoryPage() {
                                                             </TableCell>
                                                             <TableCell>{user?.name || 'N/A'}</TableCell>
                                                             <TableCell>{project?.title || 'Personal Use'}</TableCell>
-                                                            <TableCell><StatusCircle status={req.status} /></TableCell>
                                                             <TableCell className="text-right">
-                                                                <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
+                                                                <StatusCircle status={req.status} />
                                                             </TableCell>
                                                         </TableRow>
                                                     );
