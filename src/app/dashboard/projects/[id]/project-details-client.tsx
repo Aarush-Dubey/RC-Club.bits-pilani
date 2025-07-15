@@ -37,8 +37,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function ProjectDetailsClient({ initialData }: { initialData: any }) {
-    const { user: currentUser, loading: authLoading } = useAuth(); 
-    const [data] = useState(initialData);
+    const { user: currentUser, loading: authLoading } = useAuth();
     const [isJoining, setIsJoining] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
     const { toast } = useToast();
@@ -76,11 +75,11 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         )
     }
 
-    if (!data) {
+    if (!initialData) {
         return null;
     }
 
-    const { project, members, inventoryRequests, inventoryItems } = data;
+    const { project, members, inventoryRequests, inventoryItems } = initialData;
     
     const isMember = currentUser && project.memberIds.includes(currentUser.uid);
     const isLead = currentUser && currentUser.uid === project.leadId;
