@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import Image from "next/image"
 import { PlusCircle, MoreVertical } from "lucide-react"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
@@ -164,15 +165,17 @@ export default function ProjectsPage() {
 
           return (
             <div key={project.id} className="group">
+              <Link href={`/dashboard/projects/${project.id}`}>
                 <div className="relative w-full h-48 mb-4">
-                  <Image
-                    src={`https://placehold.co/600x400.png`}
-                    alt={project.title}
-                    fill
-                    className="object-cover"
-                    data-ai-hint="rc project"
-                  />
+                    <Image
+                      src={`https://placehold.co/600x400.png`}
+                      alt={project.title}
+                      fill
+                      className="object-cover"
+                      data-ai-hint="rc project"
+                    />
                 </div>
+              </Link>
                 {getStatusBadge(project.status)}
                 <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
                 <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{project.description}</p>
