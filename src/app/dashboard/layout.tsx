@@ -1,7 +1,9 @@
+
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   BarChart,
   HandCoins,
@@ -12,8 +14,10 @@ import {
   Truck,
 } from "lucide-react"
 
+import { useAuth } from "@/context/auth-context"
 import { cn } from "@/lib/utils"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +44,37 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login")
+    }
+  }, [user, loading, router])
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen w-full">
+        <div className="hidden w-64 flex-col border-r bg-sidebar p-4 md:flex">
+          <Skeleton className="h-8 w-3/4" />
+          <div className="mt-8 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+        <div className="flex-1">
+          <header className="flex h-16 items-center justify-end border-b px-6">
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </header>
+          <main className="p-8">
+            <Skeleton className="h-64 w-full" />
+          </main>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -73,9 +108,7 @@ export default function DashboardLayout({
       <SidebarInset>
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto max-w-4xl py-8">
-            {children}
-          </div>
+          <div className="container mx-auto max-w-4xl py-8">{children}</div>
         </main>
       </SidebarInset>
     </SidebarProvider>
