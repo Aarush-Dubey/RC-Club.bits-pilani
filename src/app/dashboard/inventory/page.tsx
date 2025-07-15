@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History } from "lucide-react"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -261,7 +261,7 @@ function RequestActions({ request, canApprove, onActionComplete }: { request: an
     );
 }
 
-function ReturnActions({ request, canConfirm }: { request: any, canConfirm: boolean }) {
+function ReturnActions({ request, canConfirm, onActionComplete }: { request: any, canConfirm: boolean, onActionComplete: () => void }) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -275,6 +275,7 @@ function ReturnActions({ request, canConfirm }: { request: any, canConfirm: bool
                 title: `Return Confirmed`,
                 description: "The inventory has been updated.",
             });
+            onActionComplete();
         } catch (error) {
             toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
         } finally {
@@ -344,7 +345,7 @@ export default function InventoryPage() {
                 {canManageInventory && (
                     <>
                         <TabsTrigger value="requests">Requests</TabsTrigger>
-                        <TabsTrigger value="returns">Returns</TabsTrigger>
+                        <TabsTrigger value="manage">Manage</TabsTrigger>
                     </>
                 )}
             </TabsList>
@@ -415,38 +416,84 @@ export default function InventoryPage() {
                         </TableBody>
                         </Table>
                     </TabsContent>
-                    <TabsContent value="returns" className="mt-6">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Item Details</TableHead>
-                            <TableHead>Project</TableHead>
-                            <TableHead>Returned By</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.inventoryRequests.filter((r:any) => ['pending_return', 'returned'].includes(r.status)).map((req: any) => {
-                                const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                const user = data.users.find((u: any) => u.id === req.requestedById);
-                                const project = data.projects.find((p: any) => p.id === req.projectId);
-                                return (
-                                    <TableRow key={req.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                        </TableCell>
-                                        <TableCell>{project?.title || 'N/A'}</TableCell>
-                                        <TableCell>{user?.name}</TableCell>
-                                        <TableCell><StatusCircle status={req.status} /></TableCell>
-                                        <TableCell className="text-right space-x-2">
-                                            <ReturnActions request={req} canConfirm={!!canManageInventory} />
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                        </Table>
+                    <TabsContent value="manage" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Manage Inventory</CardTitle>
+                                <CardDescription>View currently checked-out items and see a log of all activities.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Tabs defaultValue="checkouts">
+                                    <TabsList>
+                                        <TabsTrigger value="checkouts"><SlidersHorizontal className="mr-2 h-4 w-4" />Current Checkouts</TabsTrigger>
+                                        <TabsTrigger value="logs"><History className="mr-2 h-4 w-4" />Activity Log</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="checkouts" className="mt-4">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Item Details</TableHead>
+                                                    <TableHead>Checked Out To</TableHead>
+                                                    <TableHead>Project</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {data.inventoryRequests.filter((r: any) => ['fulfilled', 'pending_return'].includes(r.status)).map((req: any) => {
+                                                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                                    const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+                                                    const project = data.projects.find((p: any) => p.id === req.projectId);
+                                                    return (
+                                                        <TableRow key={req.id}>
+                                                            <TableCell>
+                                                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                                                <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
+                                                            </TableCell>
+                                                            <TableCell>{user?.name || 'N/A'}</TableCell>
+                                                            <TableCell>{project?.title || 'Personal Use'}</TableCell>
+                                                            <TableCell><StatusCircle status={req.status} /></TableCell>
+                                                            <TableCell className="text-right">
+                                                                <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TabsContent>
+                                    <TabsContent value="logs" className="mt-4">
+                                         <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {data.inventoryRequests.map((req: any) => {
+                                                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                                    const user = data.users.find((u: any) => u.id === req.requestedById);
+                                                    return (
+                                                        <TableRow key={req.id}>
+                                                            <TableCell>
+                                                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                                                <div className="text-sm text-muted-foreground">{req.reason || `For Project: ${data.projects.find((p:any) => p.id === req.projectId)?.title}`}</div>
+                                                            </TableCell>
+                                                            <TableCell>{user?.name}</TableCell>
+                                                            <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
+                                                            <TableCell><StatusCircle status={req.status} /></TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </>
             )}
