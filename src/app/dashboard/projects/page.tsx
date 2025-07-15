@@ -4,27 +4,14 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { PlusCircle, MoreVertical } from "lucide-react"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { PlusCircle } from "lucide-react"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { useAuth } from "@/context/auth-context"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -34,7 +21,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { NewProjectForm } from "./new-project-form"
-import { cn } from "@/lib/utils"
+import { Separator } from "@/components/ui/separator"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export type Project = {
   id: string
@@ -78,10 +67,29 @@ function getStatusBadge(status: string) {
   }
 }
 
-async function getData() {
-    const projectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"));
-    const projectsSnapshot = await getDocs(projectsQuery);
-    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+async function getData(currentUser: any) {
+    if (!currentUser) return { myProjects: [], approvalRequests: [], users: [], inventory: [] };
+    
+    // My Projects Query
+    const myProjectsQuery = query(
+        collection(db, "projects"), 
+        where("memberIds", "array-contains", currentUser.uid), 
+        orderBy("createdAt", "desc")
+    );
+    const myProjectsSnapshot = await getDocs(myProjectsQuery);
+    const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+
+    // Approval Requests Query
+    let approvalRequests: Project[] = [];
+    if (currentUser.permissions?.canApproveProjects) {
+        const approvalRequestsQuery = query(
+            collection(db, "projects"), 
+            where("status", "==", "pending_approval"), 
+            orderBy("createdAt", "desc")
+        );
+        const approvalRequestsSnapshot = await getDocs(approvalRequestsQuery);
+        approvalRequests = approvalRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+    }
 
     const usersSnapshot = await getDocs(collection(db, "users"));
     const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
@@ -89,20 +97,80 @@ async function getData() {
     const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
     const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
 
-    return { projects, users, inventory };
+    return { myProjects, approvalRequests, users, inventory };
 }
 
+const ProjectCard = ({ project, users }: { project: Project; users: User[] }) => {
+  const projectLead = users.find((u: any) => u.id === project.leadId)
+  
+  return (
+      <div key={project.id} className="group">
+        <Link href={`/dashboard/projects/${project.id}`}>
+          <div className="relative w-full h-48 mb-4 overflow-hidden rounded-md">
+              <Image
+                src={`https://placehold.co/600x400.png`}
+                alt={project.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="rc project"
+              />
+          </div>
+        </Link>
+          {getStatusBadge(project.status)}
+          <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
+          <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{project.description}</p>
+          <div className="flex items-center gap-4 mt-4">
+               <div className="flex -space-x-2">
+                  {project.memberIds.map((memberId: string) => {
+                      const member: any = users.find((u: any) => u.id === memberId)
+                      return (
+                      <Avatar key={memberId} className="border-2 border-card h-8 w-8">
+                          <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
+                          <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      )
+                  })}
+              </div>
+              {projectLead && (
+              <div className="text-sm">
+                  <span className="font-semibold">{projectLead.name}</span>
+                  <span className="text-muted-foreground">, Lead</span>
+              </div>
+              )}
+          </div>
+      </div>
+  )
+}
+
+const ProjectListSkeleton = () => (
+  <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+    {[...Array(3)].map((_, i) => (
+      <div key={i}>
+        <Skeleton className="h-48 w-full mb-4" />
+        <Skeleton className="h-5 w-1/4 mb-2" />
+        <Skeleton className="h-6 w-3/4 mb-2" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    ))}
+  </div>
+);
+
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
+  const [myProjects, setMyProjects] = useState<Project[]>([])
+  const [approvalRequests, setApprovalRequests] = useState<Project[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [loading, setLoading] = useState(true);
+  const { user: currentUser } = useAuth();
 
   const fetchData = async () => {
+    if (!currentUser) return;
     setLoading(true);
-    const { projects, users, inventory } = await getData();
-    setProjects(projects);
+    const { myProjects, approvalRequests, users, inventory } = await getData(currentUser);
+    setMyProjects(myProjects);
+    setApprovalRequests(approvalRequests);
     setUsers(users);
     setInventory(inventory);
     setLoading(false);
@@ -110,28 +178,11 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentUser]);
   
   const handleFormSubmit = () => {
     fetchData();
     setIsFormOpen(false);
-  }
-
-  const currentUser = { role: 'coordinator' };
-
-  const getAvailableActions = (status: Project['status']) => {
-    const actions: string[] = [];
-    if (currentUser.role === 'coordinator' || currentUser.role === 'core') {
-      if (status === 'pending_approval') actions.push('Approve', 'Reject');
-    }
-    if (status === 'approved') actions.push('Start Project');
-    if (status === 'active') actions.push('Post Update');
-    if (status === 'completed') {
-       if (currentUser.role === 'admin' || currentUser.role === 'core') actions.push('Close Project');
-    } else {
-       if (status !== 'closed') actions.push('Mark as Completed');
-    }
-    return actions;
   }
   
   return (
@@ -158,50 +209,55 @@ export default function ProjectsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project: any) => {
-          const projectLead = users.find((u: any) => u.id === project.leadId)
-          const actions = getAvailableActions(project.status);
 
-          return (
-            <div key={project.id} className="group">
-              <Link href={`/dashboard/projects/${project.id}`}>
-                <div className="relative w-full h-48 mb-4">
-                    <Image
-                      src={`https://placehold.co/600x400.png`}
-                      alt={project.title}
-                      fill
-                      className="object-cover"
-                      data-ai-hint="rc project"
-                    />
+      {loading ? (
+        <ProjectListSkeleton />
+      ) : (
+        <>
+          {currentUser?.permissions?.canApproveProjects && approvalRequests.length > 0 && (
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-2xl font-headline font-semibold">Approval Requests</h3>
+                    <p className="text-muted-foreground">Projects waiting for your review.</p>
                 </div>
-              </Link>
-                {getStatusBadge(project.status)}
-                <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
-                <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{project.description}</p>
-                <div className="flex items-center gap-4 mt-4">
-                     <div className="flex -space-x-2">
-                        {project.memberIds.map((memberId: string) => {
-                            const member: any = users.find((u: any) => u.id === memberId)
-                            return (
-                            <Avatar key={memberId} className="border-2 border-card h-8 w-8">
-                                <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
-                                <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            )
-                        })}
-                    </div>
-                    {projectLead && (
-                    <div className="text-sm">
-                        <span className="font-semibold">{projectLead.name}</span>
-                        <span className="text-muted-foreground">, Lead</span>
-                    </div>
-                    )}
+                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                    {approvalRequests.map((project) => (
+                        <ProjectCard key={project.id} project={project} users={users} />
+                    ))}
                 </div>
+              <Separator className="my-12" />
             </div>
-          )
-        })}
-      </div>
+          )}
+
+          <div className="space-y-6">
+             <div>
+                <h3 className="text-2xl font-headline font-semibold">My Projects</h3>
+                <p className="text-muted-foreground">Projects you are a member of.</p>
+             </div>
+              {myProjects.length > 0 ? (
+                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                  {myProjects.map((project) => (
+                    <ProjectCard key={project.id} project={project} users={users} />
+                  ))}
+                </div>
+              ) : (
+                <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+                  <CardHeader>
+                    <CardTitle>No Projects Yet</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
+                     <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
+                        </Button>
+                      </DialogTrigger>
+                  </CardContent>
+                </Card>
+              )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
