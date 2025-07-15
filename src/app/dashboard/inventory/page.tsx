@@ -1,11 +1,10 @@
 
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
@@ -40,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { enhanceJustification } from "@/ai/flows/enhance-justification"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -316,7 +316,7 @@ function RequestRow({ request, item, user, project, onActionComplete }: { reques
                             <h4 className="font-semibold">Status</h4>
                              <div className="flex items-center gap-2">
                                 <StatusCircle status={request.status} />
-                                <span className="font-medium capitalize">{request.status}</span>
+                                <span className="font-medium capitalize">{request.status.replace(/_/g, " ")}</span>
                             </div>
                         </div>
                     </div>
@@ -549,9 +549,254 @@ function ActivityLogItemRow({ request, item, user, project, approver, returner }
     )
 }
 
+function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser: AppUser | null, fetchData: () => void }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Available Inventory</CardTitle>
+                <CardDescription>Click on an item to view details and request it.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-right">Available</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {data.inventory.length > 0 ? data.inventory.map((item: any) => (
+                            <InventoryItemRow key={item.id} item={item} currentUser={currentUser} onFormSubmit={fetchData} />
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={2} className="h-24 text-center">
+                                    No inventory items found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    )
+}
+
+function RequestsView({ data, fetchData }: { data: any, fetchData: () => void }) {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pending Requests</CardTitle>
+                    <CardDescription>Tap a request to view details and take action.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {data.inventoryRequests.filter((r:any) => r.status === 'pending').length > 0 ? (
+                        data.inventoryRequests.filter((r:any) => r.status === 'pending').map((req: any) => {
+                            const item = data.inventory.find((i: any) => i.id === req.itemId);
+                            const user = data.users.find((u: any) => u.id === req.requestedById);
+                            const project = data.projects.find((p: any) => p.id === req.projectId);
+                            return (
+                                <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
+                            )
+                        })
+                    ) : (
+                        <div className="p-4 text-center text-muted-foreground">No pending requests.</div>
+                    )}
+                </CardContent>
+            </Card>
+        )
+    }
+
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Request Details</TableHead>
+                <TableHead>Requested By</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
+                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                    const user = data.users.find((u: any) => u.id === req.requestedById);
+                    const project = data.projects.find((p: any) => p.id === req.projectId);
+                    return (
+                        <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
+                    )
+                })}
+            </TableBody>
+        </Table>
+    )
+}
+
+function ManageView({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) {
+    const isMobile = useIsMobile();
+    const [activeManageTab, setActiveManageTab] = useState("checkouts");
+
+    const manageTabs = [
+        { value: "checkouts", label: "Current Checkouts", icon: SlidersHorizontal },
+        { value: "logs", label: "Activity Log", icon: History },
+        { value: "stock", label: "All Items", icon: Box },
+    ];
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Manage Inventory</CardTitle>
+                <CardDescription>View currently checked-out items and see a log of all activities.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isMobile ? (
+                    <div className="space-y-4">
+                        <Select value={activeManageTab} onValueChange={setActiveManageTab}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {manageTabs.map(tab => (
+                                    <SelectItem key={tab.value} value={tab.value}>
+                                        <div className="flex items-center gap-2">
+                                            <tab.icon className="h-4 w-4" />
+                                            {tab.label}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />}
+                         {activeManageTab === "logs" && <ManageLogsView data={data} />}
+                         {activeManageTab === "stock" && <ManageStockView data={data} fetchData={fetchData} />}
+                    </div>
+                ) : (
+                    <Tabs defaultValue="checkouts">
+                        <TabsList>
+                            {manageTabs.map(tab => (
+                                <TabsTrigger key={tab.value} value={tab.value}>
+                                    <tab.icon className="mr-2 h-4 w-4" />
+                                    {tab.label}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                        <TabsContent value="checkouts" className="mt-4">
+                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />
+                        </TabsContent>
+                        <TabsContent value="logs" className="mt-4">
+                           <ManageLogsView data={data} />
+                        </TabsContent>
+                        <TabsContent value="stock" className="mt-4">
+                            <ManageStockView data={data} fetchData={fetchData} />
+                        </TabsContent>
+                    </Tabs>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
+
+const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) => (
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead>Item Details</TableHead>
+                <TableHead>Checked Out To</TableHead>
+                <TableHead>Project</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {data.inventoryRequests
+                .filter((req: any) => {
+                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                    return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
+                })
+                .map((req: any) => {
+                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                    const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+                    const project = data.projects.find((p: any) => p.id === req.projectId);
+                    return (
+                        <TableRow key={req.id}>
+                            <TableCell>
+                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
+                            </TableCell>
+                            <TableCell>{user?.name || 'N/A'}</TableCell>
+                            <TableCell>{project?.title || 'Personal Use'}</TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex justify-end">
+                                    <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })}
+        </TableBody>
+    </Table>
+);
+
+const ManageLogsView = ({ data }: { data: any }) => (
+     <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Checked Out</TableHead>
+                <TableHead>Returned</TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {data.inventoryRequests.map((req: any) => {
+                const item = data.inventory.find((i: any) => i.id === req.itemId);
+                const requester = data.users.find((u: any) => u.id === req.requestedById);
+                const approver = data.users.find((u: any) => u.id === req.fulfilledById || u.id === req.rejectedById);
+                const returner = data.users.find((u: any) => u.id === req.returnedById);
+                const project = data.projects.find((p:any) => p.id === req.projectId);
+                return (
+                    <ActivityLogItemRow 
+                        key={req.id}
+                        request={req}
+                        item={item}
+                        user={requester}
+                        project={project}
+                        approver={approver}
+                        returner={returner}
+                    />
+                );
+            })}
+        </TableBody>
+    </Table>
+);
+
+const ManageStockView = ({ data, fetchData }: { data: any, fetchData: () => void }) => (
+    <Table>
+        <TableHeader>
+            <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Available</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {data.inventory.map((item: any) => (
+                <EditableInventoryItemRow
+                    key={item.id}
+                    item={item}
+                    onFormSubmit={fetchData}
+                />
+            ))}
+        </TableBody>
+    </Table>
+);
+
+
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
     const [loading, setLoading] = useState(true);
+    const [activeView, setActiveView] = useState("all");
     const { user: currentUser } = useAuth();
     const isMobile = useIsMobile();
     
@@ -569,228 +814,76 @@ export default function InventoryPage() {
     const canManageInventory = currentUser?.permissions?.canApproveInventory;
     const canManageProcurement = currentUser?.permissions?.canApproveNewItemRequest;
 
+    const mainViews = [
+        { value: "all", label: "All Items", visible: true },
+        { value: "requests", label: "Requests", visible: !!canManageInventory },
+        { value: "manage", label: "Manage", visible: !!canManageInventory },
+    ].filter(v => v.visible);
+
   return (
     <Dialog>
         <div className="space-y-8">
-        <div className="flex items-center justify-between">
-            <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">Inventory</h2>
-            <p className="text-muted-foreground">
-                Manage equipment, track loans, and approve requests.
-            </p>
+            <div className="flex items-center justify-between">
+                <div>
+                <h2 className="text-3xl font-bold tracking-tight font-headline">Inventory</h2>
+                <p className="text-muted-foreground">
+                    Manage equipment, track loans, and approve requests.
+                </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    {canManageProcurement && (
+                        <Link href="/dashboard/procurement/approvals">
+                            <Button variant="outline">
+                                <ClipboardCheck className="mr-2 h-4 w-4" /> Manage Procurement
+                            </Button>
+                        </Link>
+                    )}
+                </div>
             </div>
-            <div className="flex items-center gap-2">
-                {canManageProcurement && (
-                    <Link href="/dashboard/procurement/approvals">
-                        <Button variant="outline">
-                            <ClipboardCheck className="mr-2 h-4 w-4" /> Manage Procurement
-                        </Button>
-                    </Link>
-                )}
-            </div>
-        </div>
 
-        <Tabs defaultValue="all" orientation={isMobile ? "vertical" : "horizontal"} className={cn(isMobile && "grid grid-cols-4 gap-4")}>
-            <TabsList className={cn(isMobile && "col-span-1 flex-col h-auto items-stretch space-y-1")}>
-                <TabsTrigger value="all">All Items</TabsTrigger>
-                {canManageInventory && (
-                    <>
-                        <TabsTrigger value="requests">Requests</TabsTrigger>
-                        <TabsTrigger value="manage">Manage</TabsTrigger>
-                    </>
-                )}
-            </TabsList>
-            <div className={cn(isMobile ? "col-span-3" : "")}>
-                <TabsContent value="all" className="mt-0">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Available Inventory</CardTitle>
-                            <CardDescription>Click on an item to view details and request it.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Item</TableHead>
-                                    <TableHead className="text-right">Available</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {data.inventory.length > 0 ? data.inventory.map((item: any) => (
-                                        <InventoryItemRow key={item.id} item={item} currentUser={currentUser} onFormSubmit={fetchData} />
-                                    )) : (
-                                        <TableRow>
-                                            <TableCell colSpan={2} className="h-24 text-center">
-                                                No inventory items found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                {canManageInventory && (
-                    <>
-                        <TabsContent value="requests" className="mt-0">
-                            {isMobile ? (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Pending Requests</CardTitle>
-                                        <CardDescription>Tap a request to view details and take action.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        {data.inventoryRequests.filter((r:any) => r.status === 'pending').length > 0 ? (
-                                            data.inventoryRequests.filter((r:any) => r.status === 'pending').map((req: any) => {
-                                                const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                const user = data.users.find((u: any) => u.id === req.requestedById);
-                                                const project = data.projects.find((p: any) => p.id === req.projectId);
-                                                return (
-                                                    <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
-                                                )
-                                            })
-                                        ) : (
-                                            <div className="p-4 text-center text-muted-foreground">No pending requests.</div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                        <TableHead>Request Details</TableHead>
-                                        <TableHead>Requested By</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
-                                            const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                            const user = data.users.find((u: any) => u.id === req.requestedById);
-                                            const project = data.projects.find((p: any) => p.id === req.projectId);
-                                            return (
-                                                <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </TabsContent>
-                        <TabsContent value="manage" className="mt-0">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Manage Inventory</CardTitle>
-                                    <CardDescription>View currently checked-out items and see a log of all activities.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Tabs defaultValue="checkouts">
-                                        <TabsList>
-                                            <TabsTrigger value="checkouts"><SlidersHorizontal className="mr-2 h-4 w-4" />Current Checkouts</TabsTrigger>
-                                            <TabsTrigger value="logs"><History className="mr-2 h-4 w-4" />Activity Log</TabsTrigger>
-                                            <TabsTrigger value="stock"><Box className="mr-2 h-4 w-4" />All Items</TabsTrigger>
-                                        </TabsList>
-                                        <TabsContent value="checkouts" className="mt-4">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Item Details</TableHead>
-                                                        <TableHead>Checked Out To</TableHead>
-                                                        <TableHead>Project</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {data.inventoryRequests
-                                                        .filter((req: any) => {
-                                                            const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                            return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
-                                                        })
-                                                        .map((req: any) => {
-                                                            const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                            const user = data.users.find((u: any) => u.id === req.checkedOutToId);
-                                                            const project = data.projects.find((p: any) => p.id === req.projectId);
-                                                            return (
-                                                                <TableRow key={req.id}>
-                                                                    <TableCell>
-                                                                        <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                                                        <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
-                                                                    </TableCell>
-                                                                    <TableCell>{user?.name || 'N/A'}</TableCell>
-                                                                    <TableCell>{project?.title || 'Personal Use'}</TableCell>
-                                                                    <TableCell className="text-right">
-                                                                        <div className="flex justify-end">
-                                                                            <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
-                                                                        </div>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            );
-                                                        })}
-                                                </TableBody>
-                                            </Table>
-                                        </TabsContent>
-                                        <TabsContent value="logs" className="mt-4">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Item</TableHead>
-                                                        <TableHead>Checked Out</TableHead>
-                                                        <TableHead>Returned</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {data.inventoryRequests.map((req: any) => {
-                                                        const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                        const requester = data.users.find((u: any) => u.id === req.requestedById);
-                                                        const approver = data.users.find((u: any) => u.id === req.fulfilledById || u.id === req.rejectedById);
-                                                        const returner = data.users.find((u: any) => u.id === req.returnedById);
-                                                        const project = data.projects.find((p:any) => p.id === req.projectId);
-                                                        return (
-                                                            <ActivityLogItemRow 
-                                                                key={req.id}
-                                                                request={req}
-                                                                item={item}
-                                                                user={requester}
-                                                                project={project}
-                                                                approver={approver}
-                                                                returner={returner}
-                                                            />
-                                                        );
-                                                    })}
-                                                </TableBody>
-                                            </Table>
-                                        </TabsContent>
-                                        <TabsContent value="stock" className="mt-4">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Item</TableHead>
-                                                        <TableHead>Total</TableHead>
-                                                        <TableHead>Available</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {data.inventory.map((item: any) => (
-                                                        <EditableInventoryItemRow
-                                                            key={item.id}
-                                                            item={item}
-                                                            onFormSubmit={fetchData}
-                                                        />
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </TabsContent>
-                                    </Tabs>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </>
-                )}
-            </div>
-        </Tabs>
+            {isMobile ? (
+                <div className="space-y-4">
+                    <Select value={activeView} onValueChange={setActiveView}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a view" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {mainViews.map(view => (
+                                <SelectItem key={view.value} value={view.value}>{view.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    
+                    {activeView === 'all' && <AllItemsView data={data} currentUser={currentUser} fetchData={fetchData} />}
+                    {activeView === 'requests' && canManageInventory && <RequestsView data={data} fetchData={fetchData} />}
+                    {activeView === 'manage' && canManageInventory && <ManageView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />}
+
+                </div>
+            ) : (
+                <Tabs defaultValue="all" value={activeView} onValueChange={setActiveView}>
+                    <TabsList>
+                        {mainViews.map(view => (
+                             <TabsTrigger key={view.value} value={view.value}>{view.label}</TabsTrigger>
+                        ))}
+                    </TabsList>
+                    <TabsContent value="all" className="mt-4">
+                        <AllItemsView data={data} currentUser={currentUser} fetchData={fetchData} />
+                    </TabsContent>
+                    {canManageInventory && (
+                        <>
+                            <TabsContent value="requests" className="mt-4">
+                                <RequestsView data={data} fetchData={fetchData} />
+                            </TabsContent>
+                            <TabsContent value="manage" className="mt-4">
+                               <ManageView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />
+                            </TabsContent>
+                        </>
+                    )}
+                </Tabs>
+            )}
         </div>
     </Dialog>
   )
 }
+
+    
