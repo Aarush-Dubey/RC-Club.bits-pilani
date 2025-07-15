@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { PlusCircle } from "lucide-react"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth, type AppUser } from "@/context/auth-context"
 
@@ -33,9 +33,13 @@ async function getData(currentUser: AppUser | null) {
     const myProjectsSnapshot = await getDocs(myProjectsQuery);
     const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-
+    const userIds = [...new Set(myProjects.flatMap(p => p.memberIds))];
+    let users: User[] = [];
+    if (userIds.length > 0) {
+        const usersSnapshot = await getDocs(query(collection(db, "users"), where("id", "in", userIds.slice(0,30))));
+        users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+    }
+    
     const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
     const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
 
@@ -131,7 +135,7 @@ export default function ProjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
-                    <DialogTrigger asChild>
+                     <DialogTrigger asChild>
                         <Button variant="outline">
                           <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
                         </Button>
