@@ -4,11 +4,12 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box } from "lucide-react"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { approveInventoryRequest, rejectInventoryRequest, confirmReturn, requestInventory } from "./actions"
+import { updateItemQuantity, deleteInventoryItem } from "./manage-actions"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,11 +31,12 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { enhanceJustification } from "@/ai/flows/enhance-justification"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -295,6 +297,87 @@ function ReturnActions({ request, canConfirm, onActionComplete }: { request: any
     );
 }
 
+function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => void }) {
+    const [totalQuantity, setTotalQuantity] = useState(item.totalQuantity);
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleUpdate = async () => {
+        setIsLoading(true);
+        try {
+            await updateItemQuantity({
+                itemId: item.id,
+                newTotalQuantity: totalQuantity,
+                oldTotalQuantity: item.totalQuantity,
+                checkedOutQuantity: item.checkedOutQuantity
+            });
+            toast({ title: "Item Updated", description: `${item.name} quantity has been updated.` });
+            onFormSubmit();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setIsLoading(true);
+        try {
+            await deleteInventoryItem(item.id);
+            toast({ title: "Item Deleted", description: `${item.name} has been removed from inventory.` });
+            onFormSubmit();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Delete Failed", description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="total-quantity">Total Quantity</Label>
+                <Input
+                    id="total-quantity"
+                    type="number"
+                    value={totalQuantity}
+                    onChange={(e) => setTotalQuantity(parseInt(e.target.value, 10))}
+                    min={item.checkedOutQuantity}
+                />
+                <p className="text-xs text-muted-foreground">
+                    Cannot be less than the currently checked out quantity ({item.checkedOutQuantity}).
+                </p>
+            </div>
+            <div className="flex justify-between">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={isLoading}>Delete Item</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the item from inventory.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Confirm Deletion
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <Button onClick={handleUpdate} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Update Quantity
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
@@ -333,9 +416,6 @@ export default function InventoryPage() {
                         </Button>
                     </Link>
                 )}
-                <Button disabled>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
-                </Button>
             </div>
         </div>
 
@@ -427,6 +507,7 @@ export default function InventoryPage() {
                                     <TabsList>
                                         <TabsTrigger value="checkouts"><SlidersHorizontal className="mr-2 h-4 w-4" />Current Checkouts</TabsTrigger>
                                         <TabsTrigger value="logs"><History className="mr-2 h-4 w-4" />Activity Log</TabsTrigger>
+                                        <TabsTrigger value="stock"><Box className="mr-2 h-4 w-4" />All Items</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="checkouts" className="mt-4">
                                         <Table>
@@ -492,6 +573,45 @@ export default function InventoryPage() {
                                                             <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                                                             <TableCell><StatusCircle status={req.status} /></TableCell>
                                                         </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </TabsContent>
+                                    <TabsContent value="stock" className="mt-4">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>Total</TableHead>
+                                                    <TableHead>Available</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {data.inventory.map((item: any) => {
+                                                    const [isEditOpen, setIsEditOpen] = useState(false);
+                                                    return (
+                                                        <Dialog key={item.id} open={isEditOpen} onOpenChange={setIsEditOpen}>
+                                                            <TableRow>
+                                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                                <TableCell>{item.totalQuantity}</TableCell>
+                                                                <TableCell>{item.availableQuantity}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <DialogTrigger asChild>
+                                                                        <Button variant="ghost" size="sm">
+                                                                            <Pencil className="mr-2 h-4 w-4"/> Edit
+                                                                        </Button>
+                                                                    </DialogTrigger>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                            <DialogContent>
+                                                                <DialogHeader>
+                                                                    <DialogTitle>Edit: {item.name}</DialogTitle>
+                                                                </DialogHeader>
+                                                                <EditItemForm item={item} onFormSubmit={() => { fetchData(); setIsEditOpen(false); }} />
+                                                            </DialogContent>
+                                                        </Dialog>
                                                     );
                                                 })}
                                             </TableBody>
