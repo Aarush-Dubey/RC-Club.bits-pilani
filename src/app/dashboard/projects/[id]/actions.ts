@@ -145,6 +145,20 @@ export async function initiateProjectCompletion(projectId: string) {
     );
     const fulfilledRequestsSnap = await getDocs(fulfilledRequestsQuery);
 
+    if (fulfilledRequestsSnap.empty) {
+        // No items were ever checked out, so just complete the project
+        batch.update(projectRef, { 
+            status: "completed",
+            hasPendingReturns: false,
+            completedAt: serverTimestamp(),
+            completedById: 'system-lead'
+        });
+        await batch.commit();
+        revalidatePath(`/dashboard/projects/${projectId}`);
+        revalidatePath('/dashboard/projects');
+        return;
+    }
+
     const itemIds = [...new Set(fulfilledRequestsSnap.docs.map(doc => doc.data().itemId))];
     const itemDocs = new Map();
     if (itemIds.length > 0) {

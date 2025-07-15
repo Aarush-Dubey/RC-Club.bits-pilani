@@ -439,24 +439,32 @@ export default function InventoryPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {data.inventoryRequests.filter((r: any) => ['fulfilled', 'pending_return'].includes(r.status)).map((req: any) => {
-                                                    const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                    const user = data.users.find((u: any) => u.id === req.checkedOutToId);
-                                                    const project = data.projects.find((p: any) => p.id === req.projectId);
-                                                    return (
-                                                        <TableRow key={req.id}>
-                                                            <TableCell>
-                                                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                                                <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
-                                                            </TableCell>
-                                                            <TableCell>{user?.name || 'N/A'}</TableCell>
-                                                            <TableCell>{project?.title || 'Personal Use'}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <StatusCircle status={req.status} />
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })}
+                                                {data.inventoryRequests
+                                                    .filter((req: any) => {
+                                                        const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                                        // Only include items that are checked out and NOT perishable
+                                                        return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
+                                                    })
+                                                    .map((req: any) => {
+                                                        const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                                        const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+                                                        const project = data.projects.find((p: any) => p.id === req.projectId);
+                                                        return (
+                                                            <TableRow key={req.id}>
+                                                                <TableCell>
+                                                                    <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                                                    <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
+                                                                </TableCell>
+                                                                <TableCell>{user?.name || 'N/A'}</TableCell>
+                                                                <TableCell>{project?.title || 'Personal Use'}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                     <div className="flex justify-end">
+                                                                        <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
+                                                                     </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
                                             </TableBody>
                                         </Table>
                                     </TabsContent>
