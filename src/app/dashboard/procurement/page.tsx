@@ -90,9 +90,6 @@ export default function ProcurementBucketsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard/procurement/my-requests">
-                <Button variant="outline"><User className="mr-2 h-4 w-4"/>My Requests</Button>
-            </Link>
             {canApprove && (
                 <Link href="/dashboard/procurement/approvals">
                     <Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4"/>Manage Approvals</Button>

@@ -34,7 +34,7 @@ const menuItems = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
   { href: "/dashboard/projects", icon: ToyBrick, label: "Projects" },
   { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
-  { href: "/dashboard/procurement/new", icon: Truck, label: "Procurement" },
+  { href: "/dashboard/procurement", icon: Truck, label: "Procurement" },
   { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements" },
   { href: "/dashboard/finance", icon: LineChart, label: "Finance AI" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
