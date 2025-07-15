@@ -121,7 +121,11 @@ function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: a
                     value={quantity}
                     onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        setQuantity(isNaN(value) || value < 1 ? 1 : value);
+                        if (isNaN(value)) {
+                            setQuantity(1); // or some other default like 0
+                        } else {
+                            setQuantity(value < 1 ? 1 : value);
+                        }
                     }}
                     min={1}
                     max={item.availableQuantity}
@@ -216,7 +220,7 @@ async function getData() {
     return { inventory, inventoryRequests, users, projects };
 }
 
-function RequestActions({ request, canApprove }: { request: any, canApprove: boolean }) {
+function RequestActions({ request, canApprove, onActionComplete }: { request: any, canApprove: boolean, onActionComplete: () => void }) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState<"approve" | "reject" | null>(null);
@@ -230,6 +234,7 @@ function RequestActions({ request, canApprove }: { request: any, canApprove: boo
                 title: `Request ${type === 'approve' ? 'Approved' : 'Rejected'}`,
                 description: "The inventory status has been updated.",
             });
+            onActionComplete();
         } catch (error) {
             toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
         } finally {
@@ -397,7 +402,7 @@ export default function InventoryPage() {
                                 <TableCell><StatusCircle status={req.status} /></TableCell>
                                 {canManageInventory && (
                                     <TableCell className="text-right space-x-2">
-                                        <RequestActions request={req} canApprove={!!canManageInventory} />
+                                        <RequestActions request={req} canApprove={!!canManageInventory} onActionComplete={fetchData} />
                                     </TableCell>
                                 )}
                             </TableRow>
