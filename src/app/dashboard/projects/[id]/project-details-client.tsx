@@ -2,6 +2,7 @@
 "use client"
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Loader2, UserPlus } from "lucide-react";
+import { joinProject } from "./actions";
+import { useToast } from "@/hooks/use-toast";
+
 
 function getStatusBadge(status: string) {
     switch (status) {
@@ -32,6 +38,10 @@ function getStatusBadge(status: string) {
 export default function ProjectDetailsClient({ initialData }: { initialData: any }) {
     const { user: currentUser, loading: authLoading } = useAuth(); 
     const [data] = useState(initialData);
+    const [isJoining, setIsJoining] = useState(false);
+    const { toast } = useToast();
+    const router = useRouter();
+
 
     if (authLoading) {
         return (
@@ -69,6 +79,26 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     }
 
     const { project, members, inventoryRequests, inventoryItems } = data;
+    
+    const isMember = currentUser && project.memberIds.includes(currentUser.uid);
+
+    const handleJoin = async () => {
+        if (!currentUser) {
+            toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join a project." });
+            return;
+        }
+        setIsJoining(true);
+        try {
+            await joinProject(project.id, currentUser.uid);
+            toast({ title: "Success!", description: `You have joined the project "${project.title}".` });
+            router.refresh();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Failed to Join", description: (error as Error).message });
+        } finally {
+            setIsJoining(false);
+        }
+    };
+
 
     return (
         <div className="space-y-8">
@@ -80,7 +110,16 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                     </div>
                     <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                 </div>
-                <ProjectActions project={project as any} currentUser={currentUser} />
+                <div className="flex items-center gap-2">
+                    {isMember ? (
+                         <ProjectActions project={project as any} currentUser={currentUser} />
+                    ) : (
+                        <Button onClick={handleJoin} disabled={isJoining}>
+                            {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                            Join Team
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

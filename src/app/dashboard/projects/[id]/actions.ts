@@ -11,7 +11,6 @@ export async function approveProject(projectId: string) {
             const projectRef = doc(db, "projects", projectId);
             
             // --- 1. READ PHASE ---
-            // Read the project document first.
             const projectDoc = await transaction.get(projectRef);
 
             if (!projectDoc.exists() || projectDoc.data().status !== 'pending_approval') {
@@ -20,11 +19,9 @@ export async function approveProject(projectId: string) {
             
             const projectData = projectDoc.data();
 
-            // Find all pending inventory requests for this project.
             const requestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), where("status", "==", "pending"));
             const requestsSnapshot = await getDocs(requestsQuery);
 
-            // Collect all item IDs and read the corresponding inventory documents within the transaction.
             const itemRefs: { [key: string]: any } = {};
             const itemDocs: { [key: string]: any } = {};
             
@@ -37,7 +34,6 @@ export async function approveProject(projectId: string) {
             }
 
             // --- 2. VALIDATION PHASE ---
-            // Check stock availability after all reads are done.
             for (const requestDoc of requestsSnapshot.docs) {
                 const requestData = requestDoc.data();
                 const itemDoc = itemDocs[requestData.itemId];
@@ -52,16 +48,14 @@ export async function approveProject(projectId: string) {
             }
 
             // --- 3. WRITE PHASE ---
-            // Update project status
             const hasInventoryRequests = requestsSnapshot.docs.length > 0;
             transaction.update(projectRef, { 
                 status: 'approved',
                 approvedAt: serverTimestamp(),
-                approvedById: 'system-admin', // In a real app, this would be the current user's ID
+                approvedById: 'system-admin',
                 hasPendingReturns: hasInventoryRequests
             });
 
-            // Process inventory requests: update item quantities and request status
             for (const requestDoc of requestsSnapshot.docs) {
                 const requestData = requestDoc.data();
                 const itemRef = itemRefs[requestData.itemId];
@@ -78,11 +72,10 @@ export async function approveProject(projectId: string) {
                 transaction.update(doc(db, "inventory_requests", requestDoc.id), { 
                     status: 'fulfilled',
                     fulfilledAt: serverTimestamp(),
-                    checkedOutToId: projectData.leadId, // Associate with project lead
+                    checkedOutToId: projectData.leadId,
                 });
             }
 
-            // Add project to each member's list of joined projects
             for (const memberId of projectData.memberIds) {
                 const userRef = doc(db, "users", memberId);
                 transaction.update(userRef, {
@@ -131,7 +124,6 @@ export async function startProject(projectId: string) {
     await updateDoc(projectRef, {
         status: 'active',
         activatedAt: serverTimestamp(),
-        // In a real app, this should be the current user's ID
         activatedById: 'system-lead'
     });
     revalidatePath(`/dashboard/projects/${projectId}`);
@@ -143,7 +135,6 @@ export async function completeProject(projectId: string) {
     await updateDoc(projectRef, {
         status: 'completed',
         completedAt: serverTimestamp(),
-        // In a real app, this should be the current user's ID
         completedById: 'system-lead'
     });
     revalidatePath(`/dashboard/projects/${projectId}`);
@@ -155,9 +146,39 @@ export async function closeProject(projectId: string) {
     await updateDoc(projectRef, {
         status: 'closed',
         closedAt: serverTimestamp(),
-        // In a real app, this should be the current user's ID
         closedById: 'system-admin'
     });
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
+}
+
+export async function joinProject(projectId: string, userId: string) {
+    if (!userId) {
+        throw new Error("User is not authenticated.");
+    }
+    try {
+        const projectRef = doc(db, "projects", projectId);
+        const userRef = doc(db, "users", userId);
+
+        await runTransaction(db, async (transaction) => {
+            const projectDoc = await transaction.get(projectRef);
+            if (!projectDoc.exists()) {
+                throw new Error("Project not found.");
+            }
+            // Add user to project's members
+            transaction.update(projectRef, {
+                memberIds: arrayUnion(userId)
+            });
+            // Add project to user's joined projects
+            transaction.update(userRef, {
+                joinedProjects: arrayUnion(projectId)
+            });
+        });
+    } catch (error) {
+        console.error("Failed to join project:", error);
+        throw new Error(`Failed to join project: ${(error as Error).message}`);
+    }
+
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
 }
