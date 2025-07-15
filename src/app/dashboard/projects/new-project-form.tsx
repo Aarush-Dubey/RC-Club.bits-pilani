@@ -99,6 +99,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
       // 1. Create the project document
       const projectRef = doc(collection(db, "projects"));
       batch.set(projectRef, {
+        id: projectRef.id, // Store readable ID
         title: data.title,
         type: data.type,
         description: data.description,
@@ -119,6 +120,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
           for (const req of data.requestedInventory) {
               const requestRef = doc(collection(db, "inventory_requests"));
               batch.set(requestRef, {
+                  id: requestRef.id, // Store readable ID
                   projectId: projectRef.id,
                   requestedById: mockCurrentUser.id,
                   itemId: req.itemId,
@@ -444,5 +446,3 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
     </Form>
   )
 }
-
-    

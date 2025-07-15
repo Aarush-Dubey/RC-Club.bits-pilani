@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import {
   addDoc,
   collection,
+  doc,
   serverTimestamp,
 } from 'firebase/firestore'
 import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
@@ -98,7 +99,10 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
       const downloadURL = uploadResponse.url;
 
       // 3. Save reimbursement request to Firestore
+      const reimbursementsCol = collection(db, 'reimbursements');
+      const reimbursementRef = doc(reimbursementsCol); // Creates a ref with a new auto-ID
       await addDoc(collection(db, 'reimbursements'), {
+        id: reimbursementRef.id, // Store readable ID
         amount: parseFloat(amount),
         notes,
         proofImageUrls: [downloadURL],
