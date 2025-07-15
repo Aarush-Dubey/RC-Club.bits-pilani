@@ -1,21 +1,10 @@
 
 "use client"
 
-import React, { useState } from 'react'
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-} from 'firebase/firestore'
+import React, { useState, useEffect } from 'react'
+import { addDoc, collection, doc, serverTimestamp } from 'firebase/firestore'
 import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
-import {
-    ImageKitAbortError,
-    ImageKitInvalidRequestError,
-    ImageKitServerError,
-    ImageKitUploadNetworkError,
-    upload,
-} from "@imagekit/next";
+import { upload } from "@imagekit/next"
 
 import { db } from '@/lib/firebase'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -23,22 +12,55 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-
-// Mock user for demo purposes
-const mockUser = { id: 'user-5', name: 'Mary Jane' }
+import type { AppUser } from '@/context/auth-context'
+import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useToast } from '@/hooks/use-toast'
 
 interface ReimbursementFormProps {
   setOpen: (open: boolean) => void;
   onFormSubmit: () => void;
+  currentUser: AppUser | null;
+  procurementItems: any[];
+  procurementBuckets: any[];
 }
 
-export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormProps) {
+export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurementItems, procurementBuckets }: ReimbursementFormProps) {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' | '' }>({ text: '', type: '' })
+  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' | '' }>({ text: '', type: '' });
+  const [isForProcurement, setIsForProcurement] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState("");
+  const { toast } = useToast();
+
+  const orderedItems = procurementItems.filter(item => {
+    // Single requests that are approved
+    if (!item.linkedBucketId && item.status === 'approved' && item.requestedById === currentUser?.uid) {
+        return true;
+    }
+    // Items in an ordered bucket created by the user
+    const bucket = procurementBuckets.find(b => b.id === item.linkedBucketId);
+    if (bucket && bucket.status === 'ordered' && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
+        return true;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isForProcurement && selectedItemId) {
+      const selectedItem = orderedItems.find(item => item.id === selectedItemId);
+      if (selectedItem) {
+        setAmount((selectedItem.estimatedCost * selectedItem.quantity).toString());
+        setNotes(`Reimbursement for: ${selectedItem.itemName} (x${selectedItem.quantity})`);
+      }
+    } else {
+      setAmount("");
+      setNotes("");
+    }
+  }, [selectedItemId, isForProcurement, orderedItems]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -59,74 +81,69 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
     try {
       const response = await fetch('/api/upload-auth');
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Request failed with status ${response.status}: ${errorText}`);
+        throw new Error(`Request failed with status ${response.status}`);
       }
       const data = await response.json();
       const { signature, expire, token } = data;
       return { signature, expire, token };
     } catch (error) {
-      console.error("Authentication error:", error);
       throw new Error("Authentication request failed. Check your server logs.");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!amount || !selectedFile) {
+    e.preventDefault();
+    if (!currentUser) {
+        toast({ variant: "destructive", title: "Not Authenticated" });
+        return;
+    }
+     if (!amount || !selectedFile) {
       setMessage({ text: 'Amount and receipt image are required.', type: 'error' })
       return
+    }
+    if (isForProcurement && !selectedItemId) {
+        setMessage({ text: 'Please select the procured item.', type: 'error' })
+        return
     }
 
     setUploading(true)
     setMessage({ text: 'Submitting request...', type: 'info' })
 
     try {
-       // 1. Get Authentication Parameters
       const authParams = await authenticator();
-      const { signature, expire, token } = authParams;
-
-      // 2. Upload image to ImageKit
       const uploadResponse = await upload({
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
-        signature,
-        expire,
-        token,
+        ...authParams,
         file: selectedFile,
         fileName: selectedFile.name,
       });
 
       const downloadURL = uploadResponse.url;
 
-      // 3. Save reimbursement request to Firestore
-      const reimbursementsCol = collection(db, 'reimbursements');
-      const reimbursementRef = doc(reimbursementsCol); // Creates a ref with a new auto-ID
-      await addDoc(collection(db, 'reimbursements'), {
-        id: reimbursementRef.id, // Store readable ID
+      const reimbursementData: any = {
         amount: parseFloat(amount),
         notes,
         proofImageUrls: [downloadURL],
         status: 'pending',
-        submittedById: mockUser.id, // Using mock user ID
+        submittedById: currentUser.uid,
         createdAt: serverTimestamp(),
-      })
+      };
+      
+      if (isForProcurement && selectedItemId) {
+        reimbursementData.newItemRequestId = selectedItemId;
+      }
+
+      await addDoc(collection(db, 'reimbursements'), reimbursementData);
 
       setMessage({ text: 'Reimbursement request submitted successfully!', type: 'success' })
-      onFormSubmit(); // Revalidate data on the main page
+      onFormSubmit();
       setTimeout(() => {
         setOpen(false)
       }, 1500)
     } catch (error) {
         console.error('Submission error:', error)
-        let errorMessage = 'Submission failed. Please try again.';
-        if (error instanceof ImageKitInvalidRequestError) {
-          errorMessage = "Invalid request to ImageKit. Check your public key and authentication."
-        } else if (error instanceof ImageKitUploadNetworkError || error instanceof ImageKitServerError) {
-          errorMessage = "Network or server error during upload. Please try again."
-        } else if (error instanceof Error && error.message.includes("Authentication")) {
-          errorMessage = "Could not authenticate with ImageKit. Please check your API keys and endpoint configuration."
-        }
-      setMessage({ text: errorMessage, type: 'error' })
+        const errorMessage = (error instanceof Error) ? error.message : 'An unknown error occurred.';
+        setMessage({ text: errorMessage, type: 'error' })
     } finally {
       setUploading(false)
     }
@@ -134,8 +151,37 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+       <div className="flex items-center space-x-2">
+        <Switch 
+          id="procurement-toggle" 
+          checked={isForProcurement}
+          onCheckedChange={setIsForProcurement}
+        />
+        <Label htmlFor="procurement-toggle">Is this for a pre-approved procurement item?</Label>
+      </div>
+
+      {isForProcurement && (
+        <div>
+          <Label htmlFor="procurement-item">Procurement Item *</Label>
+          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+             <SelectTrigger id="procurement-item" className="mt-1">
+                <SelectValue placeholder="Select an ordered item" />
+            </SelectTrigger>
+            <SelectContent>
+                {orderedItems.length > 0 ? orderedItems.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                        {item.itemName} (₹{(item.estimatedCost * item.quantity).toFixed(2)})
+                    </SelectItem>
+                )) : (
+                    <SelectItem value="none" disabled>No items awaiting reimbursement.</SelectItem>
+                )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div>
-        <Label htmlFor="amount">Amount *</Label>
+        <Label htmlFor="amount">Amount (INR) *</Label>
         <Input
           id="amount"
           type="number"
@@ -144,6 +190,7 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
           placeholder="0.00"
           required
           className="mt-1"
+          disabled={isForProcurement}
         />
       </div>
 
@@ -155,6 +202,7 @@ export function ReimbursementForm({ setOpen, onFormSubmit }: ReimbursementFormPr
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g., Purchase of new servos for Project Phoenix"
           className="mt-1"
+           disabled={isForProcurement}
         />
       </div>
 

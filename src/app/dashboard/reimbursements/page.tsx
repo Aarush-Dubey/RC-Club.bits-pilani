@@ -1,20 +1,15 @@
+
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { PlusCircle } from "lucide-react"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { useAuth } from "@/context/auth-context"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -54,37 +49,36 @@ async function getData() {
     const usersSnapshot = await getDocs(collection(db, "users"));
     const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    const projectsSnapshot = await getDocs(collection(db, "projects"));
-    const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
     const newItemsSnapshot = await getDocs(collection(db, "new_item_requests"));
     const newItems = newItemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    return { reimbursements, users, projects, newItems };
+    const bucketsSnapshot = await getDocs(collection(db, "procurement_buckets"));
+    const buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return { reimbursements, users, newItems, buckets };
 }
 
 export default function ReimbursementsPage() {
-  const [reimbursements, setReimbursements] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [projects, setProjects] = useState<any[]>([])
-  const [newItems, setNewItems] = useState<any[]>([])
+  const [data, setData] = useState<{ reimbursements: any[], users: any[], newItems: any[], buckets: any[] }>({ reimbursements: [], users: [], newItems: [], buckets: [] });
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [loading, setLoading] = useState(true);
   const router = useRouter()
+  const { user: currentUser } = useAuth();
   
   const fetchData = async () => {
-    const { reimbursements, users, projects, newItems } = await getData();
-    setReimbursements(reimbursements);
-    setUsers(users);
-    setProjects(projects);
-    setNewItems(newItems);
+    setLoading(true);
+    const { reimbursements, users, newItems, buckets } = await getData();
+    setData({ reimbursements, users, newItems, buckets });
+    setLoading(false);
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchData()
-  });
+  }, []);
   
   const handleFormSubmit = () => {
     fetchData(); 
+    setIsFormOpen(false);
     router.refresh(); 
   }
 
@@ -103,11 +97,17 @@ export default function ReimbursementsPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>New Reimbursement Request</DialogTitle>
             </DialogHeader>
-            <ReimbursementForm setOpen={setIsFormOpen} onFormSubmit={handleFormSubmit} />
+            <ReimbursementForm 
+              setOpen={setIsFormOpen} 
+              onFormSubmit={handleFormSubmit}
+              currentUser={currentUser}
+              procurementItems={data.newItems}
+              procurementBuckets={data.buckets}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -123,14 +123,13 @@ export default function ReimbursementsPage() {
             </TableRow>
         </TableHeader>
         <TableBody>
-            {reimbursements.map((req: any) => {
-            const user = users.find((u: any) => u.id === req.submittedById);
+            {data.reimbursements.map((req: any) => {
+            const user = data.users.find((u: any) => u.id === req.submittedById);
             let details = req.notes || '';
             if (req.newItemRequestId) {
-                const newItem: any = newItems.find((i: any) => i.id === req.newItemRequestId);
+                const newItem: any = data.newItems.find((i: any) => i.id === req.newItemRequestId);
                 if (newItem) {
-                    const project: any = projects.find((p: any) => p.id === newItem.projectId);
-                    details = `Purchase: ${newItem.itemName} for ${project?.title}`;
+                    details = `Purchase: ${newItem.itemName}`;
                 }
             }
             
@@ -142,7 +141,7 @@ export default function ReimbursementsPage() {
                 <TableCell>
                     <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono">${req.amount.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
                 </TableRow>
             )
             })}
