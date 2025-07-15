@@ -70,7 +70,7 @@ function getStatusBadge(status: string) {
 async function getData(currentUser: any) {
     if (!currentUser) return { myProjects: [], approvalRequests: [], users: [], inventory: [] };
     
-    // My Projects Query - NOTE: orderBy was removed to prevent index error.
+    // My Projects Query
     const myProjectsQuery = query(
         collection(db, "projects"), 
         where("memberIds", "array-contains", currentUser.uid)
@@ -190,78 +190,78 @@ export default function ProjectsPage() {
   }
   
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
-          <p className="text-muted-foreground">
-            Track and manage all RC projects in the club.
-          </p>
-        </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
-              <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>
-            </DialogHeader>
-            <NewProjectForm onFormSubmit={handleFormSubmit} users={users} inventory={inventory} />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <ProjectListSkeleton />
-      ) : (
-        <>
-          {currentUser?.permissions?.canApproveProjects && approvalRequests.length > 0 && (
-            <div className="space-y-6">
-                <div>
-                    <h3 className="text-2xl font-headline font-semibold">Approval Requests</h3>
-                    <p className="text-muted-foreground">Projects waiting for your review.</p>
-                </div>
-                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-                    {approvalRequests.map((project) => (
-                        <ProjectCard key={project.id} project={project} users={users} />
-                    ))}
-                </div>
-              <Separator className="my-12" />
-            </div>
-          )}
-
-          <div className="space-y-6">
-             <div>
-                <h3 className="text-2xl font-headline font-semibold">My Projects</h3>
-                <p className="text-muted-foreground">Projects you are a member of.</p>
-             </div>
-              {myProjects.length > 0 ? (
-                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-                  {myProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} users={users} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
-                  <CardHeader>
-                    <CardTitle>No Projects Yet</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
-                     <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
-                        </Button>
-                      </DialogTrigger>
-                  </CardContent>
-                </Card>
-              )}
+    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
+            <p className="text-muted-foreground">
+              Track and manage all RC projects in the club.
+            </p>
           </div>
-        </>
-      )}
-    </div>
+          <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> New Project
+              </Button>
+            </DialogTrigger>
+        </div>
+
+        {loading ? (
+          <ProjectListSkeleton />
+        ) : (
+          <>
+            {currentUser?.permissions?.canApproveProjects && approvalRequests.length > 0 && (
+              <div className="space-y-6">
+                  <div>
+                      <h3 className="text-2xl font-headline font-semibold">Approval Requests</h3>
+                      <p className="text-muted-foreground">Projects waiting for your review.</p>
+                  </div>
+                  <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                      {approvalRequests.map((project) => (
+                          <ProjectCard key={project.id} project={project} users={users} />
+                      ))}
+                  </div>
+                <Separator className="my-12" />
+              </div>
+            )}
+
+            <div className="space-y-6">
+              <div>
+                  <h3 className="text-2xl font-headline font-semibold">My Projects</h3>
+                  <p className="text-muted-foreground">Projects you are a member of.</p>
+              </div>
+                {myProjects.length > 0 ? (
+                  <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                    {myProjects.map((project) => (
+                      <ProjectCard key={project.id} project={project} users={users} />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+                    <CardHeader>
+                      <CardTitle>No Projects Yet</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
+                      <DialogTrigger asChild>
+                          <Button variant="outline">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
+                          </Button>
+                        </DialogTrigger>
+                    </CardContent>
+                  </Card>
+                )}
+            </div>
+          </>
+        )}
+      </div>
+      <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
+          <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>
+        </DialogHeader>
+        <NewProjectForm onFormSubmit={handleFormSubmit} users={users} inventory={inventory} />
+      </DialogContent>
+    </Dialog>
   )
 }
