@@ -98,7 +98,9 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
 
     const { bucket, requests, members } = data;
     const isManager = currentUser?.permissions?.canApproveNewItemRequest;
-    const canTakeAction = isManager && bucket.status === 'open';
+    const isCreator = currentUser?.uid === bucket.createdBy;
+    
+    const canApproveIndividualItem = isManager && bucket.status === 'open';
     const creator = members.find((m: any) => m.id === bucket.createdBy);
 
     const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
@@ -128,24 +130,10 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     )}
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Dev Tool</CardTitle>
-                        <CardDescription>Use this to check current user permissions.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Current User Role: <span className="font-mono">{currentUser?.role || 'Not defined'}</span></p>
-                        <p>Can Approve New Item?: <span className="font-mono">{isManager ? 'true' : 'false'}</span></p>
-                        <pre className="mt-2 text-xs bg-muted p-2 rounded-md font-mono overflow-auto">
-                            {JSON.stringify(currentUser?.permissions, null, 2)}
-                        </pre>
-                    </CardContent>
-                </Card>
-
-                {isManager && bucket.status === 'open' && (
+                {isCreator && bucket.status === 'open' && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Manager Actions</CardTitle>
+                            <CardTitle>Creator Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center gap-2">
                              <AlertDialog>
@@ -203,7 +191,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     <TableHead>Qty</TableHead>
                                     <TableHead>Est. cost / piece</TableHead>
                                     <TableHead>Status</TableHead>
-                                    {canTakeAction && <TableHead className="text-right">Actions</TableHead>}
+                                    {canApproveIndividualItem && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -219,7 +207,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                             <TableCell>{req.quantity}</TableCell>
                                             <TableCell>₹{req.estimatedCost.toFixed(2)}</TableCell>
                                             <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
-                                            {canTakeAction && (
+                                            {canApproveIndividualItem && (
                                                 <TableCell className="text-right">
                                                     {req.status === 'pending' && (
                                                          <div className="flex gap-2 justify-end">
@@ -233,7 +221,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     )
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={canTakeAction ? 6 : 5} className="text-center h-24">
+                                        <TableCell colSpan={canApproveIndividualItem ? 6 : 5} className="text-center h-24">
                                             No items have been requested in this bucket yet.
                                         </TableCell>
                                     </TableRow>
