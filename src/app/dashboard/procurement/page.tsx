@@ -19,7 +19,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 async function getData(currentUser: AppUser | null) {
   if (!currentUser) return { buckets: [], users: [], singleRequests: [] };
@@ -68,19 +69,41 @@ async function getData(currentUser: AppUser | null) {
   return { buckets, users, singleRequests };
 }
 
-
-const getStatusVariant = (status: string) => {
+const getBucketStatusVariant = (status: string) => {
   switch (status) {
     case 'open': return 'default';
     case 'closed': return 'secondary';
     case 'ordered': return 'outline';
     case 'received': return 'destructive'; // Re-using for now, should be success
-    case 'pending': return 'secondary';
-    case 'approved': return 'default';
-    case 'rejected': return 'destructive';
     default: return 'outline';
   }
 };
+
+const StatusCircle = ({ status }: { status: string }) => {
+  const statusConfig: { [key: string]: { color: string; tooltip: string } } = {
+    pending: { color: 'bg-yellow-500', tooltip: 'Pending' },
+    approved: { color: 'bg-blue-500', tooltip: 'Approved' },
+    rejected: { color: 'bg-red-500', tooltip: 'Rejected' },
+    ordered: { color: 'bg-orange-500', tooltip: 'Ordered' },
+    received: { color: 'bg-green-500', tooltip: 'Received' },
+  };
+
+  const config = statusConfig[status] || { color: 'bg-gray-400', tooltip: 'Unknown' };
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 
 export default function ProcurementPage() {
   const [data, setData] = useState<{ buckets: any[], users: any[], singleRequests: any[] }>({ buckets: [], users: [], singleRequests: [] });
@@ -157,7 +180,7 @@ export default function ProcurementPage() {
                                 <CardHeader>
                                     <div className="flex justify-between items-start">
                                         <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
-                                        <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
+                                        <Badge variant={getBucketStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
                                     </div>
                                     <CardDescription>
                                         Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
@@ -194,7 +217,9 @@ export default function ProcurementPage() {
                                     {data.singleRequests.map((req: any) => (
                                         <TableRow key={req.id}>
                                             <TableCell className="font-medium whitespace-nowrap">{req.itemName} (x{req.quantity})</TableCell>
-                                            <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
+                                            <TableCell>
+                                                <StatusCircle status={req.status} />
+                                            </TableCell>
                                             <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}
