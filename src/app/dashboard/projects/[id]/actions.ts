@@ -226,11 +226,11 @@ export async function leaveProject(projectId: string, userId: string) {
     revalidatePath('/dashboard/projects');
 }
 
-export async function addProjectUpdate({ projectId, text, imageUrl, userId }: { projectId: string, text: string, imageUrl: string | null, userId: string }) {
+export async function addProjectUpdate({ projectId, text, imageUrls, userId }: { projectId: string, text: string, imageUrls: string[] | null, userId: string }) {
     if (!userId) {
         throw new Error("User is not authenticated.");
     }
-    if (!text && !imageUrl) {
+    if (!text && (!imageUrls || imageUrls.length === 0)) {
         throw new Error("Update must contain text or an image.");
     }
 
@@ -238,7 +238,7 @@ export async function addProjectUpdate({ projectId, text, imageUrl, userId }: { 
         const updatesCollectionRef = collection(db, "projects", projectId, "updates");
         await addDoc(updatesCollectionRef, {
             text: text || "",
-            imageUrl: imageUrl || null,
+            imageUrls: imageUrls || null,
             postedById: userId,
             createdAt: serverTimestamp(),
         });

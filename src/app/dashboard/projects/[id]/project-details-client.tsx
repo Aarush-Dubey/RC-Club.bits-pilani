@@ -17,6 +17,7 @@ import { joinProject, leaveProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 
 function getStatusBadge(status: string) {
@@ -197,10 +198,22 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                                                         </p>
                                                     </div>
                                                     {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
-                                                    {update.imageUrl && (
-                                                        <div className="relative aspect-video mt-2">
-                                                          <Image src={update.imageUrl} alt="Project update image" layout="fill" objectFit="cover" className="rounded-md border"/>
-                                                        </div>
+                                                    {update.imageUrls && update.imageUrls.length > 0 && (
+                                                        <Carousel className="w-full mt-2">
+                                                            <CarouselContent>
+                                                                {update.imageUrls.map((url: string, index: number) => (
+                                                                    <CarouselItem key={index}>
+                                                                        <div className="relative aspect-video">
+                                                                            <Image src={url} alt={`Project update image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border"/>
+                                                                        </div>
+                                                                    </CarouselItem>
+                                                                ))}
+                                                            </CarouselContent>
+                                                            {update.imageUrls.length > 1 && <>
+                                                                <CarouselPrevious className="left-2" />
+                                                                <CarouselNext className="right-2" />
+                                                            </>}
+                                                        </Carousel>
                                                     )}
                                                 </div>
                                             </div>

@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { AlertCircle, CheckCircle, Loader2, Upload, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader2, Upload, Image as ImageIcon, Sparkles, X } from 'lucide-react'
 import { upload } from "@imagekit/next"
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -14,6 +14,7 @@ import Image from 'next/image'
 import type { Project } from '../page'
 import { enhanceUpdate } from '@/ai/flows/enhance-update'
 import { useToast } from '@/hooks/use-toast'
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
 
 interface NewUpdateFormProps {
   project: Project;
@@ -25,26 +26,33 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
   const { user } = useAuth();
   const { toast } = useToast();
   const [text, setText] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' | '' }>({ text: '', type: '' });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        setSelectedFile(file)
-        setPreview(URL.createObjectURL(file))
-        setMessage({ text: '', type: '' })
-      } else {
-        setMessage({ text: 'Please select a valid image file.', type: 'error' })
-        setSelectedFile(null)
-        setPreview('')
-      }
+    const files = Array.from(e.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...imageFiles]);
+      const newPreviews = imageFiles.map(file => URL.createObjectURL(file));
+      setPreviews(prev => [...prev, ...newPreviews]);
+      setMessage({ text: '', type: '' });
+    } else if (files.length > 0) {
+      setMessage({ text: 'Please select valid image files.', type: 'error' });
     }
+     // Reset the input value to allow selecting the same file again
+    e.target.value = '';
   }
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+  }
+
 
   const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -56,7 +64,7 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
   };
 
   const handleEnhanceUpdate = async () => {
-    if (!text && !selectedFile) {
+    if (!text && selectedFiles.length === 0) {
         toast({
             variant: "destructive",
             title: "Cannot Enhance",
@@ -67,8 +75,8 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
     setIsEnhancing(true);
     try {
         let imageUri: string | undefined = undefined;
-        if (selectedFile) {
-            imageUri = await fileToDataUri(selectedFile);
+        if (selectedFiles.length > 0) {
+            imageUri = await fileToDataUri(selectedFiles[0]);
         }
 
         const result = await enhanceUpdate({
@@ -114,7 +122,7 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
         setMessage({ text: 'You must be logged in to post an update.', type: 'error' });
         return;
     }
-     if (!text && !selectedFile) {
+     if (!text && selectedFiles.length === 0) {
       setMessage({ text: 'Update must include text or an image.', type: 'error' })
       return
     }
@@ -123,23 +131,27 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
     setMessage({ text: 'Posting update...', type: 'info' });
 
     try {
-      let imageUrl: string | null = null;
+      let imageUrls: string[] | null = null;
 
-      if (selectedFile) {
+      if (selectedFiles.length > 0) {
+        imageUrls = [];
         const authParams = await authenticator();
-        const uploadResponse = await upload({
-          file: selectedFile,
-          fileName: selectedFile.name,
-          ...authParams,
-          publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
-        });
-        imageUrl = uploadResponse.url;
+        
+        for (const file of selectedFiles) {
+            const uploadResponse = await upload({
+              file: file,
+              fileName: file.name,
+              ...authParams,
+              publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
+            });
+            imageUrls.push(uploadResponse.url);
+        }
       }
       
       await addProjectUpdate({
         projectId: project.id,
         text,
-        imageUrl,
+        imageUrls,
         userId: user.uid,
       });
 
@@ -185,26 +197,51 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
             onChange={handleFileSelect}
             className="hidden"
             id="update-image-upload"
+            multiple
           />
-          <label
-            htmlFor="update-image-upload"
-            className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
-          >
-            {preview ? (
-              <Image
-                src={preview}
-                alt="Update Preview"
-                width={300}
-                height={160}
-                className="h-full w-full object-contain rounded-md p-1"
-              />
-            ) : (
-              <div className="text-center text-muted-foreground">
-                <ImageIcon className="mx-auto h-8 w-8" />
-                <p className="mt-2 text-sm">Click to add an image (optional)</p>
-              </div>
-            )}
-          </label>
+           {previews.length === 0 ? (
+                <label
+                    htmlFor="update-image-upload"
+                    className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+                >
+                    <div className="text-center text-muted-foreground">
+                        <ImageIcon className="mx-auto h-8 w-8" />
+                        <p className="mt-2 text-sm">Click to add images (optional)</p>
+                    </div>
+                </label>
+           ) : (
+             <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                    {previews.map((src, index) => (
+                        <div key={src} className="relative group">
+                            <Image
+                                src={src}
+                                alt={`Preview ${index + 1}`}
+                                width={150}
+                                height={150}
+                                className="h-24 w-full object-cover rounded-md border"
+                            />
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleRemoveImage(index)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                     <label
+                        htmlFor="update-image-upload"
+                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors text-muted-foreground"
+                    >
+                        <Upload className="h-6 w-6"/>
+                        <span className="text-xs mt-1">Add more</span>
+                    </label>
+                </div>
+             </div>
+           )}
         </div>
       </div>
 
