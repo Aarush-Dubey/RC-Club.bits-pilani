@@ -108,7 +108,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
   const filteredUsers = users.filter(user => user.name.toLowerCase().includes(memberSearch.toLowerCase()))
 
   const handleEnhanceDescription = async () => {
-    const { title, type, description } = form.getValues();
+    const { title, description, requestedInventory } = form.getValues();
     if (!description) {
       toast({
         variant: "destructive",
@@ -119,7 +119,20 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
     }
     setIsEnhancing(true);
     try {
-      const result = await enhanceDescription({ title, type, description });
+      const inventoryList = requestedInventory
+        ?.map(req => {
+            const item = inventory.find(i => i.id === req.itemId);
+            return item ? `${item.name} (Qty: ${req.quantity})` : '';
+        })
+        .filter(Boolean)
+        .join(', ');
+
+      const result = await enhanceDescription({
+        title,
+        description,
+        requestedInventory: inventoryList,
+      });
+
       form.setValue("description", result.enhancedDescription, {
         shouldValidate: true,
       });

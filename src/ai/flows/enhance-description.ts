@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,8 +14,8 @@ import {z} from 'genkit';
 
 const EnhanceDescriptionInputSchema = z.object({
   title: z.string().describe('The title of the project.'),
-  type: z.string().describe('The type of the project (e.g., plane, drone, other).'),
   description: z.string().describe('The user-provided initial description of the project.'),
+  requestedInventory: z.string().optional().describe('A comma-separated list of requested inventory items and quantities.'),
 });
 export type EnhanceDescriptionInput = z.infer<typeof EnhanceDescriptionInputSchema>;
 
@@ -31,17 +32,19 @@ const prompt = ai.definePrompt({
   name: 'enhanceDescriptionPrompt',
   input: {schema: EnhanceDescriptionInputSchema},
   output: {schema: EnhanceDescriptionOutputSchema},
-  prompt: `You are a creative assistant for a Radio-Control (RC) hobbyist club.
-  Your task is to take a user's basic project idea and expand it into a more detailed and exciting project description.
-  Make it sound ambitious but achievable for a hobbyist club. Mention potential technologies or goals. Do not use markdown.
+  prompt: `You are an assistant for a Radio-Control (RC) hobbyist club.
+  Your task is to refine a basic project idea into a concise and formal project description using simple English.
+  The description should be minimal and directly related to the provided information. Do not use markdown.
 
   Project Title: {{{title}}}
-  Project Type: {{{type}}}
   
   User's Description:
   {{{description}}}
 
-  Now, generate an enhanced, more detailed description based on this input.
+  Requested Inventory:
+  {{{requestedInventory}}}
+
+  Based on the title, user's description, and requested inventory, generate a clear, formal, and minimal description for the project proposal.
   `,
 });
 
