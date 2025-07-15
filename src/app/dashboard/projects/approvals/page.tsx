@@ -1,0 +1,69 @@
+
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { auth } from "@/lib/firebase"
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
+import { ProjectCard, type Project, type User } from "../project-card"
+import { Button } from "@/components/ui/button"
+
+async function getApprovalData() {
+    const approvalRequestsQuery = query(
+        collection(db, "projects"), 
+        where("status", "==", "pending_approval"),
+        orderBy("createdAt", "desc")
+    );
+    const approvalRequestsSnapshot = await getDocs(approvalRequestsQuery);
+    const approvalRequests = approvalRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+
+    const userIds = [...new Set(approvalRequests.flatMap(p => [p.leadId, ...p.memberIds]))];
+    let users: User[] = [];
+    if (userIds.length > 0) {
+        // Firestore 'in' query is limited to 30 elements.
+        // For larger sets, you might need to chunk the requests.
+        const usersSnapshot = await getDocs(query(collection(db, "users"), where("id", "in", userIds.slice(0,30))));
+        users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+    }
+    
+    return { approvalRequests, users };
+}
+
+export default async function ApprovalsPage() {
+    // In a real app, you'd protect this route using middleware or similar
+    // For now, we assume the user has canApproveProjects permission
+    
+    const { approvalRequests, users } = await getApprovalData();
+
+    return (
+        <div className="space-y-8">
+             <div className="flex items-center gap-4">
+                <Link href="/dashboard/projects">
+                    <Button variant="outline" size="icon">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                </Link>
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight font-headline">Project Approvals</h2>
+                    <p className="text-muted-foreground">
+                        Review and approve new project proposals.
+                    </p>
+                </div>
+            </div>
+
+            {approvalRequests.length > 0 ? (
+                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                    {approvalRequests.map((project) => (
+                        <ProjectCard key={project.id} project={project} users={users} currentUser={null} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <h3 className="text-xl font-semibold">All Clear!</h3>
+                    <p>There are no projects waiting for approval.</p>
+                </div>
+            )}
+        </div>
+    )
+}
