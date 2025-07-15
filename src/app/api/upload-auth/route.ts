@@ -9,9 +9,13 @@ export async function GET() {
         return Response.json({ error: "ImageKit keys are not configured." }, { status: 500 });
     }
 
-    const { token, expire, signature } = getUploadAuthParams({
+    // Generate a unique token for each request to prevent replay attacks
+    const token = crypto.randomUUID();
+
+    const { expire, signature } = getUploadAuthParams({
         privateKey: process.env.IMAGEKIT_PRIVATE_KEY as string,
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY as string,
+        token: token,
     })
 
     return Response.json({ token, expire, signature })
