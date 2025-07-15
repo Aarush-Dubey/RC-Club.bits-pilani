@@ -64,7 +64,7 @@ const StatusCircle = ({ status }: { status: string }) => {
   );
 };
 
-function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUser: AppUser | null, setOpen: (open: boolean) => void }) {
+function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: any, currentUser: AppUser | null, setOpen: (open: boolean) => void, onFormSubmit: () => void }) {
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -102,6 +102,7 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
         try {
             await requestInventory({ itemId: item.id, quantity, userId: currentUser.uid, reason });
             toast({ title: "Request Submitted", description: `Your request for ${item.name} has been submitted for approval.` });
+            onFormSubmit();
             setOpen(false);
         } catch (error) {
             toast({ variant: "destructive", title: "Request Failed", description: (error as Error).message });
@@ -151,52 +152,49 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
     )
 }
 
-function InventoryItemRow({ item, currentUser }: { item: any, currentUser: AppUser | null }) {
+function InventoryItemRow({ item, currentUser, onFormSubmit }: { item: any, currentUser: AppUser | null, onFormSubmit: () => void }) {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
     
     return (
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-            <DialogTrigger asChild>
-                    <TableRow className="cursor-pointer">
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right">{item.availableQuantity}</TableCell>
-                </TableRow>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{item.name}</DialogTitle>
-                        <DialogDescription>
-                        {item.description || "No description available for this item."}
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
-                    <div>
-                        <div className="text-sm font-medium text-muted-foreground">Total Stock</div>
-                        <div className="text-lg font-bold">{item.totalQuantity}</div>
+        <>
+            <TableRow className="cursor-pointer" onClick={() => setIsDetailsOpen(true)}>
+                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell className="text-right">{item.availableQuantity}</TableCell>
+            </TableRow>
+            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{item.name}</DialogTitle>
+                            <DialogDescription>
+                            {item.description || "No description available for this item."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">Total Stock</div>
+                            <div className="text-lg font-bold">{item.totalQuantity}</div>
+                        </div>
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">Available</div>
+                            <div className="text-lg font-bold">{item.availableQuantity}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-sm font-medium text-muted-foreground">Available</div>
-                        <div className="text-lg font-bold">{item.availableQuantity}</div>
-                    </div>
-                </div>
-                    <Dialog>
-                    <DialogTrigger asChild>
-                        <Button disabled={item.availableQuantity === 0}>
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Request Item
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Request: {item.name}</DialogTitle>
-                        </DialogHeader>
-                        <RequestItemForm item={item} currentUser={currentUser} setOpen={(isOpen) => {
-                            if (!isOpen) setIsDetailsOpen(false);
-                        }} />
-                    </DialogContent>
-                </Dialog>
-            </DialogContent>
-        </Dialog>
+                    <Button disabled={item.availableQuantity === 0} onClick={() => { setIsDetailsOpen(false); setIsRequestFormOpen(true); }}>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Request Item
+                    </Button>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Request: {item.name}</DialogTitle>
+                    </DialogHeader>
+                    <RequestItemForm item={item} currentUser={currentUser} setOpen={setIsRequestFormOpen} onFormSubmit={onFormSubmit} />
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
@@ -357,7 +355,7 @@ export default function InventoryPage() {
                             </TableHeader>
                             <TableBody>
                                 {data.inventory.length > 0 ? data.inventory.map((item: any) => (
-                                    <InventoryItemRow key={item.id} item={item} currentUser={currentUser} />
+                                    <InventoryItemRow key={item.id} item={item} currentUser={currentUser} onFormSubmit={fetchData} />
                                 )) : (
                                     <TableRow>
                                         <TableCell colSpan={2} className="h-24 text-center">
@@ -448,5 +446,3 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
-
-    

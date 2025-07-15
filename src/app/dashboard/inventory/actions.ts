@@ -64,6 +64,7 @@ export async function approveInventoryRequest(requestId: string, adminId: string
                 status: 'fulfilled',
                 fulfilledAt: serverTimestamp(),
                 fulfilledById: adminId,
+                checkedOutToId: requestData.requestedById, // Assign to the requester
             });
         });
     } catch (error) {
