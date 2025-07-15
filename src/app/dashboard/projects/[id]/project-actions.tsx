@@ -136,19 +136,20 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
               Start Project
             </Button>
           )}
+
           {project.status === 'active' && isMember && (
-            <>
-               <DialogTrigger asChild>
-                  <Button><Flag className="mr-2"/>Post Update</Button>
-               </DialogTrigger>
-               {isProjectLead && (
-                 <Button onClick={onComplete} disabled={isLoading} variant="outline">
-                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
-                   Mark as Completed
-                 </Button>
-               )}
-            </>
+            <DialogTrigger asChild>
+              <Button><Flag className="mr-2"/>Post Update</Button>
+            </DialogTrigger>
           )}
+
+          {project.status === 'active' && isProjectLead && (
+              <Button onClick={onComplete} disabled={isLoading} variant="outline">
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+                Mark as Completed
+              </Button>
+          )}
+
           {project.status === 'completed' && canManage && (
               <Button onClick={onClose} disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}
