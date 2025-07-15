@@ -8,6 +8,7 @@ import { doc, getDoc, collection, getDocs, query, where, Timestamp } from "fireb
 import { db } from "@/lib/firebase";
 import { useAuth, type AppUser } from "@/context/auth-context";
 import { ArrowLeft, PlusCircle, Check, X, FileText, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
     const { bucket, requests, members } = data;
     const isManager = currentUser?.permissions?.canApproveNewItemRequest;
     const canTakeAction = isManager && bucket.status === 'open';
+    const creator = members.find((m: any) => m.id === bucket.createdBy);
 
     const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
 
@@ -113,6 +115,9 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{bucket.description}</h2>
                             <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
                         </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Started by {creator?.name} on {bucket.createdAt ? format(new Date(bucket.createdAt), "MMM d, yyyy") : 'N/A'}
+                        </p>
                     </div>
                     {bucket.status === 'open' && (
                         <DialogTrigger asChild>
@@ -182,7 +187,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     <TableHead>Item</TableHead>
                                     <TableHead>Requested By</TableHead>
                                     <TableHead>Qty</TableHead>
-                                    <TableHead>Est. Cost per item</TableHead>
+                                    <TableHead>Est. cost / piece</TableHead>
                                     <TableHead>Status</TableHead>
                                     {canTakeAction && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
