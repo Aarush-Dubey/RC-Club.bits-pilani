@@ -126,16 +126,18 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
       let imageUrl: string | null = null;
 
       if (selectedFile) {
+        const authParams = await authenticator();
         const uploadResponse = await upload({
           file: selectedFile,
           fileName: selectedFile.name,
-          authenticator,
+          ...authParams,
+          publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
         });
         imageUrl = uploadResponse.url;
       }
       
       await addProjectUpdate({
-        projectId,
+        projectId: project.id,
         text,
         imageUrl,
         userId: user.uid,
