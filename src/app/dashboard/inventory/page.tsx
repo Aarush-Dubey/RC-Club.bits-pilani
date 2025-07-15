@@ -98,7 +98,10 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
                     id="quantity"
                     type="number"
                     value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value, 10))}
+                    onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setQuantity(isNaN(value) ? 1 : value);
+                    }}
                     min={1}
                     max={item.availableQuantity}
                     required
