@@ -89,6 +89,7 @@ function getStatusBadge(status: string) {
 
 
 export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
+    const { id: projectId } = params;
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const { user: currentUser, loading: authLoading } = useAuth(); 
@@ -96,7 +97,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const projectData = await getProjectData(params.id);
+                const projectData = await getProjectData(projectId);
                 if (!projectData) {
                     notFound();
                 }
@@ -108,7 +109,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
             }
         };
         fetchData();
-    }, [params.id]);
+    }, [projectId]);
 
 
     if (loading || authLoading) {
