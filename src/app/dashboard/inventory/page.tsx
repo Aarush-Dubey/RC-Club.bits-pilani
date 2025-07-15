@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -721,7 +722,6 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: an
                         <TableRow key={req.id}>
                             <TableCell>
                                 <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                <Badge variant={item?.isPerishable ? "destructive" : "secondary"}>{item?.isPerishable ? 'Perishable' : 'Non-Perishable'}</Badge>
                             </TableCell>
                             <TableCell>{user?.name || 'N/A'}</TableCell>
                             <TableCell>{project?.title || 'Personal Use'}</TableCell>
@@ -879,5 +879,3 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
-
-    
