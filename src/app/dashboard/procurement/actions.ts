@@ -53,11 +53,8 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
             estimatedCost: request.estimatedCost, // This is now cost per piece
             status: "pending",
             createdAt: serverTimestamp(),
+            linkedBucketId: bucketId, // Explicitly set to null if no bucketId
         };
-
-        if (bucketId) {
-            requestData.linkedBucketId = bucketId;
-        }
 
         batch.set(requestRef, requestData);
     }
@@ -99,10 +96,11 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
         const itemRequests = new Map();
         approvedItemsSnap.docs.forEach(doc => {
             const req = doc.data();
-            if (itemRequests.has(req.itemName.toLowerCase())) {
-                itemRequests.get(req.itemName.toLowerCase()).quantity += req.quantity;
+            const lowerCaseName = req.itemName.toLowerCase();
+            if (itemRequests.has(lowerCaseName)) {
+                itemRequests.get(lowerCaseName).quantity += req.quantity;
             } else {
-                itemRequests.set(req.itemName.toLowerCase(), {
+                itemRequests.set(lowerCaseName, {
                     name: req.itemName,
                     quantity: req.quantity,
                     costPerUnit: req.estimatedCost
@@ -114,7 +112,7 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
         const itemNames = Array.from(itemRequests.keys());
         let existingInventory: Map<string, any>;
         if (itemNames.length > 0) {
-            const inventoryQuery = query(collection(db, "inventory_items"), where("name", "in", itemNames.map(name => itemRequests.get(name).name)));
+            const inventoryQuery = query(collection(db, "inventory_items"), where("name", "in", Array.from(itemRequests.values()).map(item => item.name)));
             const inventorySnap = await getDocs(inventoryQuery);
             existingInventory = new Map(inventorySnap.docs.map(doc => [doc.data().name.toLowerCase(), { id: doc.id, ...doc.data() }]));
         } else {
