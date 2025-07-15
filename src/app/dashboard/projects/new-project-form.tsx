@@ -37,6 +37,9 @@ const mockCurrentUser = { id: "user-5", name: "Mary Jane" }
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
+  type: z.enum(["plane", "drone", "other"], {
+    required_error: "You need to select a project type.",
+  }),
   description: z.string().min(10, "Description must be at least 10 characters long."),
   memberIds: z.array(z.string()).min(1, "At least one team member is required."),
   leadId: z.string().min(1, "A project lead must be selected."),
@@ -90,6 +93,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
       const projectRef = doc(collection(db, "projects"));
       batch.set(projectRef, {
         title: data.title,
+        type: data.type,
         description: data.description,
         leadId: data.leadId,
         memberIds: data.memberIds,
@@ -157,6 +161,29 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                   <FormControl>
                     <Input placeholder="e.g., Autonomous Drone Swarm" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem className="m-2">
+                  <FormLabel>Project Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a project type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="plane">Plane</SelectItem>
+                      <SelectItem value="drone">Drone</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
