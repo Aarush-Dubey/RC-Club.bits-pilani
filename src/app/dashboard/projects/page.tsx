@@ -70,11 +70,10 @@ function getStatusBadge(status: string) {
 async function getData(currentUser: any) {
     if (!currentUser) return { myProjects: [], approvalRequests: [], users: [], inventory: [] };
     
-    // My Projects Query
+    // My Projects Query - NOTE: orderBy was removed to prevent index error.
     const myProjectsQuery = query(
         collection(db, "projects"), 
-        where("memberIds", "array-contains", currentUser.uid), 
-        orderBy("createdAt", "desc")
+        where("memberIds", "array-contains", currentUser.uid)
     );
     const myProjectsSnapshot = await getDocs(myProjectsQuery);
     const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
@@ -168,12 +167,17 @@ export default function ProjectsPage() {
   const fetchData = async () => {
     if (!currentUser) return;
     setLoading(true);
-    const { myProjects, approvalRequests, users, inventory } = await getData(currentUser);
-    setMyProjects(myProjects);
-    setApprovalRequests(approvalRequests);
-    setUsers(users);
-    setInventory(inventory);
-    setLoading(false);
+    try {
+      const { myProjects, approvalRequests, users, inventory } = await getData(currentUser);
+      setMyProjects(myProjects);
+      setApprovalRequests(approvalRequests);
+      setUsers(users);
+      setInventory(inventory);
+    } catch(err) {
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
   };
 
   useEffect(() => {
