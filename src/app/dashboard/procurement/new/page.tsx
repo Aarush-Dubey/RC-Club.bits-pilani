@@ -148,7 +148,7 @@ export default function NewProcurementPage() {
                                 <CardHeader>
                                     <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
                                     <CardDescription>
-                                        Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}
+                                        Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-grow">

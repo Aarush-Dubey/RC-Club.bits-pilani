@@ -127,7 +127,7 @@ export default function ProcurementBucketsPage() {
                                 <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
                             </div>
                             <CardDescription>
-                                Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy"): 'N/A'}
+                                Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
