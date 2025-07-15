@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles } from "lucide-react"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { enhanceJustification } from "@/ai/flows/enhance-justification"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -67,7 +68,26 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isEnhancing, setIsEnhancing] = useState(false);
     const { toast } = useToast();
+
+    const handleEnhanceReason = async () => {
+        if (!reason) {
+          toast({ variant: "destructive", title: "Cannot Enhance", description: "Please provide a basic reason first." });
+          return;
+        }
+        setIsEnhancing(true);
+        try {
+          const result = await enhanceJustification({ itemName: item.name, justification: reason });
+          setReason(result.enhancedJustification);
+          toast({ title: "Reason Enhanced", description: "The justification has been updated with AI." });
+        } catch (error) {
+          console.error("Error enhancing reason:", error);
+          toast({ variant: "destructive", title: "Enhancement Failed", description: "Could not enhance the reason." });
+        } finally {
+          setIsEnhancing(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,7 +120,7 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
                     value={quantity}
                     onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        setQuantity(isNaN(value) ? 1 : value);
+                        setQuantity(isNaN(value) || value < 1 ? 1 : value);
                     }}
                     min={1}
                     max={item.availableQuantity}
@@ -108,7 +128,13 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
                 />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="reason">Reason for Request</Label>
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="reason">Reason for Request</Label>
+                    <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceReason} disabled={isEnhancing || isLoading}>
+                        {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Enhance
+                    </Button>
+                </div>
                 <Textarea
                     id="reason"
                     value={reason}
@@ -117,8 +143,8 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
                     required
                 />
             </div>
-            <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isLoading || isEnhancing} className="w-full">
+                {(isLoading || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Request
             </Button>
         </form>
@@ -422,3 +448,5 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
+
+    
