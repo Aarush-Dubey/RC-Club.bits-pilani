@@ -248,7 +248,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                             {bucket.status === 'ordered' && (
                                 <Button onClick={() => handleUpdateStatus('received')} disabled={actionLoading}>
                                     {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Submit for Reimbursement
+                                    Mark as Received
                                 </Button>
                             )}
                         </CardContent>
