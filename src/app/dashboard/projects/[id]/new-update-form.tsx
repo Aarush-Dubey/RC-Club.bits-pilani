@@ -135,9 +135,9 @@ export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormP
 
       if (selectedFiles.length > 0) {
         imageUrls = [];
-        const authParams = await authenticator();
         
         for (const file of selectedFiles) {
+            const authParams = await authenticator();
             const uploadResponse = await upload({
               file: file,
               fileName: file.name,
