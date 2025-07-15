@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { NewItemRequestForm } from "../../new-item-request-form";
+import { NewItemRequestForm } from "../new-item-request-form";
 import { useToast } from "@/hooks/use-toast";
-import { updateBucketStatus } from "../../actions";
+import { updateBucketStatus } from "../actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +66,7 @@ const getStatusVariant = (status: string) => {
   }
 };
 
-export default function BucketDetailsPage({ params }: { params: { id: string } }) {
+export default function BucketDetailsPage({ params: { id } }: { params: { id: string } }) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -78,7 +78,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
     const fetchData = async () => {
         setLoading(true);
         try {
-            const bucketData = await getBucketData(params.id);
+            const bucketData = await getBucketData(id);
             if (!bucketData) {
                 notFound();
             }
@@ -93,7 +93,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
 
     useEffect(() => {
         fetchData();
-    }, [params.id]);
+    }, [id]);
 
     const handleFormSubmit = () => {
         fetchData();
@@ -103,7 +103,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
     const handleUpdateStatus = async (status: "open" | "closed" | "ordered" | "received") => {
         setActionLoading(true);
         try {
-            await updateBucketStatus(params.id, status);
+            await updateBucketStatus(id, status);
             toast({ title: "Bucket Updated", description: `The bucket is now ${status}.` });
             fetchData();
         } catch (error) {
@@ -252,7 +252,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
                 <DialogDescription>Fill out the details for the item you want to request.</DialogDescription>
                 </DialogHeader>
                 <NewItemRequestForm
-                    bucketId={params.id}
+                    bucketId={id}
                     currentUser={currentUser}
                     setOpen={setIsFormOpen}
                     onFormSubmit={handleFormSubmit}
