@@ -473,8 +473,8 @@ function EditableInventoryItemRow({ item, onFormSubmit }: { item: any, onFormSub
                 <TableCell>{item.availableQuantity}</TableCell>
                 <TableCell className="text-right">
                     <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                        <Button variant="ghost" size="icon">
+                            <Pencil className="h-4 w-4" />
                         </Button>
                     </DialogTrigger>
                 </TableCell>
@@ -642,7 +642,7 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
     const manageTabs = [
         { value: "checkouts", label: "Current Checkouts", icon: SlidersHorizontal },
         { value: "logs", label: "Activity Log", icon: History },
-        { value: "stock", label: "All Items", icon: Box },
+        { value: "stock", label: "Stock", icon: Box },
     ];
     
     return (
