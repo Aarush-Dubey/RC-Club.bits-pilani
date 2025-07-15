@@ -95,8 +95,9 @@ const serializeFirestoreTimestamps = (data: any): any => {
 export default function BucketDetailsClient({ initialData, bucketId }: { initialData: any, bucketId: string }) {
     const [data, setData] = useState<any>(initialData);
     const [loading, setLoading] = useState(!initialData);
-    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isNewItemFormOpen, setIsNewItemFormOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
     const { user: currentUser, loading: authLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
@@ -152,7 +153,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
 
 
     const handleFormSubmit = () => {
-        setIsFormOpen(false);
+        setIsNewItemFormOpen(false);
     };
 
     const handleUpdateStatus = async (status: "open" | "closed" | "ordered" | "received") => {
@@ -203,12 +204,12 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         .reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
 
     return (
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog>
             <div className="space-y-8">
                 <div className="flex items-start justify-between">
                     <div>
                         <Link href="/dashboard/procurement" className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-2">
-                           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Buckets
+                           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Procurement
                         </Link>
                         <div className="flex items-center gap-4">
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{bucket.description}</h2>
@@ -218,12 +219,26 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                             Started by {creator?.name} on {bucket.createdAt ? format(new Date(bucket.createdAt), "MMM d, yyyy") : 'N/A'}
                         </p>
                     </div>
-                    {bucket.status === 'open' && (
-                        <DialogTrigger asChild>
-                            <Button>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Item Request
-                            </Button>
-                        </DialogTrigger>
+                     {bucket.status === 'open' && (
+                        <Dialog open={isNewItemFormOpen} onOpenChange={setIsNewItemFormOpen}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item Request
+                                </Button>
+                            </DialogTrigger>
+                             <DialogContent>
+                                <DialogHeader>
+                                <DialogTitle>Add Item to Bucket</DialogTitle>
+                                <DialogDescription>Fill out the details for the item you want to request.</DialogDescription>
+                                </DialogHeader>
+                                <NewItemRequestForm
+                                    bucketId={bucketId}
+                                    currentUser={currentUser}
+                                    setOpen={setIsNewItemFormOpen}
+                                    onFormSubmit={handleFormSubmit}
+                                />
+                            </DialogContent>
+                        </Dialog>
                     )}
                 </div>
 
@@ -296,38 +311,26 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                 <TableRow>
                                     <TableHead>Item</TableHead>
                                     <TableHead>Requested By</TableHead>
-                                    <TableHead>Qty</TableHead>
-                                    <TableHead>Est. Cost</TableHead>
                                     <TableHead>Status</TableHead>
-                                    {isManager && bucket.status === 'closed' && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {requests && requests.length > 0 ? requests.map((req: any) => {
                                     const user = members.find((u: any) => u.id === req.requestedById);
                                     return (
-                                        <TableRow key={req.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{req.itemName}</div>
-                                                <div className="text-sm text-muted-foreground">{req.justification}</div>
-                                                {req.rejectionReason && (
-                                                    <div className="text-xs text-destructive mt-1">Reason: {req.rejectionReason}</div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>{user?.name || 'Unknown'}</TableCell>
-                                            <TableCell>{req.quantity}</TableCell>
-                                            <TableCell>₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
-                                            <TableCell><StatusCircle status={req.status} type="request" /></TableCell>
-                                            {isManager && bucket.status === 'closed' && (
-                                                <TableCell className="text-right">
-                                                   {req.status === 'pending' ? <BucketItemActions requestId={req.id} itemName={req.itemName} /> : '-'}
+                                        <DialogTrigger key={req.id} asChild>
+                                            <TableRow className="cursor-pointer" onClick={() => setSelectedRequest(req)}>
+                                                <TableCell>
+                                                    <div className="font-medium">{req.itemName}</div>
                                                 </TableCell>
-                                            )}
-                                        </TableRow>
+                                                <TableCell>{user?.name || 'Unknown'}</TableCell>
+                                                <TableCell><StatusCircle status={req.status} type="request" /></TableCell>
+                                            </TableRow>
+                                        </DialogTrigger>
                                     )
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={isManager && bucket.status === 'closed' ? 6 : 5} className="text-center h-24">
+                                        <TableCell colSpan={3} className="text-center h-24">
                                             No items have been requested in this bucket yet.
                                         </TableCell>
                                     </TableRow>
@@ -337,18 +340,57 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     </CardContent>
                 </Card>
             </div>
-             <DialogContent>
-                <DialogHeader>
-                <DialogTitle>Add Item to Bucket</DialogTitle>
-                <DialogDescription>Fill out the details for the item you want to request.</DialogDescription>
-                </DialogHeader>
-                <NewItemRequestForm
-                    bucketId={bucketId}
-                    currentUser={currentUser}
-                    setOpen={setIsFormOpen}
-                    onFormSubmit={handleFormSubmit}
-                />
+            
+            <DialogContent>
+                {selectedRequest && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="font-headline text-2xl">{selectedRequest.itemName}</DialogTitle>
+                            <DialogDescription>
+                                Requested by {members.find((u: any) => u.id === selectedRequest.requestedById)?.name || 'Unknown'}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Status</span>
+                                <div className="flex items-center gap-2">
+                                     <StatusCircle status={selectedRequest.status} type="request" />
+                                     <span className="font-medium capitalize">{selectedRequest.status.replace(/_/g, ' ')}</span>
+                                </div>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Quantity</span>
+                                <span className="font-medium">{selectedRequest.quantity}</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Est. Cost / piece</span>
+                                <span className="font-mono">₹{selectedRequest.estimatedCost.toFixed(2)}</span>
+                            </div>
+                             <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Est. Total Cost</span>
+                                <span className="font-mono font-bold">₹{(selectedRequest.estimatedCost * selectedRequest.quantity).toFixed(2)}</span>
+                            </div>
+                            <div>
+                                <h4 className="font-medium mb-1">Justification</h4>
+                                <p className="text-sm text-muted-foreground">{selectedRequest.justification}</p>
+                            </div>
+                             {selectedRequest.rejectionReason && (
+                                <div>
+                                    <h4 className="font-medium mb-1 text-destructive">Rejection Reason</h4>
+                                    <p className="text-sm text-destructive/80">{selectedRequest.rejectionReason}</p>
+                                </div>
+                            )}
+                        </div>
+                        {isManager && bucket.status === 'closed' && selectedRequest.status === 'pending' && (
+                            <div className="pt-4 border-t">
+                                <BucketItemActions requestId={selectedRequest.id} itemName={selectedRequest.itemName} />
+                            </div>
+                        )}
+                    </>
+                )}
             </DialogContent>
         </Dialog>
     );
 }
+
+    
