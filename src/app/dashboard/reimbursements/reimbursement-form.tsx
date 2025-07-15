@@ -41,10 +41,10 @@ export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurem
     if (!item.linkedBucketId && item.status === 'approved' && item.requestedById === currentUser?.uid) {
         return true;
     }
-    // An item in a bucket is eligible if the item is approved AND the bucket is ordered AND the bucket was created by the current user.
+    // An item in a bucket is eligible if the item is approved AND the bucket is ordered/received AND the bucket was created by the current user.
     if(item.linkedBucketId) {
         const bucket = procurementBuckets.find(b => b.id === item.linkedBucketId);
-        if (bucket && bucket.status === 'ordered' && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
+        if (bucket && ['ordered', 'received'].includes(bucket.status) && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
             return true;
         }
     }
