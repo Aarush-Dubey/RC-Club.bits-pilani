@@ -31,6 +31,7 @@ import type { User, InventoryItem } from "./page"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import type { AppUser } from "@/context/auth-context"
+import { enhanceDescription } from "@/ai/flows/enhance-description"
 
 const createFormSchema = (inventory: InventoryItem[]) => z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
@@ -75,6 +76,7 @@ interface NewProjectFormProps {
 
 export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: NewProjectFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEnhancing, setIsEnhancing] = useState(false)
   const [memberSearch, setMemberSearch] = useState("")
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false)
 
@@ -104,6 +106,39 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
   const availableLeads = users.filter(u => selectedMembers?.includes(u.id))
   
   const filteredUsers = users.filter(user => user.name.toLowerCase().includes(memberSearch.toLowerCase()))
+
+  const handleEnhanceDescription = async () => {
+    const { title, type, description } = form.getValues();
+    if (!description) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Enhance",
+        description: "Please provide a basic description first.",
+      });
+      return;
+    }
+    setIsEnhancing(true);
+    try {
+      const result = await enhanceDescription({ title, type, description });
+      form.setValue("description", result.enhancedDescription, {
+        shouldValidate: true,
+      });
+      toast({
+        title: "Description Enhanced",
+        description: "The project description has been updated with AI.",
+      });
+    } catch (error) {
+      console.error("Error enhancing description:", error);
+      toast({
+        variant: "destructive",
+        title: "Enhancement Failed",
+        description: "Could not enhance the description. Please try again.",
+      });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!currentUser) {
@@ -445,8 +480,8 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
                 <FormItem className="m-2">
                   <div className="flex justify-between items-center">
                     <FormLabel>Project Description</FormLabel>
-                    <Button type="button" variant="ghost" size="sm" disabled>
-                        <Sparkles className="mr-2 h-4 w-4" />
+                     <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceDescription} disabled={isEnhancing}>
+                        {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         Enhance with AI
                     </Button>
                   </div>
@@ -464,7 +499,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
           </div>
         </ScrollArea>
         <div className="pt-4 border-t">
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+          <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit for Approval
           </Button>
@@ -473,5 +508,3 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
     </Form>
   )
 }
-
-    
