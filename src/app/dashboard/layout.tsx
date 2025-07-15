@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   ToyBrick,
   Truck,
+  Settings,
 } from "lucide-react"
 
 import { useAuth } from "@/context/auth-context"
@@ -36,6 +37,7 @@ const menuItems = [
   { href: "/dashboard/procurement", icon: Truck, label: "Procurement" },
   { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements" },
   { href: "/dashboard/finance", icon: LineChart, label: "Finance AI" },
+  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ]
 
 export default function DashboardLayout({

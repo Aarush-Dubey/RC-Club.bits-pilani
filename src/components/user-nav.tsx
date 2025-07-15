@@ -1,5 +1,7 @@
+
 "use client"
 
+import Link from "next/link"
 import { LogOut, Settings, User as UserIcon } from "lucide-react"
 import { signOut } from "firebase/auth"
 import { useRouter } from "next/navigation"
@@ -68,10 +70,12 @@ export function UserNav() {
             <UserIcon />
             Profile
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Settings />
-            Settings
-          </DropdownMenuItem>
+          <Link href="/dashboard/settings" passHref>
+            <DropdownMenuItem>
+              <Settings />
+              Settings
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
