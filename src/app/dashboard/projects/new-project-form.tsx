@@ -26,15 +26,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { User, InventoryItem } from "./page"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import type { AppUser } from "@/context/auth-context"
 
-
-const formSchema = z.object({
+const createFormSchema = (inventory: InventoryItem[]) => z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
   type: z.enum(["plane", "drone", "other"], {
     required_error: "You need to select a project type.",
@@ -43,16 +41,30 @@ const formSchema = z.object({
   memberIds: z.array(z.string()).min(1, "At least one team member is required."),
   leadId: z.string().min(1, "A project lead must be selected."),
   targetCompletionDate: z.date().optional(),
-  requestedInventory: z.array(z.object({
-    itemId: z.string().min(1, "Please select an item."),
-    quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-  })).optional(),
+  requestedInventory: z.array(
+    z.object({
+      itemId: z.string().min(1, "Please select an item."),
+      quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
+    }).refine(
+      (data) => {
+        const item = inventory.find(i => i.id === data.itemId);
+        if (!item) return true; // Let the itemId validation handle this
+        return data.quantity <= item.availableQuantity;
+      },
+      (data) => {
+        const item = inventory.find(i => i.id === data.itemId);
+        return {
+          message: `Cannot request more than ${item?.availableQuantity} available items.`,
+          path: ["quantity"],
+        };
+      }
+    )
+  ).optional(),
 }).refine(data => data.memberIds.includes(data.leadId), {
     message: "Project lead must be a team member.",
     path: ["leadId"],
 })
 
-type FormValues = z.infer<typeof formSchema>
 
 interface NewProjectFormProps {
   onFormSubmit: () => void
@@ -67,6 +79,9 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
   const [memberPopoverOpen, setMemberPopoverOpen] = useState(false)
 
   const { toast } = useToast()
+  
+  const formSchema = createFormSchema(inventory);
+  type FormValues = z.infer<typeof formSchema>
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -376,7 +391,12 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
                                                           : "opacity-0"
                                                       )}
                                                     />
-                                                    {item.name}
+                                                    <div className="flex justify-between w-full">
+                                                        <span>{item.name}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            ({item.availableQuantity} avail.)
+                                                        </span>
+                                                    </div>
                                                   </CommandItem>
                                                 ))}
                                               </CommandGroup>
@@ -394,7 +414,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
                               render={({ field }) => (
                                   <FormItem className="w-24">
                                       <FormControl>
-                                          <Input type="number" placeholder="Qty" {...field} />
+                                          <Input type="number" placeholder="Qty" {...field} min={1} />
                                       </FormControl>
                                       <FormMessage />
                                   </FormItem>
