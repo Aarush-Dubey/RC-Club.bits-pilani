@@ -23,6 +23,7 @@ import type { AppUser } from "@/context/auth-context";
 import { addRequestToBucket } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { enhanceJustification } from "@/ai/flows/enhance-justification";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   requests: z.array(z.object({
@@ -30,6 +31,7 @@ const formSchema = z.object({
     justification: z.string().min(10, "Please provide a brief justification."),
     quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
     estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
+    isPerishable: z.boolean().default(false),
   })).min(1, "At least one item is required.")
 });
 
@@ -55,6 +57,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
         justification: "",
         quantity: 1,
         estimatedCost: 0,
+        isPerishable: false,
       }],
     },
   });
@@ -216,13 +219,32 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name={`requests.${index}.isPerishable`}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          This item is perishable/consumable
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
             ))}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ itemName: "", justification: "", quantity: 1, estimatedCost: 0 })}
+              onClick={() => append({ itemName: "", justification: "", quantity: 1, estimatedCost: 0, isPerishable: false })}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
             </Button>

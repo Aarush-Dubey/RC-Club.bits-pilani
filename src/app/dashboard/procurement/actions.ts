@@ -33,7 +33,8 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
         itemName: string,
         justification: string,
         quantity: number,
-        estimatedCost: number
+        estimatedCost: number,
+        isPerishable: boolean
     }[]
 }) {
     if (!requestedById) {
@@ -50,22 +51,21 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
             itemName: request.itemName,
             justification: request.justification,
             quantity: request.quantity,
-            estimatedCost: request.estimatedCost, // This is now cost per piece
+            estimatedCost: request.estimatedCost,
+            isPerishable: request.isPerishable,
             status: "pending",
             createdAt: serverTimestamp(),
-            linkedBucketId: bucketId, // Explicitly set to null if no bucketId
+            linkedBucketId: bucketId,
         };
 
         batch.set(requestRef, requestData);
     }
     
-    // If it's for a bucket, add the user to the bucket's member list
     if (bucketId) {
         const bucketRef = doc(db, "procurement_buckets", bucketId);
         batch.update(bucketRef, {
             members: arrayUnion(requestedById)
         });
-        // No need for revalidatePath here, as onSnapshot will handle UI updates
     } else {
         revalidatePath(`/dashboard/procurement/approvals`);
     }
@@ -84,7 +84,6 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
     if (status === 'received') {
         const batch = writeBatch(db);
         
-        // 1. Get all approved items in the bucket
         const approvedItemsQuery = query(
             collection(db, "new_item_requests"),
             where("linkedBucketId", "==", bucketId),
@@ -92,7 +91,6 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
         );
         const approvedItemsSnap = await getDocs(approvedItemsQuery);
         
-        // Map item names to their requested details
         const itemRequests = new Map();
         approvedItemsSnap.docs.forEach(doc => {
             const req = doc.data();
@@ -103,12 +101,12 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
                 itemRequests.set(lowerCaseName, {
                     name: req.itemName,
                     quantity: req.quantity,
-                    costPerUnit: req.estimatedCost
+                    costPerUnit: req.estimatedCost,
+                    isPerishable: req.isPerishable
                 });
             }
         });
 
-        // 2. Get existing inventory items that match the names
         const itemNames = Array.from(itemRequests.keys());
         let existingInventory: Map<string, any>;
         if (itemNames.length > 0) {
@@ -119,10 +117,8 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
             existingInventory = new Map();
         }
 
-        // 3. Prepare batch writes for new or updated inventory
         for (const [name, request] of itemRequests.entries()) {
             if (existingInventory.has(name)) {
-                // Item exists, update quantity
                 const existingItem = existingInventory.get(name);
                 const itemRef = doc(db, "inventory_items", existingItem.id);
                 batch.update(itemRef, {
@@ -130,7 +126,6 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
                     availableQuantity: existingItem.availableQuantity + request.quantity
                 });
             } else {
-                // New item, create it
                 const newItemRef = doc(collection(db, "inventory_items"));
                 batch.set(newItemRef, {
                     id: newItemRef.id,
@@ -138,17 +133,15 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
                     totalQuantity: request.quantity,
                     availableQuantity: request.quantity,
                     checkedOutQuantity: 0,
-                    isPerishable: false, // Default value, can be edited later
+                    isPerishable: request.isPerishable,
                     costPerUnit: request.costPerUnit,
                     createdAt: serverTimestamp()
                 });
             }
         }
         
-        // 4. Update the bucket status
         batch.update(bucketRef, data);
         
-        // 5. Commit the batch
         await batch.commit();
 
     } else {
@@ -157,7 +150,7 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
 
     revalidatePath(`/dashboard/procurement`);
     revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
-    revalidatePath('/dashboard/inventory'); // Revalidate inventory to show new items
+    revalidatePath('/dashboard/inventory');
 }
 
 export async function approveNewItemRequest(requestId: string, approverId: string) {
@@ -173,7 +166,6 @@ export async function approveNewItemRequest(requestId: string, approverId: strin
     const requestDoc = await getDoc(requestRef);
     const bucketId = requestDoc.data()?.linkedBucketId;
     
-    // Revalidate paths if not part of a bucket or if the bucket itself needs updating
     if (bucketId) {
         revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
     } else {
