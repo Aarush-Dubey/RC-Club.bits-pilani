@@ -128,6 +128,20 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     )}
                 </div>
 
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Dev Tool</CardTitle>
+                        <CardDescription>Use this to check current user permissions.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Current User Role: <span className="font-mono">{currentUser?.role || 'Not defined'}</span></p>
+                        <p>Can Approve New Item?: <span className="font-mono">{isManager ? 'true' : 'false'}</span></p>
+                        <pre className="mt-2 text-xs bg-muted p-2 rounded-md font-mono overflow-auto">
+                            {JSON.stringify(currentUser?.permissions, null, 2)}
+                        </pre>
+                    </CardContent>
+                </Card>
+
                 {isManager && bucket.status === 'open' && (
                     <Card>
                         <CardHeader>
