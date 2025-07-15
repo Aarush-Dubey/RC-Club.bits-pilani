@@ -122,30 +122,54 @@ function RequestItemForm({ item, currentUser, setOpen }: { item: any, currentUse
     )
 }
 
-function ItemDetailsDialog({ item, currentUser }: { item: any, currentUser: AppUser | null }) {
-    const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
-
+function InventoryItemRow({ item, currentUser }: { item: any, currentUser: AppUser | null }) {
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    
     return (
-         <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{item.name}</DialogTitle>
-                    <DialogDescription>
-                        Request this item for personal use.
-                    </DialogDescription>
-                </DialogHeader>
-                <RequestItemForm item={item} currentUser={currentUser} setOpen={setIsRequestFormOpen} />
-            </DialogContent>
-             <DialogTrigger asChild>
-                <TableRow className="cursor-pointer">
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogTrigger asChild>
+                    <TableRow className="cursor-pointer">
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-right">{item.availableQuantity}</TableCell>
                 </TableRow>
             </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{item.name}</DialogTitle>
+                        <DialogDescription>
+                        {item.description || "No description available for this item."}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                    <div>
+                        <div className="text-sm font-medium text-muted-foreground">Total Stock</div>
+                        <div className="text-lg font-bold">{item.totalQuantity}</div>
+                    </div>
+                    <div>
+                        <div className="text-sm font-medium text-muted-foreground">Available</div>
+                        <div className="text-lg font-bold">{item.availableQuantity}</div>
+                    </div>
+                </div>
+                    <Dialog>
+                    <DialogTrigger asChild>
+                        <Button disabled={item.availableQuantity === 0}>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Request Item
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Request: {item.name}</DialogTitle>
+                        </DialogHeader>
+                        <RequestItemForm item={item} currentUser={currentUser} setOpen={(isOpen) => {
+                            if (!isOpen) setIsDetailsOpen(false);
+                        }} />
+                    </DialogContent>
+                </Dialog>
+            </DialogContent>
         </Dialog>
-    )
+    );
 }
-
 
 async function getData() {
     const inventorySnapshot = await getDocs(query(collection(db, "inventory_items"), orderBy("name")));
@@ -242,7 +266,6 @@ function ReturnActions({ request, canConfirm }: { request: any, canConfirm: bool
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
     const [loading, setLoading] = useState(true);
-    const [openDialogs, setOpenDialogs] = useState<{ [key: string]: boolean }>({});
     const { user: currentUser } = useAuth();
     
     const fetchData = async () => {
@@ -304,53 +327,9 @@ export default function InventoryPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {data.inventory.length > 0 ? data.inventory.map((item: any) => {
-                                    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-                                return (
-                                    <Dialog key={item.id} open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                                        <DialogTrigger asChild>
-                                             <TableRow className="cursor-pointer">
-                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell className="text-right">{item.availableQuantity}</TableCell>
-                                            </TableRow>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>{item.name}</DialogTitle>
-                                                 <DialogDescription>
-                                                    {item.description || "No description available for this item."}
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="grid grid-cols-2 gap-4 py-4">
-                                                <div>
-                                                    <div className="text-sm font-medium text-muted-foreground">Total Stock</div>
-                                                    <div className="text-lg font-bold">{item.totalQuantity}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-medium text-muted-foreground">Available</div>
-                                                    <div className="text-lg font-bold">{item.availableQuantity}</div>
-                                                </div>
-                                            </div>
-                                             <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button disabled={item.availableQuantity === 0}>
-                                                        <ShoppingCart className="mr-2 h-4 w-4" />
-                                                        Request Item
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Request: {item.name}</DialogTitle>
-                                                    </DialogHeader>
-                                                    <RequestItemForm item={item} currentUser={currentUser} setOpen={(isOpen) => {
-                                                        if (!isOpen) setIsDetailsOpen(false);
-                                                    }} />
-                                                </DialogContent>
-                                            </Dialog>
-                                        </DialogContent>
-                                    </Dialog>
-                                )
-                                }) : (
+                                {data.inventory.length > 0 ? data.inventory.map((item: any) => (
+                                    <InventoryItemRow key={item.id} item={item} currentUser={currentUser} />
+                                )) : (
                                     <TableRow>
                                         <TableCell colSpan={2} className="h-24 text-center">
                                             No inventory items found.
