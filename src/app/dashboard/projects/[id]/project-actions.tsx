@@ -75,6 +75,7 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
 
   const canManage = currentUser?.role && ['admin', 'coordinator'].includes(currentUser.role);
   const isProjectLead = currentUser?.uid === project.leadId;
+  const isMember = currentUser && project.memberIds.includes(currentUser.uid);
 
 
   if (canApprove()) {
@@ -135,15 +136,17 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
               Start Project
             </Button>
           )}
-          {project.status === 'active' && isProjectLead && (
+          {project.status === 'active' && isMember && (
             <>
                <DialogTrigger asChild>
                   <Button><Flag className="mr-2"/>Post Update</Button>
                </DialogTrigger>
-              <Button onClick={onComplete} disabled={isLoading} variant="outline">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
-                Mark as Completed
-              </Button>
+               {isProjectLead && (
+                 <Button onClick={onComplete} disabled={isLoading} variant="outline">
+                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+                   Mark as Completed
+                 </Button>
+               )}
             </>
           )}
           {project.status === 'completed' && canManage && (
