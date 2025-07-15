@@ -168,22 +168,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
     return (
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <div className="space-y-8">
-                 <Card className="border-yellow-400 bg-yellow-50">
-                    <CardHeader>
-                        <CardTitle className="text-yellow-800">Dev Tool</CardTitle>
-                        <CardDescription className="text-yellow-700">This panel is for debugging permissions.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-yellow-900 space-y-2">
-                        <p><strong>Your Role:</strong> {currentUser?.role || 'N/A'}</p>
-                        <p>
-                            <strong>canApproveNewItemRequest:</strong> 
-                            <span className={isManager ? 'font-bold text-green-700' : 'font-bold text-red-700'}>
-                                {isManager ? ' true' : ' false'}
-                            </span>
-                        </p>
-                    </CardContent>
-                </Card>
-
                 <div className="flex items-start justify-between">
                     <div>
                         <Link href="/dashboard/procurement" className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-2">

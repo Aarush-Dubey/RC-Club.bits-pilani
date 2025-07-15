@@ -82,21 +82,6 @@ export default function ProcurementBucketsPage() {
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
       <div className="space-y-8">
-        <Card className="border-yellow-400 bg-yellow-50">
-            <CardHeader>
-                <CardTitle className="text-yellow-800">Dev Tool</CardTitle>
-                <CardDescription className="text-yellow-700">This panel is for debugging permissions.</CardDescription>
-            </CardHeader>
-            <CardContent className="text-yellow-900 space-y-2">
-                <p><strong>Your Role:</strong> {currentUser?.role || 'N/A'}</p>
-                <p>
-                    <strong>canApproveNewItemRequest:</strong> 
-                    <span className={canApprove ? 'font-bold text-green-700' : 'font-bold text-red-700'}>
-                        {canApprove ? ' true' : ' false'}
-                    </span>
-                </p>
-            </CardContent>
-        </Card>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight font-headline">All Procurement Buckets</h2>
