@@ -46,7 +46,7 @@ async function getProjectData(projectId: string) {
         members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
     }
     
-    const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), orderBy("createdAt", "desc"));
+    const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
     const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
     const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
