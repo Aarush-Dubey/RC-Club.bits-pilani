@@ -53,7 +53,7 @@ function getStatusBadge(status: string) {
 
 export const ProjectCard = ({ project, users, currentUser }: { project: Project; users: User[]; currentUser: AppUser | null }) => {
   const projectLead = users.find((u: any) => u.id === project.leadId)
-  const canManage = currentUser?.role === 'admin' || currentUser?.role === 'coordinator'
+  const canManage = currentUser?.permissions?.canApproveProjects;
 
   return (
       <div key={project.id} className="group flex flex-col">
@@ -96,11 +96,18 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
               </div>
               )}
           </div>
-          <Link href={`/dashboard/projects/${project.id}`} className="mt-4">
-            <Button variant="outline" className="w-full">
-              View Project
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2 mt-4">
+            <Link href={`/dashboard/projects/${project.id}`} className="flex-1">
+                <Button variant="outline" className="w-full">
+                View Project
+                </Button>
+            </Link>
+            {canManage && (
+                 <Link href={`/dashboard/projects/${project.id}`}>
+                    <Button className="w-full">Manage</Button>
+                </Link>
+            )}
+          </div>
       </div>
   )
 }
