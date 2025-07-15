@@ -340,9 +340,13 @@ export default function InventoryPage() {
 
         <Tabs defaultValue="all">
             <TabsList>
-            <TabsTrigger value="all">All Items</TabsTrigger>
-            <TabsTrigger value="requests">Requests</TabsTrigger>
-            <TabsTrigger value="returns">Returns</TabsTrigger>
+                <TabsTrigger value="all">All Items</TabsTrigger>
+                {canManageInventory && (
+                    <>
+                        <TabsTrigger value="requests">Requests</TabsTrigger>
+                        <TabsTrigger value="returns">Returns</TabsTrigger>
+                    </>
+                )}
             </TabsList>
             <TabsContent value="all" className="mt-6">
                 <Card>
@@ -373,79 +377,79 @@ export default function InventoryPage() {
                     </CardContent>
                 </Card>
             </TabsContent>
-            <TabsContent value="requests" className="mt-6">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>Request Details</TableHead>
-                    <TableHead>Requested By</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canManageInventory && <TableHead className="text-right">Actions</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
-                        const item = data.inventory.find((i: any) => i.id === req.itemId);
-                        const user = data.users.find((u: any) => u.id === req.requestedById);
-                        const project = data.projects.find((p: any) => p.id === req.projectId);
-                        return (
-                            <TableRow key={req.id}>
-                                <TableCell>
-                                    <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {project ? `For: ${project.title}` : `Reason: ${req.reason || 'N/A'}`}
-                                    </div>
-                                </TableCell>
-                                <TableCell>{user?.name}</TableCell>
-                                <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                                <TableCell><StatusCircle status={req.status} /></TableCell>
-                                {canManageInventory && (
-                                    <TableCell className="text-right space-x-2">
-                                        <RequestActions request={req} canApprove={!!canManageInventory} onActionComplete={fetchData} />
-                                    </TableCell>
-                                )}
+            {canManageInventory && (
+                <>
+                    <TabsContent value="requests" className="mt-6">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Request Details</TableHead>
+                            <TableHead>Requested By</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        )
-                    })}
-                </TableBody>
-                </Table>
-            </TabsContent>
-            <TabsContent value="returns" className="mt-6">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>Item Details</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Returned By</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canManageInventory && <TableHead className="text-right">Actions</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.inventoryRequests.filter((r:any) => ['pending_return', 'returned'].includes(r.status)).map((req: any) => {
-                        const item = data.inventory.find((i: any) => i.id === req.itemId);
-                        const user = data.users.find((u: any) => u.id === req.requestedById);
-                        const project = data.projects.find((p: any) => p.id === req.projectId);
-                        return (
-                            <TableRow key={req.id}>
-                                <TableCell>
-                                    <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                </TableCell>
-                                <TableCell>{project?.title || 'N/A'}</TableCell>
-                                <TableCell>{user?.name}</TableCell>
-                                <TableCell><StatusCircle status={req.status} /></TableCell>
-                                {canManageInventory && (
-                                    <TableCell className="text-right space-x-2">
-                                        <ReturnActions request={req} canConfirm={!!canManageInventory} />
-                                    </TableCell>
-                                )}
+                        </TableHeader>
+                        <TableBody>
+                            {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
+                                const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                const user = data.users.find((u: any) => u.id === req.requestedById);
+                                const project = data.projects.find((p: any) => p.id === req.projectId);
+                                return (
+                                    <TableRow key={req.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {project ? `For: ${project.title}` : `Reason: ${req.reason || 'N/A'}`}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{user?.name}</TableCell>
+                                        <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
+                                        <TableCell><StatusCircle status={req.status} /></TableCell>
+                                        <TableCell className="text-right space-x-2">
+                                            <RequestActions request={req} canApprove={!!canManageInventory} onActionComplete={fetchData} />
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
+                        </Table>
+                    </TabsContent>
+                    <TabsContent value="returns" className="mt-6">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Item Details</TableHead>
+                            <TableHead>Project</TableHead>
+                            <TableHead>Returned By</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        )
-                    })}
-                </TableBody>
-                </Table>
-            </TabsContent>
+                        </TableHeader>
+                        <TableBody>
+                            {data.inventoryRequests.filter((r:any) => ['pending_return', 'returned'].includes(r.status)).map((req: any) => {
+                                const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                const user = data.users.find((u: any) => u.id === req.requestedById);
+                                const project = data.projects.find((p: any) => p.id === req.projectId);
+                                return (
+                                    <TableRow key={req.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                        </TableCell>
+                                        <TableCell>{project?.title || 'N/A'}</TableCell>
+                                        <TableCell>{user?.name}</TableCell>
+                                        <TableCell><StatusCircle status={req.status} /></TableCell>
+                                        <TableCell className="text-right space-x-2">
+                                            <ReturnActions request={req} canConfirm={!!canManageInventory} />
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
+                        </Table>
+                    </TabsContent>
+                </>
+            )}
         </Tabs>
         </div>
     </Dialog>
