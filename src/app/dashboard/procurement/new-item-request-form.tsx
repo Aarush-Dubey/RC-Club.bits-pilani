@@ -20,7 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { AppUser } from "@/context/auth-context";
-import { addRequestToBucket } from "../../actions";
+import { addRequestToBucket } from "../actions";
 
 const formSchema = z.object({
   itemName: z.string().min(3, "Item name must be at least 3 characters."),
@@ -32,13 +32,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface NewItemRequestFormProps {
-  bucketId: string;
+  bucketId?: string | null;
   currentUser: AppUser | null;
   setOpen: (open: boolean) => void;
   onFormSubmit: () => void;
 }
 
-export function NewItemRequestForm({ bucketId, currentUser, setOpen, onFormSubmit }: NewItemRequestFormProps) {
+export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFormSubmit }: NewItemRequestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -69,8 +69,10 @@ export function NewItemRequestForm({ bucketId, currentUser, setOpen, onFormSubmi
       });
 
       toast({
-        title: "Item Added",
-        description: "Your request has been added to the bucket.",
+        title: "Item Request Added",
+        description: bucketId 
+          ? "Your request has been added to the bucket."
+          : "Your standalone request has been submitted.",
       });
       onFormSubmit();
       setOpen(false);
@@ -85,6 +87,8 @@ export function NewItemRequestForm({ bucketId, currentUser, setOpen, onFormSubmi
       setIsSubmitting(false);
     }
   };
+  
+  const submitButtonText = bucketId ? "Add Item to Bucket" : "Submit Single Request";
 
   return (
     <Form {...form}>
@@ -149,10 +153,9 @@ export function NewItemRequestForm({ bucketId, currentUser, setOpen, onFormSubmi
         />
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Add Item to Bucket
+          {submitButtonText}
         </Button>
       </form>
     </Form>
   );
 }
-

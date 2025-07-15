@@ -21,9 +21,10 @@ export async function createProcurementBucket({ description, createdById }: { de
     });
 
     revalidatePath("/dashboard/procurement");
+    revalidatePath("/dashboard/procurement/new");
 }
 
-export async function addRequestToBucket(bucketId: string, { requestedById, itemName, justification, quantity, estimatedCost }: {
+export async function addRequestToBucket(bucketId: string | null, { requestedById, itemName, justification, quantity, estimatedCost }: {
     requestedById: string,
     itemName: string,
     justification: string,
@@ -36,9 +37,9 @@ export async function addRequestToBucket(bucketId: string, { requestedById, item
 
     const batch = writeBatch(db);
 
-    // 1. Create the new item request, linking it to the bucket
+    // 1. Create the new item request, linking it to the bucket if provided
     const requestRef = doc(collection(db, "new_item_requests"));
-    batch.set(requestRef, {
+    const requestData: any = {
         id: requestRef.id,
         requestedById,
         itemName,
@@ -46,18 +47,29 @@ export async function addRequestToBucket(bucketId: string, { requestedById, item
         quantity,
         estimatedCost,
         status: "pending",
-        linkedBucketId: bucketId,
         createdAt: serverTimestamp(),
-    });
+    };
 
-    // 2. Add the user to the bucket's member list if they aren't already there
-    const bucketRef = doc(db, "procurement_buckets", bucketId);
-    batch.update(bucketRef, {
-        members: arrayUnion(requestedById)
-    });
+    if (bucketId) {
+        requestData.linkedBucketId = bucketId;
+    }
+
+    batch.set(requestRef, requestData);
+
+    // 2. If it's for a bucket, add the user to the bucket's member list
+    if (bucketId) {
+        const bucketRef = doc(db, "procurement_buckets", bucketId);
+        batch.update(bucketRef, {
+            members: arrayUnion(requestedById)
+        });
+    }
 
     await batch.commit();
-    revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+
+    if (bucketId) {
+        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+    }
+    revalidatePath(`/dashboard/procurement/new`);
 }
 
 export async function updateBucketStatus(bucketId: string, status: "open" | "closed" | "ordered" | "received") {
