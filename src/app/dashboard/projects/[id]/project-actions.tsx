@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, Loader2, Play, Flag, Archive } from "lucide-react";
+import { Check, X, Loader2, Play, Flag, Archive, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import type { Project } from "../page";
-import { approveProject, rejectProject } from "./actions";
+import { approveProject, rejectProject, startProject, completeProject, closeProject } from "./actions";
 
 interface ProjectActionsProps {
   project: Project;
@@ -30,33 +30,25 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleApprove = async () => {
+  const handleAction = async (action: () => Promise<void>, successTitle: string, successDescription: string, errorTitle: string) => {
     setIsLoading(true);
     try {
-      await approveProject(project.id);
-      toast({ title: "Project Approved", description: "Inventory has been checked out to the project lead." });
+      await action();
+      toast({ title: successTitle, description: successDescription });
       router.refresh();
     } catch (error) {
-      console.error("Failed to approve project:", error);
-      toast({ variant: "destructive", title: "Approval Failed", description: (error as Error).message });
+      console.error(`Failed to ${errorTitle}:`, error);
+      toast({ variant: "destructive", title: errorTitle, description: (error as Error).message });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleReject = async () => {
-    setIsLoading(true);
-    try {
-      await rejectProject(project.id);
-      toast({ title: "Project Rejected", description: "The project has been marked as rejected." });
-      router.refresh();
-    } catch (error) {
-      console.error("Failed to reject project:", error);
-      toast({ variant: "destructive", title: "Rejection Failed", description: (error as Error).message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+  const onApprove = () => handleAction(() => approveProject(project.id), "Project Approved", "Inventory has been checked out to the project lead.", "Approval Failed");
+  const onReject = () => handleAction(() => rejectProject(project.id), "Project Rejected", "The project has been marked as rejected.", "Rejection Failed");
+  const onStart = () => handleAction(() => startProject(project.id), "Project Started", "The project is now active.", "Failed to Start Project");
+  const onComplete = () => handleAction(() => completeProject(project.id), "Project Completed", "The project has been marked as completed.", "Failed to Complete Project");
+  const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
 
   const isAdmin = currentUserRole === 'coordinator' || currentUserRole === 'admin';
 
@@ -79,7 +71,7 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleApprove}>Confirm Approval</AlertDialogAction>
+                <AlertDialogAction onClick={onApprove}>Confirm Approval</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -100,7 +92,7 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleReject}>Confirm Rejection</AlertDialogAction>
+                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={onReject}>Confirm Rejection</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -108,12 +100,29 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
     );
   }
 
-  // Placeholder for other actions based on status
   return (
     <div className="flex gap-2">
-        {project.status === 'approved' && <Button disabled><Play className="mr-2"/>Start Project</Button>}
-        {project.status === 'active' && <Button disabled><Flag className="mr-2"/>Post Update</Button>}
-        {project.status === 'completed' && isAdmin && <Button disabled><Archive className="mr-2"/>Close Project</Button>}
+        {project.status === 'approved' && (
+          <Button onClick={onStart} disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2"/>}
+            Start Project
+          </Button>
+        )}
+        {project.status === 'active' && (
+          <>
+            <Button disabled><Flag className="mr-2"/>Post Update</Button>
+            <Button onClick={onComplete} disabled={isLoading} variant="outline">
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+              Mark as Completed
+            </Button>
+          </>
+        )}
+        {project.status === 'completed' && isAdmin && (
+            <Button onClick={onClose} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}
+                Close Project
+            </Button>
+        )}
     </div>
   );
 }

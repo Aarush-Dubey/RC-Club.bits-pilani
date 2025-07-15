@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -19,7 +19,7 @@ export async function approveProject(projectId: string) {
             // 1. Update project status
             transaction.update(projectRef, { 
                 status: 'approved',
-                approvedAt: new Date(),
+                approvedAt: serverTimestamp(),
                 // In a real app, this would be the current user's ID
                 approvedById: 'system-admin' 
             });
@@ -55,7 +55,7 @@ export async function approveProject(projectId: string) {
                 // Update inventory request status
                 transaction.update(requestRef, { 
                     status: 'fulfilled',
-                    fulfilledAt: new Date(),
+                    fulfilledAt: serverTimestamp(),
                     // Associate with project lead
                     checkedOutToId: projectData.leadId,
                 });
@@ -97,4 +97,34 @@ export async function rejectProject(projectId: string) {
         console.error("Transaction failed: ", e);
         throw new Error(`Failed to reject project: ${(e as Error).message}`);
     }
+}
+
+export async function startProject(projectId: string) {
+    const projectRef = doc(db, "projects", projectId);
+    await updateDoc(projectRef, {
+        status: 'active',
+        activatedAt: serverTimestamp(),
+        // In a real app, this should be the current user's ID
+        activatedById: 'system-lead'
+    });
+}
+
+export async function completeProject(projectId: string) {
+    const projectRef = doc(db, "projects", projectId);
+    await updateDoc(projectRef, {
+        status: 'completed',
+        completedAt: serverTimestamp(),
+        // In a real app, this should be the current user's ID
+        completedById: 'system-lead'
+    });
+}
+
+export async function closeProject(projectId: string) {
+    const projectRef = doc(db, "projects", projectId);
+    await updateDoc(projectRef, {
+        status: 'closed',
+        closedAt: serverTimestamp(),
+        // In a real app, this should be the current user's ID
+        closedById: 'system-admin'
+    });
 }

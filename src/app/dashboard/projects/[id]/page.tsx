@@ -16,9 +16,15 @@ async function getProjectData(projectId: string) {
         return null;
     }
 
-    const project = { id: projectSnap.id, ...projectSnap.data() };
+    const projectData = projectSnap.data();
+    // Ensure memberIds is an array
+    const memberIds = Array.isArray(projectData.memberIds) && projectData.memberIds.length > 0
+        ? projectData.memberIds
+        : [projectData.leadId]; // Fallback to leadId if memberIds is empty or not an array
 
-    const usersQuery = query(collection(db, "users"), where("id", "in", project.memberIds));
+    const project = { id: projectSnap.id, ...projectData, memberIds };
+
+    const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
     const usersSnap = await getDocs(usersQuery);
     const members = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -28,12 +34,13 @@ async function getProjectData(projectId: string) {
 
     const inventoryItems = [];
     if(inventoryRequests.length > 0) {
-        const itemIds = inventoryRequests.map(req => req.itemId);
-        const inventoryItemsQuery = query(collection(db, "inventory_items"), where("id", "in", itemIds));
-        const inventoryItemsSnap = await getDocs(inventoryItemsQuery);
-        inventoryItems.push(...inventoryItemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const itemIds = inventoryRequests.map(req => req.itemId).filter(id => id);
+        if (itemIds.length > 0) {
+            const inventoryItemsQuery = query(collection(db, "inventory_items"), where("id", "in", itemIds));
+            const inventoryItemsSnap = await getDocs(inventoryItemsQuery);
+            inventoryItems.push(...inventoryItemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
     }
-
 
     return { project, members, inventoryRequests, inventoryItems };
 }
@@ -51,7 +58,7 @@ function getStatusBadge(status: string) {
         case 'closed':
         return <Badge variant="outline">Closed</Badge>
         default:
-        return <Badge variant="outline">{status.replace('_', ' ')}</Badge>
+        return <Badge variant="outline">{status ? status.replace(/_/g, ' ') : 'Unknown'}</Badge>
     }
 }
 
@@ -78,7 +85,7 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
                     </div>
                     <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                 </div>
-                <ProjectActions project={project} currentUserRole={currentUser.role} />
+                <ProjectActions project={project as any} currentUserRole={currentUser.role} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -136,4 +143,3 @@ export default async function ProjectDetailsPage({ params }: { params: { id: str
         </div>
     );
 }
-
