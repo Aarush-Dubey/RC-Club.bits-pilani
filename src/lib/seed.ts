@@ -93,7 +93,7 @@ const inventoryRequests = [
 ];
 
 const newItemRequests = [
-    { id: 'new-req-1', projectId: 'proj-1', requestedById: 'user-4', itemName: '3D Printer Filament (PLA, 1kg)', description: 'For printing custom drone parts.', justification: 'Essential for custom frame.', status: 'ordered', estimatedCost: 25, actualCost: 23.50, reimbursementStatus: 'none' },
+    { id: 'new-req-1', projectId: 'proj-1', requestedById: 'user-4', itemName: '3D Printer Filament (PLA, 1kg)', description: 'For printing custom drone parts.', justification: 'Essential for custom frame.', status: 'ordered', estimatedCost: 25, actualCost: 23.50, reimbursementStatus: 'none', linkedBucketId: null },
 ];
 
 const reimbursements = [
@@ -119,6 +119,26 @@ const reimbursements = [
     }
 ];
 
+const procurementBuckets = [
+    {
+        id: 'bucket-1',
+        createdBy: 'user-3',
+        status: 'open',
+        description: 'Q3 General Parts Order (HobbyKing)',
+        createdAt: Timestamp.fromDate(new Date('2024-07-28')),
+        members: ['user-3', 'user-4']
+    },
+    {
+        id: 'bucket-2',
+        createdBy: 'user-2',
+        status: 'closed',
+        description: 'Bulk order for Plane components',
+        createdAt: Timestamp.fromDate(new Date('2024-07-20')),
+        closedAt: Timestamp.fromDate(new Date('2024-07-25')),
+        members: ['user-2', 'user-5']
+    }
+]
+
 const permissionsByRole = {
   admin: {
     canManageUsers: true,
@@ -139,6 +159,7 @@ const permissionsByRole = {
     canExportFinanceLogs: true,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: true,
+    canCreateBuckets: true,
   },
   coordinator: {
     canManageUsers: false,
@@ -159,6 +180,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
+    canCreateBuckets: true,
   },
   inventory_manager: {
     canManageUsers: false,
@@ -179,6 +201,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
+    canCreateBuckets: true,
   },
   drone_lead: {
     canManageUsers: false,
@@ -199,6 +222,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
+    canCreateBuckets: false,
   },
   plane_lead: {
     canManageUsers: false,
@@ -220,6 +244,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
+    canCreateBuckets: false,
   },
   member: {
     canManageUsers: false,
@@ -240,6 +265,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: false,
     canAccessAdminPanel: false,
+    canCreateBuckets: false,
   }
 };
 
@@ -303,6 +329,7 @@ const seedDatabase = async () => {
     await seedCollection('inventory_items', inventoryItems);
     await seedCollection('inventory_requests', inventoryRequests);
     await seedCollection('new_item_requests', newItemRequests);
+    await seedCollection('procurement_buckets', procurementBuckets);
     await seedCollection('reimbursements', reimbursements);
     await seedPermissions();
     await seedSystemDocs();

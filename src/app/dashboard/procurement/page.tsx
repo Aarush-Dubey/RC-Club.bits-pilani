@@ -1,100 +1,158 @@
-import { PlusCircle } from "lucide-react"
-import { collection, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { PlusCircle, ShoppingBasket } from "lucide-react";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
+import { format } from "date-fns";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  Dialog,
+  DialogContent,
+  DialogDescription as DialogDescriptionComponent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { NewBucketForm } from "./new-bucket-form";
+
+async function getData() {
+  const bucketsQuery = query(collection(db, "procurement_buckets"), orderBy("createdAt", "desc"));
+  const bucketsSnapshot = await getDocs(bucketsQuery);
+  const buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const usersSnapshot = await getDocs(collection(db, "users"));
+  const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  return { buckets, users };
+}
 
 const getStatusVariant = (status: string) => {
   switch (status) {
-    case 'pending':
-      return 'secondary'
-    case 'approved':
-      return 'default'
-    case 'ordered':
-      return 'outline'
-    case 'rejected':
-      return 'destructive'
-    default:
-      return 'outline'
+    case 'open': return 'default';
+    case 'closed': return 'secondary';
+    case 'ordered': return 'outline';
+    case 'received': return 'destructive'; // Re-using for now, should be success
+    default: return 'outline';
   }
-}
+};
 
-async function getData() {
-    const procurementRequestsSnapshot = await getDocs(collection(db, "new_item_requests"));
-    const procurementRequests = procurementRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+export default function ProcurementBucketsPage() {
+  const [data, setData] = useState<{ buckets: any[], users: any[] }>({ buckets: [], users: [] });
+  const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { user: currentUser } = useAuth();
 
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const fetchedData = await getData();
+      setData(fetchedData);
+    } catch (error) {
+      console.error("Failed to fetch procurement data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return { procurementRequests, users };
-}
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  const handleFormSubmit = () => {
+    fetchData();
+    setIsFormOpen(false);
+  }
 
-export default async function ProcurementPage() {
-  const { procurementRequests, users } = await getData();
+  const canCreate = currentUser?.permissions?.canCreateBuckets;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Procurement</h2>
-          <p className="text-muted-foreground">
-            Request new equipment and track purchase orders.
-          </p>
+    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">Procurement Buckets</h2>
+            <p className="text-muted-foreground">
+              Group purchases into buckets for streamlined ordering and reimbursement.
+            </p>
+          </div>
+          {canCreate && (
+             <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" /> New Bucket
+                </Button>
+             </DialogTrigger>
+          )}
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> New Purchase Request
-        </Button>
-      </div>
 
-        <Table>
-        <TableHeader>
-            <TableRow>
-            <TableHead>Item</TableHead>
-            <TableHead>Requested By</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {procurementRequests.map((req: any) => {
-            const user = users.find((u: any) => u.id === req.requestedById)
-            return (
-                <TableRow key={req.id}>
-                <TableCell>
-                    <div className="font-medium">{req.itemName}</div>
-                    <div className="text-sm text-muted-foreground">{req.description}</div>
-                </TableCell>
-                <TableCell>{user?.name}</TableCell>
-                <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                <TableCell>
-                    <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
-                    <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
-                </TableCell>
-                </TableRow>
-            )
+        {loading ? (
+           <p>Loading buckets...</p>
+        ) : data.buckets.length === 0 ? (
+          <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+            <CardHeader>
+              <ShoppingBasket className="mx-auto h-12 w-12 text-muted-foreground" />
+              <CardTitle>No Procurement Buckets Found</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="mb-4">Get started by creating the first procurement bucket.</CardDescription>
+              {canCreate && (
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Create a Bucket
+                    </Button>
+                </DialogTrigger>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {data.buckets.map((bucket) => {
+              const creator = data.users.find(u => u.id === bucket.createdBy);
+              return (
+                <Link href={`/dashboard/procurement/buckets/${bucket.id}`} key={bucket.id} className="block">
+                    <Card className="h-full hover:border-primary transition-colors">
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
+                                <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
+                            </div>
+                            <CardDescription>
+                                Created by {creator?.name} on {format(bucket.createdAt.toDate(), "MMM d, yyyy")}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-sm text-muted-foreground">
+                                {bucket.members?.length || 0} members
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
+              );
             })}
-        </TableBody>
-        </Table>
-    </div>
-  )
+          </div>
+        )}
+      </div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-headline">Create New Procurement Bucket</DialogTitle>
+          <DialogDescriptionComponent>
+            This will create a new shared bucket that other members can add their item requests to.
+          </DialogDescriptionComponent>
+        </DialogHeader>
+        <NewBucketForm currentUser={currentUser} setOpen={setIsFormOpen} onFormSubmit={handleFormSubmit} />
+      </DialogContent>
+    </Dialog>
+  );
 }
