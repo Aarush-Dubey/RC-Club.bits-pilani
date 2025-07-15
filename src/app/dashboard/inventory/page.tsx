@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box } from "lucide-react"
+import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -579,25 +580,47 @@ export default function InventoryPage() {
                                          <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Item</TableHead>
-                                                    <TableHead>User</TableHead>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Request</TableHead>
+                                                    <TableHead>Details</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {data.inventoryRequests.map((req: any) => {
                                                     const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                    const user = data.users.find((u: any) => u.id === req.requestedById);
+                                                    const requester = data.users.find((u: any) => u.id === req.requestedById);
+                                                    const approver = data.users.find((u: any) => u.id === req.fulfilledById);
+                                                    const returner = data.users.find((u: any) => u.id === req.returnedById);
                                                     return (
                                                         <TableRow key={req.id}>
                                                             <TableCell>
-                                                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                                                <div className="text-sm text-muted-foreground">{req.reason || `For Project: ${data.projects.find((p:any) => p.id === req.projectId)?.title}`}</div>
+                                                                <div className="font-medium flex items-center gap-2">
+                                                                    <StatusCircle status={req.status} />
+                                                                    <span>{item?.name} (x{req.quantity})</span>
+                                                                </div>
+                                                                <div className="text-sm text-muted-foreground mt-1">
+                                                                    Requested by {requester?.name} on {req.createdAt ? format(req.createdAt.toDate(), "PP") : 'N/A'}
+                                                                </div>
+                                                                 <div className="text-sm text-muted-foreground mt-1">
+                                                                    For: {data.projects.find((p:any) => p.id === req.projectId)?.title || req.reason}
+                                                                </div>
                                                             </TableCell>
-                                                            <TableCell>{user?.name}</TableCell>
-                                                            <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                                                            <TableCell><StatusCircle status={req.status} /></TableCell>
+                                                            <TableCell>
+                                                                {req.fulfilledAt && (
+                                                                    <p className="text-sm">
+                                                                        <span className="font-medium">Fulfilled</span> by {approver?.name} on {format(req.fulfilledAt.toDate(), "PP")}
+                                                                    </p>
+                                                                )}
+                                                                {req.rejectedAt && (
+                                                                     <p className="text-sm text-destructive">
+                                                                        <span className="font-medium">Rejected</span> on {format(req.rejectedAt.toDate(), "PP")}
+                                                                    </p>
+                                                                )}
+                                                                 {req.returnedAt && (
+                                                                    <p className="text-sm text-green-600">
+                                                                        <span className="font-medium">Returned</span> and confirmed by {returner?.name} on {format(req.returnedAt.toDate(), "PP")}
+                                                                    </p>
+                                                                )}
+                                                            </TableCell>
                                                         </TableRow>
                                                     );
                                                 })}
@@ -636,5 +659,3 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
-
-    
