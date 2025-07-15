@@ -24,12 +24,14 @@ export async function createProcurementBucket({ description, createdById }: { de
     revalidatePath("/dashboard/procurement/new");
 }
 
-export async function addRequestToBucket(bucketId: string | null, { requestedById, itemName, justification, quantity, estimatedCost }: {
+export async function addRequestToBucket(bucketId: string | null, { requestedById, requests }: {
     requestedById: string,
-    itemName: string,
-    justification: string,
-    quantity: number,
-    estimatedCost: number
+    requests: {
+        itemName: string,
+        justification: string,
+        quantity: number,
+        estimatedCost: number
+    }[]
 }) {
     if (!requestedById) {
         throw new Error("User is not authenticated.");
@@ -37,26 +39,27 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
 
     const batch = writeBatch(db);
 
-    // 1. Create the new item request, linking it to the bucket if provided
-    const requestRef = doc(collection(db, "new_item_requests"));
-    const requestData: any = {
-        id: requestRef.id,
-        requestedById,
-        itemName,
-        justification,
-        quantity,
-        estimatedCost,
-        status: "pending",
-        createdAt: serverTimestamp(),
-    };
+    for (const request of requests) {
+        const requestRef = doc(collection(db, "new_item_requests"));
+        const requestData: any = {
+            id: requestRef.id,
+            requestedById,
+            itemName: request.itemName,
+            justification: request.justification,
+            quantity: request.quantity,
+            estimatedCost: request.estimatedCost, // This is now cost per piece
+            status: "pending",
+            createdAt: serverTimestamp(),
+        };
 
-    if (bucketId) {
-        requestData.linkedBucketId = bucketId;
+        if (bucketId) {
+            requestData.linkedBucketId = bucketId;
+        }
+
+        batch.set(requestRef, requestData);
     }
-
-    batch.set(requestRef, requestData);
-
-    // 2. If it's for a bucket, add the user to the bucket's member list
+    
+    // If it's for a bucket, add the user to the bucket's member list
     if (bucketId) {
         const bucketRef = doc(db, "procurement_buckets", bucketId);
         batch.update(bucketRef, {

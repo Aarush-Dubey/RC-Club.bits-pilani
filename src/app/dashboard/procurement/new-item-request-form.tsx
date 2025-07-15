@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useForm, type SubmitHandler, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +21,15 @@ import {
 } from "@/components/ui/form";
 import type { AppUser } from "@/context/auth-context";
 import { addRequestToBucket } from "./actions";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
-  itemName: z.string().min(3, "Item name must be at least 3 characters."),
-  justification: z.string().min(10, "Please provide a brief justification."),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-  estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
+  requests: z.array(z.object({
+    itemName: z.string().min(3, "Item name must be at least 3 characters."),
+    justification: z.string().min(10, "Please provide a brief justification."),
+    quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
+    estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
+  })).min(1, "At least one item is required.")
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,12 +48,20 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      itemName: "",
-      justification: "",
-      quantity: 1,
-      estimatedCost: 0,
+      requests: [{
+        itemName: "",
+        justification: "",
+        quantity: 1,
+        estimatedCost: 0,
+      }],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "requests"
+  });
+
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!currentUser) {
@@ -64,7 +75,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
     setIsSubmitting(true);
     try {
       await addRequestToBucket(bucketId, {
-        ...data,
+        requests: data.requests,
         requestedById: currentUser.uid,
       });
 
@@ -93,68 +104,98 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="itemName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Item Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-2 gap-4">
-            <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Quantity</FormLabel>
-                <FormControl>
-                    <Input type="number" {...field} min={1} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="estimatedCost"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Total Estimated Cost ($)</FormLabel>
-                <FormControl>
-                    <Input type="number" step="0.01" placeholder="25.99" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        </div>
-        <FormField
-          control={form.control}
-          name="justification"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Justification</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
-                  {...field}
-                  rows={3}
+        <ScrollArea className="h-auto max-h-[60vh] sm:h-auto">
+          <div className="space-y-4 pr-4">
+            {fields.map((field, index) => (
+              <div key={field.id} className="space-y-4 rounded-md border p-4 relative">
+                {fields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+                <FormField
+                  control={form.control}
+                  name={`requests.${index}.itemName`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Item Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {submitButtonText}
-        </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name={`requests.${index}.quantity`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} min={1} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`requests.${index}.estimatedCost`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Cost per Piece (₹)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" placeholder="1500.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name={`requests.${index}.justification`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Justification</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
+                          {...field}
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ itemName: "", justification: "", quantity: 1, estimatedCost: 0 })}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
+            </Button>
+          </div>
+        </ScrollArea>
+
+        <div className="pt-4 border-t">
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {submitButtonText}
+          </Button>
+        </div>
       </form>
     </Form>
   );

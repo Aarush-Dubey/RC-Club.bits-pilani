@@ -121,7 +121,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
     const isManager = currentUser?.permissions?.canApproveNewItemRequest;
     const canTakeAction = isManager && bucket.status === 'open';
 
-    const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost || 0), 0);
+    const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
 
     return (
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -194,7 +194,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
                     <CardHeader>
                         <CardTitle>Requested Items</CardTitle>
                         <CardDescription>
-                            Total Estimated Cost: <span className="font-bold font-mono text-foreground">${totalEstimatedCost.toFixed(2)}</span>
+                            Total Estimated Cost: <span className="font-bold font-mono text-foreground">₹{totalEstimatedCost.toFixed(2)}</span>
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -204,7 +204,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
                                     <TableHead>Item</TableHead>
                                     <TableHead>Requested By</TableHead>
                                     <TableHead>Qty</TableHead>
-                                    <TableHead>Est. Cost</TableHead>
+                                    <TableHead>Est. Cost per item</TableHead>
                                     <TableHead>Status</TableHead>
                                     {canTakeAction && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
@@ -220,7 +220,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
                                             </TableCell>
                                             <TableCell>{user?.name || 'Unknown'}</TableCell>
                                             <TableCell>{req.quantity}</TableCell>
-                                            <TableCell>${req.estimatedCost.toFixed(2)}</TableCell>
+                                            <TableCell>₹{req.estimatedCost.toFixed(2)}</TableCell>
                                             <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
                                             {canTakeAction && (
                                                 <TableCell className="text-right">
@@ -241,7 +241,7 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
                                         </TableCell>
                                     </TableRow>
                                 )}
-                            </Body>
+                            </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
@@ -261,4 +261,3 @@ export default function BucketDetailsPage({ params }: { params: { id: string } }
         </Dialog>
     );
 }
-
