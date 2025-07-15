@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -38,6 +39,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { enhanceJustification } from "@/ai/flows/enhance-justification"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -218,6 +220,7 @@ async function getData() {
             ...inventoryRequests.map(req => req.requestedById),
             ...inventoryRequests.map(req => req.fulfilledById),
             ...inventoryRequests.map(req => req.returnedById),
+            ...inventoryRequests.map(req => req.rejectedById),
         ].filter(Boolean))
     ];
     
@@ -241,7 +244,7 @@ async function getData() {
     return { inventory, inventoryRequests, users, projects };
 }
 
-function RequestActions({ request, canApprove, onActionComplete }: { request: any, canApprove: boolean, onActionComplete: () => void }) {
+function RequestActions({ request, onActionComplete }: { request: any, onActionComplete: () => void }) {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState<"approve" | "reject" | null>(null);
@@ -266,7 +269,7 @@ function RequestActions({ request, canApprove, onActionComplete }: { request: an
     const onApprove = () => handleAction(() => approveInventoryRequest(request.id, currentUser!.uid), 'approve');
     const onReject = () => handleAction(() => rejectInventoryRequest(request.id, currentUser!.uid), 'reject');
 
-    if (!canApprove || request.status !== 'pending') {
+    if (request.status !== 'pending') {
         return null;
     }
 
@@ -279,6 +282,63 @@ function RequestActions({ request, canApprove, onActionComplete }: { request: an
                 {isLoading === 'reject' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
             </Button>
         </div>
+    );
+}
+
+function RequestRow({ request, item, user, project, onActionComplete }: { request: any, item: any, user: any, project: any, onActionComplete: () => void }) {
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <DialogTrigger asChild>
+                     <div className="p-4 border-b">
+                        <div className="font-medium">{item?.name} (x{request.quantity})</div>
+                        <div className="text-sm text-muted-foreground">Requested by {user?.name}</div>
+                    </div>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{item?.name} (x{request.quantity})</DialogTitle>
+                        <DialogDescription>Requested by {user?.name} on {request.createdAt.toDate().toLocaleDateString()}</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <h4 className="font-semibold">Reason</h4>
+                            <p className="text-sm text-muted-foreground">{project ? `For: ${project.title}` : request.reason || 'N/A'}</p>
+                        </div>
+                         <div className="flex items-center justify-between">
+                            <h4 className="font-semibold">Status</h4>
+                             <div className="flex items-center gap-2">
+                                <StatusCircle status={request.status} />
+                                <span className="font-medium capitalize">{request.status}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <RequestActions request={request} onActionComplete={() => { onActionComplete(); setIsDetailsOpen(false); }} />
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    return (
+        <TableRow key={request.id}>
+            <TableCell>
+                <div className="font-medium">{item?.name} (x{request.quantity})</div>
+                <div className="text-sm text-muted-foreground">
+                    {project ? `For: ${project.title}` : `Reason: ${request.reason || 'N/A'}`}
+                </div>
+            </TableCell>
+            <TableCell>{user?.name}</TableCell>
+            <TableCell>{request.createdAt.toDate().toLocaleDateString()}</TableCell>
+            <TableCell><StatusCircle status={request.status} /></TableCell>
+            <TableCell className="text-right space-x-2">
+                <RequestActions request={request} onActionComplete={onActionComplete} />
+            </TableCell>
+        </TableRow>
     );
 }
 
@@ -459,7 +519,7 @@ function ActivityLogItemRow({ request, item, user, project, approver, returner }
                         <div className="space-y-1">
                             <h4 className="font-semibold">Approval</h4>
                             <p className="text-sm text-muted-foreground">
-                                Approved by <span className="font-medium text-foreground">{approver?.name}</span> on {format(request.fulfilledAt.toDate(), "PP")}.
+                                Approved by <span className="font-medium text-foreground">{approver?.name || "N/A"}</span> on {format(request.fulfilledAt.toDate(), "PP")}.
                             </p>
                         </div>
                     )}
@@ -467,7 +527,7 @@ function ActivityLogItemRow({ request, item, user, project, approver, returner }
                          <div className="space-y-1">
                             <h4 className="font-semibold text-destructive">Rejection</h4>
                             <p className="text-sm text-destructive/80">
-                                Rejected on {format(request.rejectedAt.toDate(), "PP")}.
+                                Rejected by <span className="font-medium text-destructive">{approver?.name || "N/A"}</span> on {format(request.rejectedAt.toDate(), "PP")}.
                             </p>
                         </div>
                     )}
@@ -489,6 +549,7 @@ export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
     const [loading, setLoading] = useState(true);
     const { user: currentUser } = useAuth();
+    const isMobile = useIsMobile();
     
     const fetchData = async () => {
         setLoading(true);
@@ -525,17 +586,17 @@ export default function InventoryPage() {
             </div>
         </div>
 
-        <Tabs defaultValue="all">
-            <TabsList>
-                <TabsTrigger value="all">All Items</TabsTrigger>
+        <Tabs defaultValue="all" orientation={isMobile ? "vertical" : "horizontal"}>
+            <TabsList className={cn(isMobile && "w-full flex-col h-auto")}>
+                <TabsTrigger value="all" className={cn(isMobile && "w-full")}>All Items</TabsTrigger>
                 {canManageInventory && (
                     <>
-                        <TabsTrigger value="requests">Requests</TabsTrigger>
-                        <TabsTrigger value="manage">Manage</TabsTrigger>
+                        <TabsTrigger value="requests" className={cn(isMobile && "w-full")}>Requests</TabsTrigger>
+                        <TabsTrigger value="manage" className={cn(isMobile && "w-full")}>Manage</TabsTrigger>
                     </>
                 )}
             </TabsList>
-            <TabsContent value="all" className="mt-6">
+            <TabsContent value="all" className="mt-6 sm:mt-0">
                 <Card>
                     <CardHeader>
                         <CardTitle>Available Inventory</CardTitle>
@@ -566,43 +627,53 @@ export default function InventoryPage() {
             </TabsContent>
             {canManageInventory && (
                 <>
-                    <TabsContent value="requests" className="mt-6">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Request Details</TableHead>
-                            <TableHead>Requested By</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
-                                const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                const user = data.users.find((u: any) => u.id === req.requestedById);
-                                const project = data.projects.find((p: any) => p.id === req.projectId);
-                                return (
-                                    <TableRow key={req.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {project ? `For: ${project.title}` : `Reason: ${req.reason || 'N/A'}`}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{user?.name}</TableCell>
-                                        <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                                        <TableCell><StatusCircle status={req.status} /></TableCell>
-                                        <TableCell className="text-right space-x-2">
-                                            <RequestActions request={req} canApprove={!!canManageInventory} onActionComplete={fetchData} />
-                                        </TableCell>
+                    <TabsContent value="requests" className="mt-6 sm:mt-0">
+                         {isMobile ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Pending Requests</CardTitle>
+                                    <CardDescription>Tap a request to view details and take action.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                     {data.inventoryRequests.filter((r:any) => r.status === 'pending').length > 0 ? (
+                                        data.inventoryRequests.filter((r:any) => r.status === 'pending').map((req: any) => {
+                                            const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                            const user = data.users.find((u: any) => u.id === req.requestedById);
+                                            const project = data.projects.find((p: any) => p.id === req.projectId);
+                                            return (
+                                                <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
+                                            )
+                                        })
+                                     ) : (
+                                        <div className="p-4 text-center text-muted-foreground">No pending requests.</div>
+                                     )}
+                                </CardContent>
+                            </Card>
+                         ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Request Details</TableHead>
+                                    <TableHead>Requested By</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
+                                        const item = data.inventory.find((i: any) => i.id === req.itemId);
+                                        const user = data.users.find((u: any) => u.id === req.requestedById);
+                                        const project = data.projects.find((p: any) => p.id === req.projectId);
+                                        return (
+                                            <RequestRow key={req.id} request={req} item={item} user={user} project={project} onActionComplete={fetchData} />
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                         )}
                     </TabsContent>
-                    <TabsContent value="manage" className="mt-6">
+                    <TabsContent value="manage" className="mt-6 sm:mt-0">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Manage Inventory</CardTitle>
@@ -667,7 +738,7 @@ export default function InventoryPage() {
                                                 {data.inventoryRequests.map((req: any) => {
                                                     const item = data.inventory.find((i: any) => i.id === req.itemId);
                                                     const requester = data.users.find((u: any) => u.id === req.requestedById);
-                                                    const approver = data.users.find((u: any) => u.id === req.fulfilledById);
+                                                    const approver = data.users.find((u: any) => u.id === req.fulfilledById || u.id === req.rejectedById);
                                                     const returner = data.users.find((u: any) => u.id === req.returnedById);
                                                     const project = data.projects.find((p:any) => p.id === req.projectId);
                                                     return (
@@ -717,5 +788,3 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
-
-    
