@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2 } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck } from "lucide-react"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -26,6 +26,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import Link from "next/link"
 
 const getStatusVariant = (status: string) => {
     switch (status) {
@@ -150,6 +151,7 @@ export default function InventoryPage() {
     }, []);
 
     const canManageInventory = currentUser?.permissions?.canApproveInventory;
+    const canManageProcurement = currentUser?.permissions?.canApproveNewItemRequest;
 
   return (
     <div className="space-y-8">
@@ -160,9 +162,18 @@ export default function InventoryPage() {
             Manage equipment, track loans, and approve requests.
           </p>
         </div>
-        <Button disabled>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
-        </Button>
+        <div className="flex items-center gap-2">
+            {canManageProcurement && (
+                <Link href="/dashboard/procurement/approvals">
+                    <Button variant="outline">
+                        <ClipboardCheck className="mr-2 h-4 w-4" /> Manage Procurement
+                    </Button>
+                </Link>
+            )}
+            <Button disabled>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+            </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="all">
