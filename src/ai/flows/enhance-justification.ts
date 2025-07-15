@@ -41,6 +41,7 @@ const prompt = ai.definePrompt({
   {{{justification}}}
 
   Based on the item name and user's justification, generate a clear and formal rationale for the procurement request.
+  If the item is a technical RC component (like an IMU, ESC, Flight Controller, etc.), briefly explain its function as part of the justification. For example, for an IMU, you might start with "This is an Inertial Measurement Unit, used for determining orientation and angular velocity..."
   `,
 });
 
