@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket, ClipboardCheck } from "lucide-react";
+import { PlusCircle, ShoppingBasket, ClipboardCheck, FileText } from "lucide-react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth, type AppUser } from "@/context/auth-context";
@@ -18,19 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription as DialogDescriptionComponent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { NewBucketForm } from "./new-bucket-form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 async function getData(currentUser: AppUser | null) {
-  if (!currentUser) return { buckets: [], users: [] };
+  if (!currentUser) return { buckets: [], users: [], singleRequests: [] };
 
+  // Fetch buckets the current user is a member of
   const bucketsQuery = query(
     collection(db, "procurement_buckets"),
     where("members", "array-contains", currentUser.uid)
@@ -38,7 +32,7 @@ async function getData(currentUser: AppUser | null) {
   const bucketsSnapshot = await getDocs(bucketsQuery);
   let buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  // Sort buckets by date manually in the code as Firestore requires a composite index for this query
+  // Sort buckets by date manually as Firestore requires a composite index for this query
   buckets.sort((a, b) => {
     const dateA = a.createdAt?.toDate() || 0;
     const dateB = b.createdAt?.toDate() || 0;
@@ -50,7 +44,6 @@ async function getData(currentUser: AppUser | null) {
   const userIds = [...new Set(buckets.flatMap(b => b.members || []))];
   let users: any[] = [];
   if (userIds.length > 0) {
-    // Firestore 'in' query has a limit of 30 items per query.
     const userChunks = [];
     for (let i = 0; i < userIds.length; i += 30) {
         userChunks.push(userIds.slice(i, i + 30));
@@ -63,7 +56,16 @@ async function getData(currentUser: AppUser | null) {
     }
   }
 
-  return { buckets, users };
+  // Fetch single requests made by the current user
+  const singleRequestsQuery = query(
+    collection(db, "new_item_requests"),
+    where("requestedById", "==", currentUser.uid),
+    where("linkedBucketId", "==", null)
+  );
+  const singleRequestsSnapshot = await getDocs(singleRequestsQuery);
+  const singleRequests = singleRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  return { buckets, users, singleRequests };
 }
 
 
@@ -73,14 +75,16 @@ const getStatusVariant = (status: string) => {
     case 'closed': return 'secondary';
     case 'ordered': return 'outline';
     case 'received': return 'destructive'; // Re-using for now, should be success
+    case 'pending': return 'secondary';
+    case 'approved': return 'default';
+    case 'rejected': return 'destructive';
     default: return 'outline';
   }
 };
 
 export default function ProcurementPage() {
-  const [data, setData] = useState<{ buckets: any[], users: any[] }>({ buckets: [], users: [] });
+  const [data, setData] = useState<{ buckets: any[], users: any[], singleRequests: any[] }>({ buckets: [], users: [], singleRequests: [] });
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const { user: currentUser } = useAuth();
 
   const fetchData = async () => {
@@ -101,22 +105,15 @@ export default function ProcurementPage() {
     }
   }, [currentUser]);
   
-  const handleFormSubmit = () => {
-    fetchData();
-    setIsFormOpen(false);
-  }
-
-  const canCreate = currentUser?.permissions?.canCreateBuckets;
   const canApprove = currentUser?.permissions?.canApproveNewItemRequest;
 
   return (
-    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight font-headline">My Procurement</h2>
             <p className="text-muted-foreground">
-              View and manage all procurement buckets you are a part of.
+              View and manage all procurement requests and buckets you are a part of.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -134,8 +131,8 @@ export default function ProcurementPage() {
         </div>
 
         {loading ? (
-           <p>Loading buckets...</p>
-        ) : data.buckets.length === 0 ? (
+           <p>Loading activities...</p>
+        ) : data.buckets.length === 0 && data.singleRequests.length === 0 ? (
           <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
             <CardHeader>
               <ShoppingBasket className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -143,52 +140,74 @@ export default function ProcurementPage() {
             </CardHeader>
             <CardContent>
               <CardDescription className="mb-4">You have not created or joined any procurement buckets.</CardDescription>
-              {canCreate && (
                 <Link href="/dashboard/procurement/new">
                     <Button variant="outline">
                         <PlusCircle className="mr-2 h-4 w-4" /> Make a Request
                     </Button>
                 </Link>
-              )}
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {data.buckets.map((bucket) => {
-              const creator = data.users.find(u => u.id === bucket.createdBy);
-              return (
-                <Link href={`/dashboard/procurement/buckets/${bucket.id}`} key={bucket.id} className="block">
-                    <Card className="h-full hover:border-primary transition-colors">
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
-                                <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
-                            </div>
-                            <CardDescription>
-                                Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-muted-foreground">
-                                {bucket.members?.length || 0} members
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Link>
-              );
-            })}
+          <div className="space-y-8">
+            {data.buckets.length > 0 && (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {data.buckets.map((bucket) => {
+                    const creator = data.users.find(u => u.id === bucket.createdBy);
+                    return (
+                        <Link href={`/dashboard/procurement/buckets/${bucket.id}`} key={bucket.id} className="block">
+                            <Card className="h-full hover:border-primary transition-colors">
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
+                                        <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
+                                    </div>
+                                    <CardDescription>
+                                        Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-sm text-muted-foreground">
+                                        {bucket.members?.length || 0} members
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    );
+                    })}
+                </div>
+            )}
+            {data.singleRequests.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Single Item Requests</CardTitle>
+                        <CardDescription>Standalone requests not part of a purchasing bucket.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead>Justification</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Est. Cost</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.singleRequests.map((req: any) => (
+                                    <TableRow key={req.id}>
+                                        <TableCell className="font-medium">{req.itemName} (x{req.quantity})</TableCell>
+                                        <TableCell className="text-muted-foreground">{req.justification}</TableCell>
+                                        <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
+                                        <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
           </div>
         )}
       </div>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">Create New Procurement Bucket</DialogTitle>
-          <DialogDescriptionComponent>
-            This will create a new shared bucket that other members can add their item requests to.
-          </DialogDescriptionComponent>
-        </DialogHeader>
-        <NewBucketForm currentUser={currentUser} setOpen={setIsFormOpen} onFormSubmit={handleFormSubmit} />
-      </DialogContent>
-    </Dialog>
   );
 }
