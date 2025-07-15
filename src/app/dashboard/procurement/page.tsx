@@ -31,12 +31,14 @@ import { NewBucketForm } from "./new-bucket-form";
 async function getData(currentUser: AppUser | null) {
   if (!currentUser) return { buckets: [], users: [] };
 
-  // Fetch all procurement buckets without ordering by a different field to avoid composite index requirement
-  const bucketsQuery = query(collection(db, "procurement_buckets"));
+  const bucketsQuery = query(
+    collection(db, "procurement_buckets"),
+    where("members", "array-contains", currentUser.uid)
+  );
   const bucketsSnapshot = await getDocs(bucketsQuery);
   let buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  // Sort buckets by date manually in the code
+  // Sort buckets by date manually in the code as Firestore requires a composite index for this query
   buckets.sort((a, b) => {
     const dateA = a.createdAt?.toDate() || 0;
     const dateB = b.createdAt?.toDate() || 0;
@@ -45,12 +47,20 @@ async function getData(currentUser: AppUser | null) {
     return 0;
   });
 
-  const userIds = [...new Set(buckets.map(b => b.createdBy))];
+  const userIds = [...new Set(buckets.flatMap(b => b.members || []))];
   let users: any[] = [];
   if (userIds.length > 0) {
-    const usersQuery = query(collection(db, "users"), where("id", "in", userIds.slice(0, 30)));
-    const usersSnap = await getDocs(usersQuery);
-    users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Firestore 'in' query has a limit of 30 items per query.
+    const userChunks = [];
+    for (let i = 0; i < userIds.length; i += 30) {
+        userChunks.push(userIds.slice(i, i + 30));
+    }
+    
+    for (const chunk of userChunks) {
+        const usersQuery = query(collection(db, "users"), where("id", "in", chunk));
+        const usersSnap = await getDocs(usersQuery);
+        users.push(...usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }
   }
 
   return { buckets, users };
@@ -67,7 +77,7 @@ const getStatusVariant = (status: string) => {
   }
 };
 
-export default function ProcurementBucketsPage() {
+export default function ProcurementPage() {
   const [data, setData] = useState<{ buckets: any[], users: any[] }>({ buckets: [], users: [] });
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -104,9 +114,9 @@ export default function ProcurementBucketsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">All Procurement Buckets</h2>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">My Procurement</h2>
             <p className="text-muted-foreground">
-              View and manage all procurement buckets, both open and closed.
+              View and manage all procurement buckets you are a part of.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -129,16 +139,16 @@ export default function ProcurementBucketsPage() {
           <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
             <CardHeader>
               <ShoppingBasket className="mx-auto h-12 w-12 text-muted-foreground" />
-              <CardTitle>No Procurement Buckets Found</CardTitle>
+              <CardTitle>No Procurement Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription className="mb-4">Get started by creating the first procurement bucket.</CardDescription>
+              <CardDescription className="mb-4">You have not created or joined any procurement buckets.</CardDescription>
               {canCreate && (
-                <DialogTrigger asChild>
+                <Link href="/dashboard/procurement/new">
                     <Button variant="outline">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Create a Bucket
+                        <PlusCircle className="mr-2 h-4 w-4" /> Make a Request
                     </Button>
-                </DialogTrigger>
+                </Link>
               )}
             </CardContent>
           </Card>
