@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { AlertCircle, CheckCircle, Loader2, Upload, Image as ImageIcon } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader2, Upload, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { upload } from "@imagekit/next"
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -11,19 +11,24 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/context/auth-context'
 import { addProjectUpdate } from './actions'
 import Image from 'next/image'
+import type { Project } from '../page'
+import { enhanceUpdate } from '@/ai/flows/enhance-update'
+import { useToast } from '@/hooks/use-toast'
 
 interface NewUpdateFormProps {
-  projectId: string;
+  project: Project;
   setOpen: (open: boolean) => void;
   onFormSubmit: () => void;
 }
 
-export function NewUpdateForm({ projectId, setOpen, onFormSubmit }: NewUpdateFormProps) {
+export function NewUpdateForm({ project, setOpen, onFormSubmit }: NewUpdateFormProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [text, setText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' | '' }>({ text: '', type: '' });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,6 +45,56 @@ export function NewUpdateForm({ projectId, setOpen, onFormSubmit }: NewUpdateFor
       }
     }
   }
+
+  const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleEnhanceUpdate = async () => {
+    if (!text && !selectedFile) {
+        toast({
+            variant: "destructive",
+            title: "Cannot Enhance",
+            description: "Please provide some text or an image for the update first.",
+        });
+        return;
+    }
+    setIsEnhancing(true);
+    try {
+        let imageUri: string | undefined = undefined;
+        if (selectedFile) {
+            imageUri = await fileToDataUri(selectedFile);
+        }
+
+        const result = await enhanceUpdate({
+            projectTitle: project.title,
+            projectDescription: project.description,
+            updateText: text,
+            updateImage: imageUri,
+        });
+
+        setText(result.enhancedUpdateText);
+        toast({
+            title: "Update Enhanced",
+            description: "The update text has been refined with AI.",
+        });
+    } catch (error) {
+        console.error("Error enhancing update:", error);
+        toast({
+            variant: "destructive",
+            title: "Enhancement Failed",
+            description: "Could not enhance the update. Please try again.",
+        });
+    } finally {
+        setIsEnhancing(false);
+    }
+  }
+
 
   const authenticator = async () => {
     try {
@@ -103,7 +158,14 @@ export function NewUpdateForm({ projectId, setOpen, onFormSubmit }: NewUpdateFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
+      <div className="space-y-2">
+         <div className="flex justify-between items-center">
+            <label className="text-sm font-medium">Update Details</label>
+             <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceUpdate} disabled={isEnhancing || isSubmitting}>
+                {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Enhance with AI
+            </Button>
+          </div>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -146,7 +208,7 @@ export function NewUpdateForm({ projectId, setOpen, onFormSubmit }: NewUpdateFor
 
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || isEnhancing}
         className="w-full"
       >
         {isSubmitting ? (

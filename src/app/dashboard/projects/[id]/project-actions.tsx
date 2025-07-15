@@ -146,7 +146,7 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
           <DialogDescription>Share your progress with the team. You can include an image.</DialogDescription>
         </DialogHeader>
         <NewUpdateForm
-          projectId={project.id}
+          project={project}
           setOpen={setIsUpdateFormOpen}
           onFormSubmit={onUpdate}
         />
