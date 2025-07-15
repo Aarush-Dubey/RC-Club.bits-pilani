@@ -53,10 +53,12 @@ export async function approveProject(projectId: string) {
 
             // --- 3. WRITE PHASE ---
             // Update project status
+            const hasInventoryRequests = requestsSnapshot.docs.length > 0;
             transaction.update(projectRef, { 
                 status: 'approved',
                 approvedAt: serverTimestamp(),
-                approvedById: 'system-admin' // In a real app, this would be the current user's ID
+                approvedById: 'system-admin', // In a real app, this would be the current user's ID
+                hasPendingReturns: hasInventoryRequests
             });
 
             // Process inventory requests: update item quantities and request status
