@@ -108,11 +108,9 @@ export default function ProjectsPage() {
                 <Button variant="outline">Manage Approvals</Button>
               </Link>
             )}
-            <DialogTrigger asChild>
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" /> New Project
-                </Button>
-            </DialogTrigger>
+            <Button onClick={() => setIsFormOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> New Project
+            </Button>
           </div>
         </div>
 
@@ -133,11 +131,9 @@ export default function ProjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
-                     <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
-                        </Button>
-                      </DialogTrigger>
+                     <Button variant="outline" onClick={() => setIsFormOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
+                     </Button>
                   </CardContent>
                 </Card>
               )}

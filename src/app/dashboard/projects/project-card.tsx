@@ -55,10 +55,12 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
   const canManage = currentUser?.permissions?.canApproveProjects;
 
   return (
-      <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full">
-          {getStatusBadge(project.status)}
+      <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full relative">
+          <div className="flex items-center justify-between">
+            {getStatusBadge(project.status)}
+          </div>
           <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors flex-grow">
-            <Link href={`/dashboard/projects/${project.id}`}>
+            <Link href={`/dashboard/projects/${project.id}`} className="static">
               <span className="absolute inset-0" />
               {project.title}
             </Link>
