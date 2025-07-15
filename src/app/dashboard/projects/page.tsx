@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { NewProjectForm } from "./new-project-form"
+import { cn } from "@/lib/utils"
 
 export type Project = {
   id: string
@@ -135,7 +136,7 @@ export default function ProjectsPage() {
   
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
           <p className="text-muted-foreground">
@@ -144,11 +145,11 @@ export default function ProjectsPage() {
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> New Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl">
+          <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
               <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>

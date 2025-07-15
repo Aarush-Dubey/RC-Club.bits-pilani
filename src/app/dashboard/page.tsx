@@ -84,7 +84,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -138,9 +138,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 lg:grid-cols-7">
         <ProjectOverviewChart data={projectStatusData} />
-        <Card className="col-span-4 lg:col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-headline">Recent Projects</CardTitle>
             <CardDescription>
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
                         <TableRow key={project.id}>
                             <TableCell>
                                 <div className="font-medium">{project.title}</div>
-                                <div className="text-sm text-muted-foreground">{project.description.substring(0,40)}...</div>
+                                <div className="text-sm text-muted-foreground hidden sm:block">{project.description.substring(0,40)}...</div>
                             </TableCell>
                             <TableCell><Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge></TableCell>
                         </TableRow>

@@ -146,8 +146,8 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
   return (
     <Form {...form}>
        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ScrollArea className="h-[65vh] pr-6">
-          <div className="space-y-6">
+        <ScrollArea className="h-[calc(100vh-12rem)] sm:h-[65vh]">
+          <div className="space-y-6 pr-6">
             <FormField
               control={form.control}
               name="title"
@@ -162,7 +162,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="memberIds"
