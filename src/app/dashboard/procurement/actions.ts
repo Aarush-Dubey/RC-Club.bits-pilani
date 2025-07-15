@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc, getDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc, getDoc, query, where, getDocs } from "firebase/firestore";
 
 export async function createProcurementBucket({ description, createdById }: { description: string; createdById: string }) {
     if (!createdById) {
@@ -84,9 +84,82 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
     if (status === 'ordered') data.orderedAt = serverTimestamp();
     if (status === 'received') data.receivedAt = serverTimestamp();
     
-    await updateDoc(bucketRef, data);
+    if (status === 'received') {
+        const batch = writeBatch(db);
+        
+        // 1. Get all approved items in the bucket
+        const approvedItemsQuery = query(
+            collection(db, "new_item_requests"),
+            where("linkedBucketId", "==", bucketId),
+            where("status", "==", "approved")
+        );
+        const approvedItemsSnap = await getDocs(approvedItemsQuery);
+        
+        // Map item names to their requested details
+        const itemRequests = new Map();
+        approvedItemsSnap.docs.forEach(doc => {
+            const req = doc.data();
+            if (itemRequests.has(req.itemName.toLowerCase())) {
+                itemRequests.get(req.itemName.toLowerCase()).quantity += req.quantity;
+            } else {
+                itemRequests.set(req.itemName.toLowerCase(), {
+                    name: req.itemName,
+                    quantity: req.quantity,
+                    costPerUnit: req.estimatedCost
+                });
+            }
+        });
+
+        // 2. Get existing inventory items that match the names
+        const itemNames = Array.from(itemRequests.keys());
+        let existingInventory: Map<string, any>;
+        if (itemNames.length > 0) {
+            const inventoryQuery = query(collection(db, "inventory_items"), where("name", "in", itemNames.map(name => itemRequests.get(name).name)));
+            const inventorySnap = await getDocs(inventoryQuery);
+            existingInventory = new Map(inventorySnap.docs.map(doc => [doc.data().name.toLowerCase(), { id: doc.id, ...doc.data() }]));
+        } else {
+            existingInventory = new Map();
+        }
+
+        // 3. Prepare batch writes for new or updated inventory
+        for (const [name, request] of itemRequests.entries()) {
+            if (existingInventory.has(name)) {
+                // Item exists, update quantity
+                const existingItem = existingInventory.get(name);
+                const itemRef = doc(db, "inventory_items", existingItem.id);
+                batch.update(itemRef, {
+                    totalQuantity: existingItem.totalQuantity + request.quantity,
+                    availableQuantity: existingItem.availableQuantity + request.quantity
+                });
+            } else {
+                // New item, create it
+                const newItemRef = doc(collection(db, "inventory_items"));
+                batch.set(newItemRef, {
+                    id: newItemRef.id,
+                    name: request.name,
+                    totalQuantity: request.quantity,
+                    availableQuantity: request.quantity,
+                    checkedOutQuantity: 0,
+                    isPerishable: false, // Default value, can be edited later
+                    costPerUnit: request.costPerUnit,
+                    createdAt: serverTimestamp()
+                });
+            }
+        }
+        
+        // 4. Update the bucket status
+        batch.update(bucketRef, data);
+        
+        // 5. Commit the batch
+        await batch.commit();
+
+    } else {
+        await updateDoc(bucketRef, data);
+    }
+
     revalidatePath(`/dashboard/procurement`);
-    revalidatePath(`/dashboard/procurement/approvals`);
+    revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+    revalidatePath('/dashboard/inventory'); // Revalidate inventory to show new items
 }
 
 export async function approveNewItemRequest(requestId: string, approverId: string) {
