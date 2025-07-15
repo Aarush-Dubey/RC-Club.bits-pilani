@@ -705,7 +705,6 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: an
                 <TableHead>Item Details</TableHead>
                 <TableHead>Checked Out To</TableHead>
                 <TableHead>Project</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -726,11 +725,6 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: an
                             </TableCell>
                             <TableCell>{user?.name || 'N/A'}</TableCell>
                             <TableCell>{project?.title || 'Personal Use'}</TableCell>
-                            <TableCell className="text-right">
-                                <div className="flex justify-end">
-                                    <ReturnActions request={req} canConfirm={!!canManageInventory} onActionComplete={fetchData} />
-                                </div>
-                            </TableCell>
                         </TableRow>
                     );
                 })}
