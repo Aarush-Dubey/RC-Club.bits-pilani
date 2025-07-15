@@ -83,18 +83,16 @@ export default function ProcurementBucketsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">Procurement Buckets</h2>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">All Procurement Buckets</h2>
             <p className="text-muted-foreground">
-              Group purchases into buckets for streamlined ordering and reimbursement.
+              View and manage all procurement buckets, both open and closed.
             </p>
           </div>
-          {canCreate && (
-             <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> New Bucket
-                </Button>
-             </DialogTrigger>
-          )}
+          <Link href="/dashboard/procurement/new">
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Request
+            </Button>
+          </Link>
         </div>
 
         {loading ? (
@@ -129,7 +127,7 @@ export default function ProcurementBucketsPage() {
                                 <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
                             </div>
                             <CardDescription>
-                                Created by {creator?.name} on {format(bucket.createdAt.toDate(), "MMM d, yyyy")}
+                                Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy"): 'N/A'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

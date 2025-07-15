@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { NewItemRequestForm } from "../new-item-request-form";
 import { useToast } from "@/hooks/use-toast";
+import { NewBucketForm } from "../new-bucket-form";
 
 async function getData() {
   const bucketsQuery = query(collection(db, "procurement_buckets"), where("status", "==", "open"));
@@ -36,7 +37,8 @@ async function getData() {
 export default function NewProcurementPage() {
   const [data, setData] = useState<{ buckets: any[], users: any[] }>({ buckets: [], users: [] });
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSingleItemFormOpen, setIsSingleItemFormOpen] = useState(false);
+  const [isNewBucketFormOpen, setIsNewBucketFormOpen] = useState(false);
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -61,11 +63,14 @@ export default function NewProcurementPage() {
 
   const handleFormSubmit = () => {
     fetchData();
-    setIsFormOpen(false);
+    setIsSingleItemFormOpen(false);
+    setIsNewBucketFormOpen(false);
   };
+  
+  const canCreateBucket = currentUser?.permissions?.canCreateBuckets;
 
   return (
-    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <Dialog open={isSingleItemFormOpen} onOpenChange={setIsSingleItemFormOpen}>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -74,9 +79,6 @@ export default function NewProcurementPage() {
               Request a single item or add items to a group purchasing bucket.
             </p>
           </div>
-          <Link href="/dashboard/procurement">
-            <Button variant="outline">View All Buckets</Button>
-          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
@@ -122,51 +124,72 @@ export default function NewProcurementPage() {
             </Card>
         </div>
 
-        <div>
-            <h3 className="text-2xl font-bold tracking-tight font-headline mb-4">Open Buckets</h3>
-            {loading ? (
-                <p>Loading open buckets...</p>
-            ) : data.buckets.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {data.buckets.map((bucket) => {
-                        const creator = data.users.find(u => u.id === bucket.createdBy);
-                        return (
-                        <Card key={bucket.id} className="flex flex-col">
-                            <CardHeader>
-                                <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
-                                <CardDescription>
-                                    Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <div className="text-sm text-muted-foreground">
-                                    {bucket.members?.length || 0} members contributing
-                                </div>
-                            </CardContent>
-                             <CardFooter>
-                                <Link href={`/dashboard/procurement/buckets/${bucket.id}`} className="w-full">
-                                    <Button variant="outline" className="w-full">
-                                        View & Add to Bucket
-                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Button>
-                                </Link>
-                            </CardFooter>
-                        </Card>
-                        );
-                    })}
+        <Dialog open={isNewBucketFormOpen} onOpenChange={setIsNewBucketFormOpen}>
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-2xl font-bold tracking-tight font-headline">Open Buckets</h3>
+                    {canCreateBucket && (
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Start a Bucket
+                            </Button>
+                        </DialogTrigger>
+                    )}
                 </div>
-            ) : (
-                 <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
-                    <CardHeader>
-                    <ShoppingBasket className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <CardTitle>No Open Buckets</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                    <CardDescription className="mb-4">There are no open purchasing buckets right now. You can create one or make a single request.</CardDescription>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+                {loading ? (
+                    <p>Loading open buckets...</p>
+                ) : data.buckets.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {data.buckets.map((bucket) => {
+                            const creator = data.users.find(u => u.id === bucket.createdBy);
+                            return (
+                            <Card key={bucket.id} className="flex flex-col">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
+                                    <CardDescription>
+                                        Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <div className="text-sm text-muted-foreground">
+                                        {bucket.members?.length || 0} members contributing
+                                    </div>
+                                </CardContent>
+                                 <CardFooter>
+                                    <Link href={`/dashboard/procurement/buckets/${bucket.id}`} className="w-full">
+                                        <Button variant="outline" className="w-full">
+                                            View & Add to Bucket
+                                            <ArrowRight className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </Link>
+                                </CardFooter>
+                            </Card>
+                            );
+                        })}
+                    </div>
+                ) : (
+                     <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+                        <CardHeader>
+                        <ShoppingBasket className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <CardTitle>No Open Buckets</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                        <CardDescription className="mb-4">There are no open purchasing buckets right now. You can create one or make a single request.</CardDescription>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+            <DialogContent>
+                 <DialogHeader>
+                    <DialogTitle className="text-2xl font-headline">Create New Procurement Bucket</DialogTitle>
+                    <DialogDescriptionComponent>
+                        This will create a new shared bucket that other members can add their item requests to.
+                    </DialogDescriptionComponent>
+                </DialogHeader>
+                <NewBucketForm currentUser={currentUser} setOpen={setIsNewBucketFormOpen} onFormSubmit={handleFormSubmit} />
+            </DialogContent>
+        </Dialog>
 
       </div>
       <DialogContent className="sm:max-w-md">
@@ -178,7 +201,7 @@ export default function NewProcurementPage() {
         </DialogHeader>
         <NewItemRequestForm
           currentUser={currentUser}
-          setOpen={setIsFormOpen}
+          setOpen={setIsSingleItemFormOpen}
           onFormSubmit={handleFormSubmit}
         />
       </DialogContent>
