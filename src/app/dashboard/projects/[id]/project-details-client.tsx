@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus } from "lucide-react";
-import { joinProject } from "./actions";
+import { Loader2, UserPlus, LogOut } from "lucide-react";
+import { joinProject, leaveProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 function getStatusBadge(status: string) {
@@ -39,6 +40,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const { user: currentUser, loading: authLoading } = useAuth(); 
     const [data] = useState(initialData);
     const [isJoining, setIsJoining] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
 
@@ -81,6 +83,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const { project, members, inventoryRequests, inventoryItems } = data;
     
     const isMember = currentUser && project.memberIds.includes(currentUser.uid);
+    const isLead = currentUser && currentUser.uid === project.leadId;
 
     const handleJoin = async () => {
         if (!currentUser) {
@@ -99,6 +102,23 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         }
     };
 
+    const handleLeave = async () => {
+        if (!currentUser) {
+            toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to leave a project." });
+            return;
+        }
+        setIsLeaving(true);
+        try {
+            await leaveProject(project.id, currentUser.uid);
+            toast({ title: "You've left the project", description: `You are no longer a member of "${project.title}".` });
+            router.refresh();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Failed to Leave", description: (error as Error).message });
+        } finally {
+            setIsLeaving(false);
+        }
+    };
+
 
     return (
         <div className="space-y-8">
@@ -112,7 +132,31 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                 </div>
                 <div className="flex items-center gap-2">
                     {isMember ? (
-                         <ProjectActions project={project as any} currentUser={currentUser} />
+                        <>
+                           <ProjectActions project={project as any} currentUser={currentUser} />
+                           {!isLead && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={isLeaving}>
+                                            {isLeaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+                                            Leave Team
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                You will be removed from the project team. This action can be reversed by joining the team again.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleLeave}>Confirm</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                           )}
+                        </>
                     ) : (
                         <Button onClick={handleJoin} disabled={isJoining}>
                             {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}

@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -177,6 +177,45 @@ export async function joinProject(projectId: string, userId: string) {
     } catch (error) {
         console.error("Failed to join project:", error);
         throw new Error(`Failed to join project: ${(error as Error).message}`);
+    }
+
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    revalidatePath('/dashboard/projects');
+}
+
+export async function leaveProject(projectId: string, userId: string) {
+    if (!userId) {
+        throw new Error("User is not authenticated.");
+    }
+
+    try {
+        const projectRef = doc(db, "projects", projectId);
+        const userRef = doc(db, "users", userId);
+
+        await runTransaction(db, async (transaction) => {
+            const projectDoc = await transaction.get(projectRef);
+            if (!projectDoc.exists()) {
+                throw new Error("Project not found.");
+            }
+
+            const projectData = projectDoc.data();
+            if (projectData.leadId === userId) {
+                throw new Error("Project lead cannot leave the project.");
+            }
+
+            // Remove user from project's members
+            transaction.update(projectRef, {
+                memberIds: arrayRemove(userId)
+            });
+            // Remove project from user's joined projects
+            transaction.update(userRef, {
+                joinedProjects: arrayRemove(projectId)
+            });
+        });
+
+    } catch (error) {
+        console.error("Failed to leave project:", error);
+        throw new Error(`Failed to leave project: ${(error as Error).message}`);
     }
 
     revalidatePath(`/dashboard/projects/${projectId}`);
