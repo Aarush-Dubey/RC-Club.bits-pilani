@@ -129,7 +129,7 @@ export default function MyProcurementRequestsPage() {
                                         <div className="font-medium">{bucket.description}</div>
                                         <div className="text-sm text-muted-foreground">{bucket.members.length} members</div>
                                     </TableCell>
-                                    <TableCell>{bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
+                                    <TableCell>{bucket.createdAt ? format((bucket.createdAt as Timestamp).toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
                                     <TableCell><Badge variant={getBucketStatusVariant(bucket.status) as any}>{bucket.status}</Badge></TableCell>
                                     <TableCell className="text-right">
                                         <Link href={`/dashboard/procurement/buckets/${bucket.id}`}>
@@ -171,7 +171,7 @@ export default function MyProcurementRequestsPage() {
                                         <div className="font-medium">{item.itemName} (x{item.quantity})</div>
                                         <div className="text-sm text-muted-foreground">{item.justification}</div>
                                     </TableCell>
-                                    <TableCell>{item.createdAt ? format(item.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
+                                    <TableCell>{item.createdAt ? format((item.createdAt as Timestamp).toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
                                     <TableCell>
                                         <Badge variant={getItemStatusVariant(item.status) as any}>{item.status}</Badge>
                                     </TableCell>
