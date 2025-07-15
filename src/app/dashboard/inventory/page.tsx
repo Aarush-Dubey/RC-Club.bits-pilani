@@ -213,8 +213,26 @@ async function getData() {
     const inventoryRequestsSnapshot = await getDocs(requestsQuery);
     const inventoryRequests = inventoryRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const userIds = [
+        ...new Set([
+            ...inventoryRequests.map(req => req.requestedById),
+            ...inventoryRequests.map(req => req.fulfilledById),
+            ...inventoryRequests.map(req => req.returnedById),
+        ].filter(Boolean))
+    ];
+    
+    let users: any[] = [];
+    if (userIds.length > 0) {
+        const userChunks = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+            userChunks.push(userIds.slice(i, i + 30));
+        }
+        for (const chunk of userChunks) {
+            const usersQuery = query(collection(db, "users"), where("id", "in", chunk));
+            const usersSnap = await getDocs(usersQuery);
+            users.push(...usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+    }
 
     const projectsSnapshot = await getDocs(collection(db, "projects"));
     const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -406,6 +424,67 @@ function EditableInventoryItemRow({ item, onFormSubmit }: { item: any, onFormSub
     );
 }
 
+function ActivityLogItemRow({ request, item, user, project, approver, returner }: { request: any, item: any, user: any, project: any, approver: any, returner: any }) {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <TableRow className="cursor-pointer">
+                    <TableCell>
+                        <div className="font-medium flex items-center gap-2">
+                            <StatusCircle status={request.status} />
+                            <span>{item?.name} (x{request.quantity})</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>{request.fulfilledAt ? format(request.fulfilledAt.toDate(), "PP") : 'N/A'}</TableCell>
+                    <TableCell>{request.returnedAt ? format(request.returnedAt.toDate(), "PP") : 'N/A'}</TableCell>
+                </TableRow>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Log Details: {item?.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-1">
+                        <h4 className="font-semibold">Request</h4>
+                        <p className="text-sm text-muted-foreground">
+                            Requested by <span className="font-medium text-foreground">{user?.name}</span> on {request.createdAt ? format(request.createdAt.toDate(), "PP") : 'N/A'}.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            For: <span className="font-medium text-foreground">{project?.title || request.reason}</span>
+                        </p>
+                    </div>
+                     {request.fulfilledAt && (
+                        <div className="space-y-1">
+                            <h4 className="font-semibold">Approval</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Approved by <span className="font-medium text-foreground">{approver?.name}</span> on {format(request.fulfilledAt.toDate(), "PP")}.
+                            </p>
+                        </div>
+                    )}
+                    {request.rejectedAt && (
+                         <div className="space-y-1">
+                            <h4 className="font-semibold text-destructive">Rejection</h4>
+                            <p className="text-sm text-destructive/80">
+                                Rejected on {format(request.rejectedAt.toDate(), "PP")}.
+                            </p>
+                        </div>
+                    )}
+                    {request.returnedAt && (
+                        <div className="space-y-1">
+                            <h4 className="font-semibold text-green-600">Return</h4>
+                            <p className="text-sm text-green-700">
+                                Return confirmed by <span className="font-medium text-green-800">{returner?.name}</span> on {format(request.returnedAt.toDate(), "PP")}.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
     const [loading, setLoading] = useState(true);
@@ -543,14 +622,13 @@ export default function InventoryPage() {
                                                     <TableHead>Item Details</TableHead>
                                                     <TableHead>Checked Out To</TableHead>
                                                     <TableHead>Project</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {data.inventoryRequests
                                                     .filter((req: any) => {
                                                         const item = data.inventory.find((i: any) => i.id === req.itemId);
-                                                        // Only include items that are checked out and NOT perishable
                                                         return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
                                                     })
                                                     .map((req: any) => {
@@ -580,8 +658,9 @@ export default function InventoryPage() {
                                          <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Request</TableHead>
-                                                    <TableHead>Details</TableHead>
+                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>Checked Out</TableHead>
+                                                    <TableHead>Returned</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -590,38 +669,17 @@ export default function InventoryPage() {
                                                     const requester = data.users.find((u: any) => u.id === req.requestedById);
                                                     const approver = data.users.find((u: any) => u.id === req.fulfilledById);
                                                     const returner = data.users.find((u: any) => u.id === req.returnedById);
+                                                    const project = data.projects.find((p:any) => p.id === req.projectId);
                                                     return (
-                                                        <TableRow key={req.id}>
-                                                            <TableCell>
-                                                                <div className="font-medium flex items-center gap-2">
-                                                                    <StatusCircle status={req.status} />
-                                                                    <span>{item?.name} (x{req.quantity})</span>
-                                                                </div>
-                                                                <div className="text-sm text-muted-foreground mt-1">
-                                                                    Requested by {requester?.name} on {req.createdAt ? format(req.createdAt.toDate(), "PP") : 'N/A'}
-                                                                </div>
-                                                                 <div className="text-sm text-muted-foreground mt-1">
-                                                                    For: {data.projects.find((p:any) => p.id === req.projectId)?.title || req.reason}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                {req.fulfilledAt && (
-                                                                    <p className="text-sm">
-                                                                        <span className="font-medium">Fulfilled</span> by {approver?.name} on {format(req.fulfilledAt.toDate(), "PP")}
-                                                                    </p>
-                                                                )}
-                                                                {req.rejectedAt && (
-                                                                     <p className="text-sm text-destructive">
-                                                                        <span className="font-medium">Rejected</span> on {format(req.rejectedAt.toDate(), "PP")}
-                                                                    </p>
-                                                                )}
-                                                                 {req.returnedAt && (
-                                                                    <p className="text-sm text-green-600">
-                                                                        <span className="font-medium">Returned</span> and confirmed by {returner?.name} on {format(req.returnedAt.toDate(), "PP")}
-                                                                    </p>
-                                                                )}
-                                                            </TableCell>
-                                                        </TableRow>
+                                                        <ActivityLogItemRow 
+                                                            key={req.id}
+                                                            request={req}
+                                                            item={item}
+                                                            user={requester}
+                                                            project={project}
+                                                            approver={approver}
+                                                            returner={returner}
+                                                        />
                                                     );
                                                 })}
                                             </TableBody>
@@ -659,3 +717,5 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
+
+    
