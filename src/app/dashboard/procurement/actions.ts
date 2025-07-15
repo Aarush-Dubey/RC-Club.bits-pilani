@@ -68,13 +68,14 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
         batch.update(bucketRef, {
             members: arrayUnion(requestedById)
         });
+        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
+    } else {
+        revalidatePath(`/dashboard/procurement/approvals`);
     }
 
     await batch.commit();
 
-    if (bucketId) {
-        revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
-    }
+    
     revalidatePath(`/dashboard/procurement/new`);
 }
 
@@ -89,4 +90,30 @@ export async function updateBucketStatus(bucketId: string, status: "open" | "clo
     await updateDoc(bucketRef, data);
     revalidatePath(`/dashboard/procurement/buckets/${bucketId}`);
     revalidatePath(`/dashboard/procurement`);
+    revalidatePath(`/dashboard/procurement/approvals`);
+}
+
+export async function approveNewItemRequest(requestId: string, approverId: string) {
+    if (!approverId) throw new Error("User is not authenticated.");
+
+    const requestRef = doc(db, "new_item_requests", requestId);
+    await updateDoc(requestRef, {
+        status: "approved",
+        approvedAt: serverTimestamp(),
+        approvedById: approverId,
+    });
+    revalidatePath('/dashboard/procurement/approvals');
+}
+
+export async function rejectNewItemRequest(requestId: string, rejectorId: string, reason: string) {
+    if (!rejectorId) throw new Error("User is not authenticated.");
+    
+    const requestRef = doc(db, "new_item_requests", requestId);
+    await updateDoc(requestRef, {
+        status: "rejected",
+        rejectedAt: serverTimestamp(),
+        rejectedById: rejectorId,
+        rejectionReason: reason,
+    });
+    revalidatePath('/dashboard/procurement/approvals');
 }

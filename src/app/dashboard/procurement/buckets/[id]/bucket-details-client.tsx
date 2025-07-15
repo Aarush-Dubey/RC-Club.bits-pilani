@@ -79,8 +79,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         setLoading(true);
 
         const bucketRef = doc(db, "procurement_buckets", bucketId);
-        const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
-
         const unsubscribeBucket = onSnapshot(bucketRef, async (bucketSnap) => {
             if (!bucketSnap.exists()) {
                 setData(null);
@@ -97,24 +95,23 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                 const usersSnap = await getDocs(usersQuery);
                 members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
             }
+            
+            const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
+            const requestsSnap = await getDocs(requestsQuery);
+            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
 
-            setData((prevData: any) => ({
-                ...prevData,
+
+            setData({
                 bucket: serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData }),
                 members,
-            }));
+                requests,
+            });
             setLoading(false);
         });
 
-        const unsubscribeRequests = onSnapshot(requestsQuery, (requestsSnap) => {
-            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
-            setData((prevData: any) => ({ ...prevData, requests }));
-        });
-
-        // Cleanup subscriptions on unmount
+        // Cleanup subscription on unmount
         return () => {
             unsubscribeBucket();
-            unsubscribeRequests();
         };
     }, [bucketId]);
 
@@ -165,9 +162,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
     const isManager = currentUser?.permissions?.canApproveNewItemRequest;
     const isCreator = currentUser?.uid === bucket.createdBy;
     
-    const canApproveIndividualItem = isManager && bucket.status === 'open';
     const creator = members.find((m: any) => m.id === bucket.createdBy);
-
     const totalEstimatedCost = requests.reduce((acc: number, req: any) => acc + (req.estimatedCost * req.quantity || 0), 0);
 
     return (
@@ -180,7 +175,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                         </Link>
                         <div className="flex items-center gap-4">
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{bucket.description}</h2>
-                            <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
+                            <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             Started by {creator?.name} on {bucket.createdAt ? format(new Date(bucket.createdAt), "MMM d, yyyy") : 'N/A'}
@@ -212,7 +207,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Closing this bucket will prevent any new items from being added. This is the first step before placing the order.
+                                        Closing this bucket will prevent any new items from being added. This will submit the bucket for approval before ordering.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -225,16 +220,24 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     </Card>
                 )}
 
-                 {isManager && bucket.status === 'closed' && (
+                 {isManager && ['closed', 'ordered'].includes(bucket.status) && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Manager Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center gap-2">
-                            <Button onClick={() => handleUpdateStatus('ordered')} disabled={actionLoading}>
-                                {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Mark as Ordered
-                            </Button>
+                            {bucket.status === 'closed' && (
+                                <Button onClick={() => handleUpdateStatus('ordered')} disabled={actionLoading}>
+                                    {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Mark as Ordered
+                                </Button>
+                            )}
+                            {bucket.status === 'ordered' && (
+                                <Button onClick={() => handleUpdateStatus('received')} disabled={actionLoading}>
+                                    {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Mark as Received
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -256,7 +259,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                     <TableHead>Qty</TableHead>
                                     <TableHead>Est. cost / piece</TableHead>
                                     <TableHead>Status</TableHead>
-                                    {canApproveIndividualItem && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -271,22 +273,12 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                             <TableCell>{user?.name || 'Unknown'}</TableCell>
                                             <TableCell>{req.quantity}</TableCell>
                                             <TableCell>₹{req.estimatedCost.toFixed(2)}</TableCell>
-                                            <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
-                                            {canApproveIndividualItem && (
-                                                <TableCell className="text-right">
-                                                    {req.status === 'pending' && (
-                                                         <div className="flex gap-2 justify-end">
-                                                            <Button size="icon" variant="outline" disabled><Check className="h-4 w-4"/></Button>
-                                                            <Button size="icon" variant="destructive" disabled><X className="h-4 w-4"/></Button>
-                                                         </div>
-                                                    )}
-                                                </TableCell>
-                                            )}
+                                            <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
                                         </TableRow>
                                     )
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={canApproveIndividualItem ? 6 : 5} className="text-center h-24">
+                                        <TableCell colSpan={5} className="text-center h-24">
                                             No items have been requested in this bucket yet.
                                         </TableCell>
                                     </TableRow>

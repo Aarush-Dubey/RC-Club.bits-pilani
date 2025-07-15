@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket } from "lucide-react";
+import { PlusCircle, ShoppingBasket, ClipboardCheck } from "lucide-react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
@@ -77,6 +77,7 @@ export default function ProcurementBucketsPage() {
   }
 
   const canCreate = currentUser?.permissions?.canCreateBuckets;
+  const canApprove = currentUser?.permissions?.canApproveNewItemRequest;
 
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -88,11 +89,18 @@ export default function ProcurementBucketsPage() {
               View and manage all procurement buckets, both open and closed.
             </p>
           </div>
-          <Link href="/dashboard/procurement/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> New Request
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {canApprove && (
+                <Link href="/dashboard/procurement/approvals">
+                    <Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4"/>Manage Approvals</Button>
+                </Link>
+            )}
+             <Link href="/dashboard/procurement/new">
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> New Request
+                </Button>
+            </Link>
+          </div>
         </div>
 
         {loading ? (
@@ -124,7 +132,7 @@ export default function ProcurementBucketsPage() {
                         <CardHeader>
                             <div className="flex justify-between items-start">
                                 <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
-                                <Badge variant={getStatusVariant(bucket.status)}>{bucket.status}</Badge>
+                                <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
                             </div>
                             <CardDescription>
                                 Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
