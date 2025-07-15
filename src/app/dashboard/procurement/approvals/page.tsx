@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ApprovalActions } from "./approval-actions"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 async function getApprovalData() {
     const singleItemsQuery = query(
@@ -44,14 +46,31 @@ async function getApprovalData() {
     return { singleItems, closedBuckets, users };
 }
 
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'open': return 'default';
-    case 'closed': return 'secondary';
-    case 'ordered': return 'outline';
-    case 'received': return 'destructive';
-    default: return 'outline';
-  }
+const getStatusConfig = (status: string) => {
+    switch (status) {
+        case 'open': return { color: 'bg-green-500', tooltip: 'Open' };
+        case 'closed': return { color: 'bg-yellow-500', tooltip: 'Closed (Pending Approval)' };
+        case 'ordered': return { color: 'bg-blue-500', tooltip: 'Ordered' };
+        case 'received': return { color: 'bg-teal-500', tooltip: 'Received' };
+        default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
+    }
+};
+
+const StatusCircle = ({ status }: { status: string }) => {
+  const config = getStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 };
 
 

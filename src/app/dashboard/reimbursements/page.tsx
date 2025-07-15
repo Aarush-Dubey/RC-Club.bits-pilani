@@ -26,21 +26,36 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ReimbursementForm } from "./reimbursement-form"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
-const getStatusVariant = (status: string) => {
+const getStatusConfig = (status: string) => {
   switch (status) {
-    case 'pending':
-      return 'secondary'
-    case 'approved':
-      return 'default'
-    case 'paid':
-      return 'outline'
-    case 'rejected':
-      return 'destructive'
-    default:
-      return 'outline'
+    case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' };
+    case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
+    case 'paid': return { color: 'bg-green-500', tooltip: 'Paid' };
+    case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
+    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
   }
-}
+};
+
+const StatusCircle = ({ status }: { status: string }) => {
+  const config = getStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 
 async function getData() {
     const reimbursementsSnapshot = await getDocs(collection(db, "reimbursements"));
@@ -139,7 +154,7 @@ export default function ReimbursementsPage() {
                 <TableCell>{details}</TableCell>
                 <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
                 <TableCell>
-                    <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
+                    <StatusCircle status={req.status} />
                 </TableCell>
                 <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
                 </TableRow>

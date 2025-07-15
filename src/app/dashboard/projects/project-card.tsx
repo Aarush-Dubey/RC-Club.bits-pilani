@@ -5,6 +5,8 @@ import type { AppUser } from "@/context/auth-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 export type Project = {
   id: string
@@ -31,25 +33,36 @@ export type InventoryItem = {
     [key: string]: any;
 }
 
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'pending_approval':
-      return <Badge variant="secondary">Pending Approval</Badge>
-    case 'approved':
-      return <Badge className="bg-yellow-500 text-white">Approved</Badge>
-    case 'active':
-      return <Badge className="bg-blue-500 text-white">Active</Badge>
-    case 'completed':
-      return <Badge className="bg-green-500 text-white">Completed</Badge>
-    case 'closed':
-      return <Badge variant="outline">Closed</Badge>
-    case 'rejected':
-      return <Badge variant="destructive">Rejected</Badge>
-    default:
-      return <Badge variant="outline">{status ? status.replace(/_/g, ' ') : 'Unknown'}</Badge>
-  }
+function getStatusConfig(status: string) {
+    switch (status) {
+        case 'pending_approval': return { color: 'bg-yellow-500', tooltip: 'Pending Approval' };
+        case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
+        case 'active': return { color: 'bg-sky-500', tooltip: 'Active' };
+        case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' };
+        case 'completed': return { color: 'bg-green-500', tooltip: 'Completed' };
+        case 'closed': return { color: 'bg-gray-500', tooltip: 'Closed' };
+        case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
+        default: return { color: 'bg-gray-400', tooltip: status ? status.replace(/_/g, ' ') : 'Unknown' };
+    }
 }
+
+const StatusCircle = ({ status }: { status: string }) => {
+  const config = getStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 
 export const ProjectCard = ({ project, users, currentUser }: { project: Project; users: User[]; currentUser: AppUser | null }) => {
   const projectLead = users.find((u: any) => u.id === project.leadId)
@@ -58,7 +71,7 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
   return (
       <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full relative">
           <div className="flex items-center justify-between">
-            {getStatusBadge(project.status)}
+            <StatusCircle status={project.status} />
           </div>
           <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors flex-grow">
             <Link href={`/dashboard/projects/${project.id}`} className="static">

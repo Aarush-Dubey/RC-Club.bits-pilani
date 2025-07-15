@@ -28,20 +28,36 @@ import {
 } from "@/components/ui/tabs"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
-const getStatusVariant = (status: string) => {
+const getStatusConfig = (status: string) => {
     switch (status) {
-        case 'Available': return 'default'
-        case 'On Loan': return 'secondary'
-        case 'Overdue': return 'destructive'
-        case 'pending': return 'secondary'
-        case 'fulfilled': return 'default'
-        case 'rejected': return 'destructive'
-        case 'pending_return': return 'secondary'
-        case 'returned': return 'default'
-        default: return 'outline'
+        case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' }
+        case 'fulfilled': return { color: 'bg-blue-500', tooltip: 'Fulfilled' }
+        case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' }
+        case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' }
+        case 'returned': return { color: 'bg-green-500', tooltip: 'Returned' }
+        default: return { color: 'bg-gray-400', tooltip: 'Unknown' }
     }
 }
+
+const StatusCircle = ({ status }: { status: string }) => {
+  const config = getStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 async function getData() {
     const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
@@ -235,7 +251,7 @@ export default function InventoryPage() {
                             </TableCell>
                             <TableCell>{user?.name}</TableCell>
                             <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                            <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
+                            <TableCell><StatusCircle status={req.status} /></TableCell>
                             {canManageInventory && (
                                 <TableCell className="text-right space-x-2">
                                     <RequestActions request={req} canApprove={!!canManageInventory} />
@@ -270,7 +286,7 @@ export default function InventoryPage() {
                             </TableCell>
                             <TableCell>{project?.title || 'N/A'}</TableCell>
                             <TableCell>{user?.name}</TableCell>
-                            <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status.replace('_', ' ')}</Badge></TableCell>
+                            <TableCell><StatusCircle status={req.status} /></TableCell>
                             {canManageInventory && (
                                 <TableCell className="text-right space-x-2">
                                     <ReturnActions request={req} canConfirm={!!canManageInventory} />

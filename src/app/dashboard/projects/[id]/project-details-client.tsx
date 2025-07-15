@@ -21,28 +21,50 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RequestInventoryForm } from "./request-inventory-form";
 import { NewUpdateForm } from "./new-update-form";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 
-function getStatusBadge(status: string) {
+function getProjectStatusConfig(status: string) {
     switch (status) {
-        case 'pending_approval':
-        return <Badge variant="secondary">Pending Approval</Badge>
-        case 'approved':
-        return <Badge className="bg-yellow-500 text-white">Approved</Badge>
-        case 'active':
-        return <Badge className="bg-blue-500 text-white">Active</Badge>
-        case 'pending_return':
-        return <Badge className="bg-orange-500 text-white">Pending Return</Badge>
-        case 'completed':
-        return <Badge className="bg-green-500 text-white">Completed</Badge>
-        case 'closed':
-        return <Badge variant="outline">Closed</Badge>
-        case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>
-        default:
-        return <Badge variant="outline">{status ? status.replace(/_/g, ' ') : 'Unknown'}</Badge>
+        case 'pending_approval': return { color: 'bg-yellow-500', tooltip: 'Pending Approval' }
+        case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' }
+        case 'active': return { color: 'bg-sky-500', tooltip: 'Active' }
+        case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' }
+        case 'completed': return { color: 'bg-green-500', tooltip: 'Completed' }
+        case 'closed': return { color: 'bg-gray-500', tooltip: 'Closed' }
+        case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' }
+        default: return { color: 'bg-gray-400', tooltip: status.replace(/_/g, ' ') }
     }
 }
+
+const getInventoryStatusConfig = (status: string) => {
+    switch (status) {
+        case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' }
+        case 'fulfilled': return { color: 'bg-blue-500', tooltip: 'Fulfilled' }
+        case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' }
+        case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' }
+        case 'returned': return { color: 'bg-green-500', tooltip: 'Returned' }
+        default: return { color: 'bg-gray-400', tooltip: 'Unknown' }
+    }
+}
+
+const StatusCircle = ({ status, type }: { status: string, type: 'project' | 'inventory' }) => {
+  const config = type === 'project' ? getProjectStatusConfig(status) : getInventoryStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 export default function ProjectDetailsClient({ initialData }: { initialData: any }) {
     const { user: currentUser, loading: authLoading } = useAuth();
@@ -163,7 +185,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                     <div>
                         <div className="flex items-center gap-4">
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{project.title}</h2>
-                            {getStatusBadge(project.status)}
+                            <StatusCircle status={project.status} type="project" />
                         </div>
                         <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                     </div>
@@ -331,7 +353,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                                                 <TableRow key={req.id}>
                                                     <TableCell>{item?.name || 'Unknown Item'}</TableCell>
                                                     <TableCell>{req.quantity}</TableCell>
-                                                    <TableCell><Badge variant={req.status === 'pending' ? 'secondary' : req.status === 'fulfilled' ? 'default' : 'destructive'}>{req.status}</Badge></TableCell>
+                                                    <TableCell><StatusCircle status={req.status} type="inventory" /></TableCell>
                                                 </TableRow>
                                             )
                                         })}

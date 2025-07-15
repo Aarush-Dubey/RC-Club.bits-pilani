@@ -69,26 +69,29 @@ async function getData(currentUser: AppUser | null) {
   return { buckets, users, singleRequests };
 }
 
-const getBucketStatusVariant = (status: string) => {
+const getBucketStatusConfig = (status: string) => {
   switch (status) {
-    case 'open': return 'default';
-    case 'closed': return 'secondary';
-    case 'ordered': return 'outline';
-    case 'received': return 'destructive'; // Re-using for now, should be success
-    default: return 'outline';
+    case 'open': return { color: 'bg-green-500', tooltip: 'Open' };
+    case 'closed': return { color: 'bg-yellow-500', tooltip: 'Closed (Pending Approval)' };
+    case 'ordered': return { color: 'bg-blue-500', tooltip: 'Ordered' };
+    case 'received': return { color: 'bg-teal-500', tooltip: 'Received' };
+    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
   }
 };
 
-const StatusCircle = ({ status }: { status: string }) => {
-  const statusConfig: { [key: string]: { color: string; tooltip: string } } = {
-    pending: { color: 'bg-yellow-500', tooltip: 'Pending' },
-    approved: { color: 'bg-blue-500', tooltip: 'Approved' },
-    rejected: { color: 'bg-red-500', tooltip: 'Rejected' },
-    ordered: { color: 'bg-orange-500', tooltip: 'Ordered' },
-    received: { color: 'bg-green-500', tooltip: 'Received' },
-  };
+const getRequestStatusConfig = (status: string) => {
+  switch (status) {
+    case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' };
+    case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
+    case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
+    case 'ordered': return { color: 'bg-orange-500', tooltip: 'Ordered' };
+    case 'received': return { color: 'bg-green-500', tooltip: 'Received' };
+    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
+  }
+};
 
-  const config = statusConfig[status] || { color: 'bg-gray-400', tooltip: 'Unknown' };
+const StatusCircle = ({ status, type }: { status: string, type: 'bucket' | 'request' }) => {
+  const config = type === 'bucket' ? getBucketStatusConfig(status) : getRequestStatusConfig(status);
 
   return (
     <TooltipProvider>
@@ -171,31 +174,39 @@ export default function ProcurementPage() {
         ) : (
           <div className="space-y-8">
             {data.buckets.length > 0 && (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {data.buckets.map((bucket) => {
-                    const creator = data.users.find(u => u.id === bucket.createdBy);
-                    return (
-                        <Link href={`/dashboard/procurement/buckets/${bucket.id}`} key={bucket.id} className="block">
-                            <Card className="h-full hover:border-primary transition-colors">
-                                <CardHeader>
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
-                                        <Badge variant={getBucketStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
-                                    </div>
-                                    <CardDescription>
-                                        Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-sm text-muted-foreground">
-                                        {bucket.members?.length || 0} members
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    );
-                    })}
-                </div>
+              <Card>
+                <CardHeader>
+                    <CardTitle>My Procurement Buckets</CardTitle>
+                    <CardDescription>Buckets you created or contributed to.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {data.buckets.map((bucket) => {
+                      const creator = data.users.find(u => u.id === bucket.createdBy);
+                      return (
+                          <Link href={`/dashboard/procurement/buckets/${bucket.id}`} key={bucket.id} className="block">
+                              <Card className="h-full hover:border-primary transition-colors">
+                                  <CardHeader>
+                                      <div className="flex justify-between items-start">
+                                          <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
+                                          <StatusCircle status={bucket.status} type="bucket" />
+                                      </div>
+                                      <CardDescription>
+                                          Started by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d") : 'N/A'}
+                                      </CardDescription>
+                                  </CardHeader>
+                                  <CardContent>
+                                      <div className="text-sm text-muted-foreground">
+                                          {bucket.members?.length || 0} members
+                                      </div>
+                                  </CardContent>
+                              </Card>
+                          </Link>
+                      );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
             )}
             {data.singleRequests.length > 0 && (
                 <Card>
@@ -216,9 +227,9 @@ export default function ProcurementPage() {
                                 <TableBody>
                                     {data.singleRequests.map((req: any) => (
                                         <TableRow key={req.id}>
-                                            <TableCell className="font-medium">{req.itemName} (x{req.quantity})</TableCell>
+                                            <TableCell className="font-medium whitespace-nowrap">{req.itemName} (x{req.quantity})</TableCell>
                                             <TableCell>
-                                                <StatusCircle status={req.status} />
+                                                <StatusCircle status={req.status} type="request" />
                                             </TableCell>
                                             <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
                                         </TableRow>

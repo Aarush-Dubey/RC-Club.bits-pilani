@@ -31,20 +31,47 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BucketItemActions } from "./bucket-item-actions";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-
-const getStatusVariant = (status: string) => {
+const getBucketStatusConfig = (status: string) => {
   switch (status) {
-    case 'open': return 'default';
-    case 'pending': return 'secondary';
-    case 'approved': return 'default';
-    case 'closed': return 'secondary';
-    case 'ordered': return 'outline';
-    case 'received': return 'destructive'; // Reuse for now
-    case 'rejected': return 'destructive';
-    default: return 'outline';
+    case 'open': return { color: 'bg-green-500', tooltip: 'Open' };
+    case 'closed': return { color: 'bg-yellow-500', tooltip: 'Closed (Pending Approval)' };
+    case 'ordered': return { color: 'bg-blue-500', tooltip: 'Ordered' };
+    case 'received': return { color: 'bg-teal-500', tooltip: 'Received' };
+    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
   }
 };
+
+const getRequestStatusConfig = (status: string) => {
+  switch (status) {
+    case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' };
+    case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
+    case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
+    case 'ordered': return { color: 'bg-orange-500', tooltip: 'Ordered' };
+    case 'received': return { color: 'bg-green-500', tooltip: 'Received' };
+    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
+  }
+};
+
+const StatusCircle = ({ status, type }: { status: string, type: 'bucket' | 'request' }) => {
+  const config = type === 'bucket' ? getBucketStatusConfig(status) : getRequestStatusConfig(status);
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 
 // Helper to convert Firestore Timestamps to strings for client-side state
 const serializeFirestoreTimestamps = (data: any): any => {
@@ -185,7 +212,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                         </Link>
                         <div className="flex items-center gap-4">
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{bucket.description}</h2>
-                            <Badge variant={getStatusVariant(bucket.status) as any}>{bucket.status}</Badge>
+                            <StatusCircle status={bucket.status} type="bucket" />
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             Started by {creator?.name} on {bucket.createdAt ? format(new Date(bucket.createdAt), "MMM d, yyyy") : 'N/A'}
@@ -290,7 +317,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                             <TableCell>{user?.name || 'Unknown'}</TableCell>
                                             <TableCell>{req.quantity}</TableCell>
                                             <TableCell>₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
-                                            <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
+                                            <TableCell><StatusCircle status={req.status} type="request" /></TableCell>
                                             {isManager && bucket.status === 'closed' && (
                                                 <TableCell className="text-right">
                                                    {req.status === 'pending' ? <BucketItemActions requestId={req.id} itemName={req.itemName} /> : '-'}
