@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket, ClipboardCheck } from "lucide-react";
+import { PlusCircle, ShoppingBasket, ClipboardCheck, User } from "lucide-react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
@@ -90,6 +90,9 @@ export default function ProcurementBucketsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/dashboard/procurement/my-requests">
+                <Button variant="outline"><User className="mr-2 h-4 w-4"/>My Requests</Button>
+            </Link>
             {canApprove && (
                 <Link href="/dashboard/procurement/approvals">
                     <Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4"/>Manage Approvals</Button>
