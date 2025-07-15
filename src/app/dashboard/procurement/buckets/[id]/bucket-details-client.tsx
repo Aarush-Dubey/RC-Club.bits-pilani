@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { doc, getDoc, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, Timestamp, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth, type AppUser } from "@/context/auth-context";
 import { ArrowLeft, PlusCircle, Check, X, FileText, Loader2 } from "lucide-react";
@@ -45,16 +45,71 @@ const getStatusVariant = (status: string) => {
   }
 };
 
+const serializeFirestoreTimestamps = (data: any): any => {
+    if (!data) return data;
+    if (Array.isArray(data)) {
+        return data.map(serializeFirestoreTimestamps);
+    }
+    if (typeof data === 'object' && data !== null) {
+        if (data instanceof Timestamp) {
+            return data.toDate().toISOString();
+        }
+        const newObj: { [key: string]: any } = {};
+        for (const key in data) {
+            newObj[key] = serializeFirestoreTimestamps(data[key]);
+        }
+        return newObj;
+    }
+    return data;
+};
+
 export default function BucketDetailsClient({ initialData, bucketId }: { initialData: any, bucketId: string }) {
     const [data, setData] = useState<any>(initialData);
+    const [loading, setLoading] = useState(!initialData);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const { user: currentUser, loading: authLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
+    useEffect(() => {
+        setLoading(true);
+        const bucketRef = doc(db, "procurement_buckets", bucketId);
+
+        const unsubscribe = onSnapshot(bucketRef, async (bucketSnap) => {
+            if (!bucketSnap.exists()) {
+                setData(null);
+                setLoading(false);
+                notFound();
+                return;
+            }
+
+            const bucketData = bucketSnap.data();
+            const memberIds = Array.isArray(bucketData.members) && bucketData.members.length > 0 ? bucketData.members : [];
+            const bucket = serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData });
+
+            const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
+            const requestsSnap = await getDocs(requestsQuery);
+            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+
+            let members: AppUser[] = [];
+            if (memberIds.length > 0) {
+                const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
+                const usersSnap = await getDocs(usersQuery);
+                members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
+            }
+            
+            setData({ bucket, requests, members });
+            setLoading(false);
+        });
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    }, [bucketId]);
+
+
     const handleFormSubmit = () => {
-        router.refresh();
+        // No need to manually refresh, onSnapshot will handle it.
         setIsFormOpen(false);
     };
 
@@ -63,7 +118,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         try {
             await updateBucketStatus(bucketId, status);
             toast({ title: "Bucket Updated", description: `The bucket is now ${status}.` });
-            router.refresh(); // This will re-run the server component's fetch and pass new initialData
         } catch (error) {
             toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
         } finally {
@@ -71,11 +125,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         }
     };
 
-    useEffect(() => {
-        setData(initialData);
-    }, [initialData]);
-
-    if (authLoading || !data) {
+    if (loading || authLoading || !data) {
         return (
              <div className="space-y-6">
                 <Skeleton className="h-10 w-1/3" />

@@ -25,7 +25,7 @@ const serializeFirestoreTimestamps = (data: any): any => {
 };
 
 
-async function getBucketData(bucketId: string) {
+async function getInitialBucketData(bucketId: string) {
     const bucketRef = doc(db, "procurement_buckets", bucketId);
     const bucketSnap = await getDoc(bucketRef);
 
@@ -54,7 +54,7 @@ async function getBucketData(bucketId: string) {
 }
 
 export default async function BucketDetailsPage({ params }: { params: { id: string } }) {
-    const data = await getBucketData(params.id);
+    const data = await getInitialBucketData(params.id);
 
     if (!data) {
         notFound();
