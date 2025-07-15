@@ -23,7 +23,7 @@ import { NewItemRequestForm } from "../new-item-request-form";
 import { useToast } from "@/hooks/use-toast";
 
 async function getData() {
-  const bucketsQuery = query(collection(db, "procurement_buckets"), where("status", "==", "open"), orderBy("createdAt", "desc"));
+  const bucketsQuery = query(collection(db, "procurement_buckets"), where("status", "==", "open"));
   const bucketsSnapshot = await getDocs(bucketsQuery);
   const buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -135,7 +135,7 @@ export default function NewProcurementPage() {
                             <CardHeader>
                                 <CardTitle className="font-headline text-lg line-clamp-2">{bucket.description}</CardTitle>
                                 <CardDescription>
-                                    Created by {creator?.name} on {format(bucket.createdAt.toDate(), "MMM d, yyyy")}
+                                    Created by {creator?.name} on {bucket.createdAt ? format(bucket.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
