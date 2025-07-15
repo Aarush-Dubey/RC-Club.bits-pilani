@@ -59,7 +59,7 @@ const StatusCircle = ({ status, type }: { status: string, type: 'bucket' | 'requ
   const config = type === 'bucket' ? getBucketStatusConfig(status) : getRequestStatusConfig(status);
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger>
           <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
