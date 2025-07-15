@@ -817,22 +817,20 @@ export default function InventoryPage() {
   return (
     <Dialog>
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                 <h2 className="text-3xl font-bold tracking-tight font-headline">Inventory</h2>
                 <p className="text-muted-foreground">
                     Manage equipment, track loans, and approve requests.
                 </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    {canManageProcurement && (
-                        <Link href="/dashboard/procurement/approvals">
-                            <Button variant="outline">
-                                <ClipboardCheck className="mr-2 h-4 w-4" /> Manage Procurement
-                            </Button>
-                        </Link>
-                    )}
-                </div>
+                {canManageProcurement && (
+                    <Link href="/dashboard/procurement/approvals" className="w-full sm:w-auto">
+                        <Button variant="outline" className="w-full">
+                            <ClipboardCheck className="mr-2 h-4 w-4" /> Manage Procurement
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             {isMobile ? (
