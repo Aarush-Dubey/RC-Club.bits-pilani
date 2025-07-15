@@ -71,7 +71,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         }
     };
 
-    if (authLoading) {
+    if (authLoading || !data) {
         return (
              <div className="space-y-6">
                 <Skeleton className="h-10 w-1/3" />
