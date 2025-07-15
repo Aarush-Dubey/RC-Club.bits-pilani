@@ -109,25 +109,23 @@ export default function ProcurementPage() {
 
   return (
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">My Procurement</h2>
-            <p className="text-muted-foreground">
-              View and manage all procurement requests and buckets you are a part of.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {canApprove && (
-                <Link href="/dashboard/procurement/approvals">
-                    <Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4"/>Manage Approvals</Button>
-                </Link>
-            )}
-             <Link href="/dashboard/procurement/new">
-                <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> New Request
-                </Button>
-            </Link>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight font-headline">My Procurement</h2>
+          <p className="text-muted-foreground">
+            View and manage all procurement requests and buckets you are a part of.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {canApprove && (
+              <Link href="/dashboard/procurement/approvals">
+                  <Button variant="outline"><ClipboardCheck className="mr-2 h-4 w-4"/>Manage Approvals</Button>
+              </Link>
+          )}
+            <Link href="/dashboard/procurement/new">
+              <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Request
+              </Button>
+          </Link>
         </div>
 
         {loading ? (
