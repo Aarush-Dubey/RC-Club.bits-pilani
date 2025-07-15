@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket, FilePlus2, Box, ArrowRight } from "lucide-react";
+import { PlusCircle, ShoppingBasket, FilePlus2, Box, ArrowRight, Info } from "lucide-react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
@@ -19,6 +19,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { NewItemRequestForm } from "../new-item-request-form";
 import { useToast } from "@/hooks/use-toast";
 import { NewBucketForm } from "../new-bucket-form";
@@ -82,7 +87,7 @@ export default function NewProcurementPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            <Card className="h-full">
+            <Card className="h-full md:col-span-2">
                 <CardHeader>
                     <div className="flex items-center gap-4">
                         <FilePlus2 className="w-8 h-8 text-primary"/>
@@ -104,30 +109,24 @@ export default function NewProcurementPage() {
                     </DialogTrigger>
                 </CardFooter>
             </Card>
-
-            <Card className="h-full">
-                <CardHeader>
-                     <div className="flex items-center gap-4">
-                        <Box className="w-8 h-8 text-primary"/>
-                        <div>
-                            <CardTitle className="font-headline text-xl">Join a Purchasing Bucket</CardTitle>
-                            <CardDescription>For combined, cost-saving orders.</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Add your item to an open bucket to combine shipping and simplify reimbursement.
-                        Select a bucket below to see its contents and add your request.
-                    </p>
-                </CardContent>
-            </Card>
         </div>
 
         <Dialog open={isNewBucketFormOpen} onOpenChange={setIsNewBucketFormOpen}>
             <div>
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-2xl font-bold tracking-tight font-headline">Open Buckets</h3>
+                    <div className="flex items-center gap-2">
+                         <h3 className="text-2xl font-bold tracking-tight font-headline">Open Buckets</h3>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Info className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="text-sm text-muted-foreground">
+                                Add your item to an open bucket to combine shipping and simplify reimbursement. Select a bucket below to see its contents and add your request.
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                     {canCreateBucket && (
                         <DialogTrigger asChild>
                             <Button variant="outline">
