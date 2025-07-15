@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RequestInventoryForm } from "./request-inventory-form";
+import { NewUpdateForm } from "./new-update-form";
 
 
 function getStatusBadge(status: string) {
@@ -46,6 +47,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const [isJoining, setIsJoining] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
     const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
+    const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
 
@@ -132,7 +134,11 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         router.refresh();
         setIsRequestFormOpen(false);
     }
-
+    
+    const handleUpdateSubmit = () => {
+        router.refresh();
+        setIsUpdateFormOpen(false);
+    }
 
     return (
         <Dialog open={isRequestFormOpen} onOpenChange={setIsRequestFormOpen}>
@@ -148,7 +154,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                     <div className="flex items-center gap-2">
                         {isMember ? (
                             <>
-                               <ProjectActions project={project as any} currentUser={currentUser} onUpdate={() => router.refresh()}/>
+                               <ProjectActions project={project as any} currentUser={currentUser} />
 
                                {project.status === 'active' && (
                                    <DialogTrigger asChild>
@@ -190,60 +196,80 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Project Updates</CardTitle>
-                                <CardDescription>A timeline of progress and milestones.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {updates?.length > 0 ? (
-                                    <div className="space-y-6">
-                                        {updates.map((update: any) => {
-                                            const author = members.find((m: AppUser) => m.uid === update.postedById);
-                                            return (
-                                                <div key={update.id} className="flex gap-4">
-                                                    <Avatar>
-                                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
-                                                        <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1 space-y-2">
-                                                        <div className="flex items-baseline justify-between">
-                                                            <p className="font-semibold">{author?.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                                                            </p>
+                        <Dialog open={isUpdateFormOpen} onOpenChange={setIsUpdateFormOpen}>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Project Updates</CardTitle>
+                                        <CardDescription>A timeline of progress and milestones.</CardDescription>
+                                    </div>
+                                    {isMember && project.status === 'active' && (
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline"><Flag className="mr-2"/>Post Update</Button>
+                                        </DialogTrigger>
+                                    )}
+                                </CardHeader>
+                                <CardContent>
+                                    {updates?.length > 0 ? (
+                                        <div className="space-y-6">
+                                            {updates.map((update: any) => {
+                                                const author = members.find((m: AppUser) => m.uid === update.postedById);
+                                                return (
+                                                    <div key={update.id} className="flex gap-4">
+                                                        <Avatar>
+                                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
+                                                            <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex-1 space-y-2">
+                                                            <div className="flex items-baseline justify-between">
+                                                                <p className="font-semibold">{author?.name}</p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                                                                </p>
+                                                            </div>
+                                                            {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
+                                                            {update.imageUrls && update.imageUrls.length > 0 && (
+                                                                <Carousel className="w-full mt-2">
+                                                                    <CarouselContent>
+                                                                        {update.imageUrls.map((url: string, index: number) => (
+                                                                            <CarouselItem key={index}>
+                                                                                <div className="relative aspect-video">
+                                                                                    <Image src={url} alt={`Project update image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border"/>
+                                                                                </div>
+                                                                            </CarouselItem>
+                                                                        ))}
+                                                                    </CarouselContent>
+                                                                    {update.imageUrls.length > 1 && <>
+                                                                        <CarouselPrevious className="left-2" />
+                                                                        <CarouselNext className="right-2" />
+                                                                    </>}
+                                                                </Carousel>
+                                                            )}
                                                         </div>
-                                                        {update.text && <p className="text-sm text-foreground whitespace-pre-wrap">{update.text}</p>}
-                                                        {update.imageUrls && update.imageUrls.length > 0 && (
-                                                            <Carousel className="w-full mt-2">
-                                                                <CarouselContent>
-                                                                    {update.imageUrls.map((url: string, index: number) => (
-                                                                        <CarouselItem key={index}>
-                                                                            <div className="relative aspect-video">
-                                                                                <Image src={url} alt={`Project update image ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border"/>
-                                                                            </div>
-                                                                        </CarouselItem>
-                                                                    ))}
-                                                                </CarouselContent>
-                                                                {update.imageUrls.length > 1 && <>
-                                                                    <CarouselPrevious className="left-2" />
-                                                                    <CarouselNext className="right-2" />
-                                                                </>}
-                                                            </Carousel>
-                                                        )}
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-muted-foreground py-8">
-                                        <Flag className="mx-auto h-8 w-8 mb-2" />
-                                        <p>No updates have been posted for this project yet.</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-muted-foreground py-8">
+                                            <Flag className="mx-auto h-8 w-8 mb-2" />
+                                            <p>No updates have been posted for this project yet.</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                             <DialogContent>
+                                <DialogHeader>
+                                <DialogTitle>Post Project Update</DialogTitle>
+                                <DialogDescription>Share your progress with the team. You can include an image.</DialogDescription>
+                                </DialogHeader>
+                                <NewUpdateForm
+                                project={project}
+                                setOpen={setIsUpdateFormOpen}
+                                onFormSubmit={handleUpdateSubmit}
+                                />
+                            </DialogContent>
+                        </Dialog>
 
                         <Card>
                             <CardHeader><CardTitle>Requested Inventory</CardTitle></CardHeader>

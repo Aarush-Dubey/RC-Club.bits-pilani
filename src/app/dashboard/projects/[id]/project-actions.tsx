@@ -20,18 +20,14 @@ import {
 import type { Project } from "../page";
 import { approveProject, rejectProject, startProject, completeProject, closeProject } from "./actions";
 import type { AppUser } from "@/context/auth-context";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { NewUpdateForm } from "./new-update-form";
 
 interface ProjectActionsProps {
   project: Project;
   currentUser: AppUser | null;
-  onUpdate: () => void;
 }
 
-export function ProjectActions({ project, currentUser, onUpdate }: ProjectActionsProps) {
+export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isUpdateFormOpen, setIsUpdateFormOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -58,8 +54,6 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
   const canApprove = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
   const canManage = currentUser?.role && ['admin', 'coordinator'].includes(currentUser.role);
   const isProjectLead = currentUser?.uid === project.leadId;
-  const isMember = currentUser && project.memberIds.includes(currentUser.uid);
-
 
   if (canApprove) {
     return (
@@ -111,19 +105,12 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
 
   // Other actions for project lifecycle
   return (
-    <Dialog open={isUpdateFormOpen} onOpenChange={setIsUpdateFormOpen}>
       <div className="flex gap-2">
           {project.status === 'approved' && isProjectLead && (
             <Button onClick={onStart} disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2"/>}
               Start Project
             </Button>
-          )}
-
-          {project.status === 'active' && isMember && (
-            <DialogTrigger asChild>
-              <Button><Flag className="mr-2"/>Post Update</Button>
-            </DialogTrigger>
           )}
 
           {project.status === 'active' && isProjectLead && (
@@ -140,17 +127,5 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
               </Button>
           )}
       </div>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Post Project Update</DialogTitle>
-          <DialogDescription>Share your progress with the team. You can include an image.</DialogDescription>
-        </DialogHeader>
-        <NewUpdateForm
-          project={project}
-          setOpen={setIsUpdateFormOpen}
-          onFormSubmit={onUpdate}
-        />
-      </DialogContent>
-    </Dialog>
   );
 }
