@@ -53,7 +53,7 @@ async function getProjectData(projectId: string) {
             // Firestore 'in' queries are limited to 30 items. For more, chunking would be needed.
             const inventoryItemsQuery = query(collection(db, "inventory_items"), where("id", "in", itemIds.slice(0, 30)));
             const inventoryItemsSnap = await getDocs(inventoryItemsQuery);
-            inventoryItems.push(...inventoryItemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            inventoryItems.push(...inventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })));
         }
     }
 
