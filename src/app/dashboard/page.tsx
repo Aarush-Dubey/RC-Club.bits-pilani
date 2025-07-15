@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ProjectOverviewChart } from "./project-overview-chart"
 
 async function getDashboardData() {
   const projectsSnapshot = await getDocs(collection(db, "projects"));
@@ -75,7 +74,6 @@ export default async function DashboardPage() {
   const { 
     projects, 
     roomStatus,
-    projectStatusData,
     onLoanCount,
     overdueCount,
     pendingReimbursements,
@@ -138,20 +136,17 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-8 lg:grid-cols-7">
-        <ProjectOverviewChart data={projectStatusData} />
-        <div className="lg:col-span-3">
-            <h3 className="text-2xl font-headline font-bold mb-4">Recent Projects</h3>
-            <div className="space-y-6">
-                {recentProjects.map((project: any) => (
-                    <div key={project.id}>
-                        <Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge>
-                        <h4 className="font-headline text-lg font-semibold mt-2">{project.title}</h4>
-                        <p className="text-muted-foreground text-sm mt-1">{project.description.substring(0,100)}...</p>
-                    </div>
-                ))}
-            </div>
-        </div>
+      <div>
+          <h3 className="text-2xl font-headline font-bold mb-4">Recent Projects</h3>
+          <div className="space-y-6">
+              {recentProjects.map((project: any) => (
+                  <div key={project.id}>
+                      <Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge>
+                      <h4 className="font-headline text-lg font-semibold mt-2">{project.title}</h4>
+                      <p className="text-muted-foreground text-sm mt-1">{project.description.substring(0,100)}...</p>
+                  </div>
+              ))}
+          </div>
       </div>
     </div>
   )
