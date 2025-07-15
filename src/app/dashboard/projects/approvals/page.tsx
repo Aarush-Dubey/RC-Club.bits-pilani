@@ -4,10 +4,12 @@ import { db } from "@/lib/firebase"
 import { auth } from "@/lib/firebase"
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Check, X } from 'lucide-react'
 
-import { ProjectCard, type Project, type User } from "../project-card"
+import { type Project, type User } from "../project-card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ApprovalActions } from "./approval-actions"
 
 async function getApprovalData() {
     const approvalRequestsQuery = query(
@@ -53,9 +55,17 @@ export default async function ApprovalsPage() {
             </div>
 
             {approvalRequests.length > 0 ? (
-                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-4">
                     {approvalRequests.map((project) => (
-                        <ProjectCard key={project.id} project={project} users={users} currentUser={null} />
+                       <Card key={project.id}>
+                            <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex-1">
+                                    <p className="font-semibold font-headline text-lg">{project.title}</p>
+                                    <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                                </div>
+                                <ApprovalActions projectId={project.id} />
+                            </CardContent>
+                       </Card>
                     ))}
                 </div>
             ) : (
