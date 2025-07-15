@@ -110,7 +110,7 @@ export default function DashboardLayout({
       <SidebarInset>
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto max-w-4xl py-8">{children}</div>
+          <div className="container mx-auto max-w-3xl py-8">{children}</div>
         </main>
       </SidebarInset>
     </SidebarProvider>
