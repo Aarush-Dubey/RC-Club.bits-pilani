@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc, writeBatch } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc, writeBatch, documentId } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -28,7 +28,7 @@ export async function approveProject(projectId: string) {
             // Batch read all unique item documents
             const uniqueItemIds = [...new Set(requestsSnapshot.docs.map(d => d.data().itemId))];
             if (uniqueItemIds.length > 0) {
-                const itemQuery = query(collection(db, "inventory_items"), where("id", "in", uniqueItemIds));
+                const itemQuery = query(collection(db, "inventory_items"), where(documentId(), "in", uniqueItemIds));
                 const itemSnapshots = await getDocs(itemQuery);
                 itemSnapshots.docs.forEach(doc => {
                     itemRefs[doc.id] = doc.ref;
@@ -134,15 +134,50 @@ export async function startProject(projectId: string) {
     revalidatePath('/dashboard/projects');
 }
 
-export async function completeProject(projectId: string) {
+export async function initiateProjectCompletion(projectId: string) {
     const projectRef = doc(db, "projects", projectId);
-    await updateDoc(projectRef, {
-        status: 'completed',
-        completedAt: serverTimestamp(),
-        completedById: 'system-lead'
-    });
+    const batch = writeBatch(db);
+
+    const fulfilledRequestsQuery = query(
+        collection(db, "inventory_requests"),
+        where("projectId", "==", projectId),
+        where("status", "==", "fulfilled")
+    );
+    const fulfilledRequestsSnap = await getDocs(fulfilledRequestsQuery);
+
+    const itemIds = [...new Set(fulfilledRequestsSnap.docs.map(doc => doc.data().itemId))];
+    const itemDocs = new Map();
+    if (itemIds.length > 0) {
+        const itemsQuery = query(collection(db, "inventory_items"), where(documentId(), "in", itemIds));
+        const itemsSnap = await getDocs(itemsQuery);
+        itemsSnap.forEach(doc => itemDocs.set(doc.id, doc.data()));
+    }
+    
+    let hasPendingReturns = false;
+    for (const reqDoc of fulfilledRequestsSnap.docs) {
+        const item = itemDocs.get(reqDoc.data().itemId);
+        if (item && !item.isPerishable) {
+            batch.update(reqDoc.ref, { status: "pending_return" });
+            hasPendingReturns = true;
+        }
+    }
+
+    if (hasPendingReturns) {
+        batch.update(projectRef, { status: "pending_return", hasPendingReturns: true });
+    } else {
+        batch.update(projectRef, { 
+            status: "completed",
+            hasPendingReturns: false,
+            completedAt: serverTimestamp(),
+            completedById: 'system-lead' // Should be current user
+        });
+    }
+
+    await batch.commit();
+
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
+    revalidatePath('/dashboard/inventory');
 }
 
 export async function closeProject(projectId: string) {

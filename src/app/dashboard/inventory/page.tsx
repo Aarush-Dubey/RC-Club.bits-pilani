@@ -2,13 +2,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { PlusCircle, Check, X, Loader2 } from "lucide-react"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { approveInventoryRequest, rejectInventoryRequest } from "./actions"
+import { approveInventoryRequest, rejectInventoryRequest, confirmReturn } from "./actions"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,8 @@ const getStatusVariant = (status: string) => {
         case 'pending': return 'secondary'
         case 'fulfilled': return 'default'
         case 'rejected': return 'destructive'
+        case 'pending_return': return 'secondary'
+        case 'returned': return 'default'
         default: return 'outline'
     }
 }
@@ -97,6 +99,39 @@ function RequestActions({ request, canApprove }: { request: any, canApprove: boo
     );
 }
 
+function ReturnActions({ request, canConfirm }: { request: any, canConfirm: boolean }) {
+    const { user: currentUser } = useAuth();
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    const handleConfirmReturn = async () => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        try {
+            await confirmReturn(request.id, currentUser.uid);
+            toast({
+                title: `Return Confirmed`,
+                description: "The inventory has been updated.",
+            });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    if (!canConfirm || request.status !== 'pending_return') {
+        return null;
+    }
+
+    return (
+        <Button size="sm" onClick={handleConfirmReturn} disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+            Confirm Return
+        </Button>
+    );
+}
+
 
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
@@ -114,7 +149,7 @@ export default function InventoryPage() {
         fetchData();
     }, []);
 
-    const canApprove = currentUser?.permissions?.canApproveInventory;
+    const canManageInventory = currentUser?.permissions?.canApproveInventory;
 
   return (
     <div className="space-y-8">
@@ -134,6 +169,7 @@ export default function InventoryPage() {
         <TabsList>
           <TabsTrigger value="all">All Items</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
+          <TabsTrigger value="returns">Returns</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="mt-6">
             <Table>
@@ -171,11 +207,11 @@ export default function InventoryPage() {
                 <TableHead>Requested By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
-                {canApprove && <TableHead className="text-right">Actions</TableHead>}
+                {canManageInventory && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {data.inventoryRequests.map((req: any) => {
+                {data.inventoryRequests.filter((r:any) => ['pending', 'fulfilled', 'rejected'].includes(r.status)).map((req: any) => {
                     const item = data.inventory.find((i: any) => i.id === req.itemId);
                     const user = data.users.find((u: any) => u.id === req.requestedById);
                     const project = data.projects.find((p: any) => p.id === req.projectId);
@@ -188,9 +224,44 @@ export default function InventoryPage() {
                             <TableCell>{user?.name}</TableCell>
                             <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
                             <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge></TableCell>
-                            {canApprove && (
+                            {canManageInventory && (
                                 <TableCell className="text-right space-x-2">
-                                    <RequestActions request={req} canApprove={!!canApprove} />
+                                    <RequestActions request={req} canApprove={!!canManageInventory} />
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    )
+                })}
+            </TableBody>
+            </Table>
+        </TabsContent>
+         <TabsContent value="returns" className="mt-6">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Item Details</TableHead>
+                <TableHead>Project</TableHead>
+                <TableHead>Returned By</TableHead>
+                <TableHead>Status</TableHead>
+                {canManageInventory && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {data.inventoryRequests.filter((r:any) => ['pending_return', 'returned'].includes(r.status)).map((req: any) => {
+                    const item = data.inventory.find((i: any) => i.id === req.itemId);
+                    const user = data.users.find((u: any) => u.id === req.requestedById);
+                    const project = data.projects.find((p: any) => p.id === req.projectId);
+                    return (
+                        <TableRow key={req.id}>
+                            <TableCell>
+                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                            </TableCell>
+                            <TableCell>{project?.title || 'N/A'}</TableCell>
+                            <TableCell>{user?.name}</TableCell>
+                            <TableCell><Badge variant={getStatusVariant(req.status) as any}>{req.status.replace('_', ' ')}</Badge></TableCell>
+                            {canManageInventory && (
+                                <TableCell className="text-right space-x-2">
+                                    <ReturnActions request={req} canConfirm={!!canManageInventory} />
                                 </TableCell>
                             )}
                         </TableRow>

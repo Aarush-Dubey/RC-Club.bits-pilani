@@ -13,7 +13,7 @@ import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle } from "lucide-react";
-import { joinProject, leaveProject, completeProject } from "./actions";
+import { joinProject, leaveProject, initiateProjectCompletion } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -31,6 +31,8 @@ function getStatusBadge(status: string) {
         return <Badge className="bg-yellow-500 text-white">Approved</Badge>
         case 'active':
         return <Badge className="bg-blue-500 text-white">Active</Badge>
+        case 'pending_return':
+        return <Badge className="bg-orange-500 text-white">Pending Return</Badge>
         case 'completed':
         return <Badge className="bg-green-500 text-white">Completed</Badge>
         case 'closed':
@@ -134,11 +136,11 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const handleCompleteProject = async () => {
         setIsSubmitting(true);
         try {
-            await completeProject(project.id);
-            toast({ title: "Project Completed", description: "The project has been marked as completed." });
+            await initiateProjectCompletion(project.id);
+            toast({ title: "Project Completion Initiated", description: "Please return all non-perishable items to the inventory manager." });
             router.refresh();
         } catch (error) {
-            toast({ variant: "destructive", title: "Failed to Complete Project", description: (error as Error).message });
+            toast({ variant: "destructive", title: "Failed to Initiate Completion", description: (error as Error).message });
         } finally {
             setIsSubmitting(false);
         }
@@ -166,9 +168,9 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                         <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                     </div>
                     <div className="flex items-center gap-2">
+                        <ProjectActions project={project as any} currentUser={currentUser} />
                         {isMember ? (
                             <>
-                               <ProjectActions project={project as any} currentUser={currentUser} />
                                {!isLead && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -200,17 +202,33 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                         )}
                     </div>
                 </div>
-
+                
                 {isMember && project.status === 'active' && (
-                    <div className="flex items-center gap-2 mt-4 border-t pt-4">
+                    <div className="flex items-center gap-2 border-t pt-4">
                         <DialogTrigger asChild>
                             <Button variant="outline"><ShoppingCart className="mr-2"/>Request Additional Inventory</Button>
                         </DialogTrigger>
                          {isLead && (
-                             <Button onClick={handleCompleteProject} disabled={isSubmitting} variant="outline">
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
-                                Mark as Completed
-                            </Button>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button disabled={isSubmitting} variant="outline">
+                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+                                        Mark as Completed
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Ready to complete the project?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will start the item return process. The project will be marked as 'completed' once all non-perishable items have been returned and confirmed by an inventory manager.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleCompleteProject}>Confirm</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                          )}
                     </div>
                 )}
