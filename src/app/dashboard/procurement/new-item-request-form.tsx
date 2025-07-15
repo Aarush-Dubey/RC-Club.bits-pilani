@@ -151,7 +151,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
                     name={`requests.${index}.estimatedCost`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Estimated Cost per Piece (₹)</FormLabel>
+                        <FormLabel>Estimated cost / piece</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" placeholder="1500.00" {...field} />
                         </FormControl>
