@@ -200,46 +200,35 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                     )}
                 </div>
 
-                {isCreator && bucket.status === 'open' && (
+                {isCreator && ['open', 'closed', 'ordered'].includes(bucket.status) && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Creator Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center gap-2">
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="outline" disabled={actionLoading}>
-                                        {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Close Bucket
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Closing this bucket will prevent any new items from being added. This will submit the bucket for approval before ordering.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleUpdateStatus('closed')}>Confirm Close</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </CardContent>
-                    </Card>
-                )}
-
-                 {isManager && ['closed', 'ordered'].includes(bucket.status) && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Manager Actions</CardTitle>
-                            <CardDescription>
-                                Total cost for approved items: <span className="font-bold font-mono text-foreground">₹{totalApprovedCost.toFixed(2)}</span>
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex items-center gap-2">
-                            {bucket.status === 'closed' && (
+                             {bucket.status === 'open' && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="outline" disabled={actionLoading}>
+                                            {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Close Bucket
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Closing this bucket will prevent any new items from being added. This will submit the bucket for approval before ordering.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleUpdateStatus('closed')}>Confirm Close</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                             )}
+                              {bucket.status === 'closed' && (
                                 <Button onClick={() => handleUpdateStatus('ordered')} disabled={actionLoading}>
                                     {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Mark as Ordered
@@ -252,6 +241,17 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                 </Button>
                             )}
                         </CardContent>
+                    </Card>
+                )}
+
+                 {isManager && ['closed', 'ordered', 'received'].includes(bucket.status) && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Manager Summary</CardTitle>
+                            <CardDescription>
+                                Total cost for approved items: <span className="font-bold font-mono text-foreground">₹{totalApprovedCost.toFixed(2)}</span>
+                            </CardDescription>
+                        </CardHeader>
                     </Card>
                 )}
 
