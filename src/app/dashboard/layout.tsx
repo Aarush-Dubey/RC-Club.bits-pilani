@@ -70,10 +70,12 @@ export default function DashboardLayout({
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset className="flex flex-col">
+      <SidebarInset>
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto">
-          {children}
+          <div className="container mx-auto max-w-4xl py-8">
+            {children}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>

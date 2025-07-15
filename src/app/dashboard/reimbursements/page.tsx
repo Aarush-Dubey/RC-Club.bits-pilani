@@ -63,8 +63,6 @@ async function getData() {
     return { reimbursements, users, projects, newItems };
 }
 
-// Note: This page is converted to a Client Component to handle dialog state and data refresh.
-// For a production app, you might use server components for the initial load and client components for interactions.
 export default function ReimbursementsPage() {
   const [reimbursements, setReimbursements] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
@@ -86,12 +84,12 @@ export default function ReimbursementsPage() {
   });
   
   const handleFormSubmit = () => {
-    fetchData(); // Refetch data after a new submission
-    router.refresh(); // Revalidate the page
+    fetchData(); 
+    router.refresh(); 
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
@@ -114,52 +112,42 @@ export default function ReimbursementsPage() {
         </Dialog>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>All Reimbursement Requests</CardTitle>
-          <CardDescription>
-            A log of all reimbursement claims submitted by members.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Submitted By</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reimbursements.map((req: any) => {
-                const user = users.find((u: any) => u.id === req.submittedById);
-                let details = req.notes || '';
-                if (req.newItemRequestId) {
-                    const newItem: any = newItems.find((i: any) => i.id === req.newItemRequestId);
-                    if (newItem) {
-                        const project: any = projects.find((p: any) => p.id === newItem.projectId);
-                        details = `Purchase: ${newItem.itemName} for ${project?.title}`;
-                    }
+      <Table>
+        <TableHeader>
+            <TableRow>
+            <TableHead>Submitted By</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {reimbursements.map((req: any) => {
+            const user = users.find((u: any) => u.id === req.submittedById);
+            let details = req.notes || '';
+            if (req.newItemRequestId) {
+                const newItem: any = newItems.find((i: any) => i.id === req.newItemRequestId);
+                if (newItem) {
+                    const project: any = projects.find((p: any) => p.id === newItem.projectId);
+                    details = `Purchase: ${newItem.itemName} for ${project?.title}`;
                 }
-                
-                return (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium">{user?.name}</TableCell>
-                    <TableCell>{details}</TableCell>
-                    <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">${req.amount.toFixed(2)}</TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            }
+            
+            return (
+                <TableRow key={req.id}>
+                <TableCell className="font-medium">{user?.name}</TableCell>
+                <TableCell>{details}</TableCell>
+                <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>
+                    <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right font-mono">${req.amount.toFixed(2)}</TableCell>
+                </TableRow>
+            )
+            })}
+        </TableBody>
+        </Table>
     </div>
   )
 }

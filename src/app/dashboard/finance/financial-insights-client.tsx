@@ -91,23 +91,15 @@ export default function FinancialInsightsClient() {
       </form>
 
       {result && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Financial Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap">{result.summary}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Budget Forecast</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap">{result.budgetForecast}</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8">
+          <div>
+            <h3 className="text-xl font-headline font-semibold">Financial Summary</h3>
+            <p className="whitespace-pre-wrap mt-2 text-muted-foreground">{result.summary}</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-headline font-semibold">Budget Forecast</h3>
+            <p className="whitespace-pre-wrap mt-2 text-muted-foreground">{result.budgetForecast}</p>
+          </div>
         </div>
       )}
     </div>

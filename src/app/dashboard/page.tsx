@@ -83,9 +83,9 @@ export default async function DashboardPage() {
   } = await getDashboardData();
 
   return (
-    <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-t-4 border-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active Projects
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Items on Loan
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
             <HandCoins className="h-4 w-4 text-muted-foreground" />
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Room Status</CardTitle>
             {roomStatus.occupied ? <Users className="h-4 w-4 text-muted-foreground" /> : <CheckCircle className="h-4 w-4 text-green-500" />}
@@ -138,37 +138,20 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 lg:grid-cols-7">
+      <div className="grid gap-8 lg:grid-cols-7">
         <ProjectOverviewChart data={projectStatusData} />
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-headline">Recent Projects</CardTitle>
-            <CardDescription>
-              A look at the latest projects started in the club.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Status</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {recentProjects.map((project: any) => (
-                        <TableRow key={project.id}>
-                            <TableCell>
-                                <div className="font-medium">{project.title}</div>
-                                <div className="text-sm text-muted-foreground hidden sm:block">{project.description.substring(0,40)}...</div>
-                            </TableCell>
-                            <TableCell><Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge></TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-3">
+            <h3 className="text-2xl font-headline font-bold mb-4">Recent Projects</h3>
+            <div className="space-y-6">
+                {recentProjects.map((project: any) => (
+                    <div key={project.id}>
+                        <Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge>
+                        <h4 className="font-headline text-lg font-semibold mt-2">{project.title}</h4>
+                        <p className="text-muted-foreground text-sm mt-1">{project.description.substring(0,100)}...</p>
+                    </div>
+                ))}
+            </div>
+        </div>
       </div>
     </div>
   )

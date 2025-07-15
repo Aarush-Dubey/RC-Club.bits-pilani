@@ -49,7 +49,7 @@ export default async function ProcurementPage() {
   const { procurementRequests, users } = await getData();
 
   return (
-    <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Procurement</h2>
@@ -62,49 +62,39 @@ export default async function ProcurementPage() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Procurement Requests</CardTitle>
-          <CardDescription>
-            A log of all requests to purchase new items for the club.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Requested By</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {procurementRequests.map((req: any) => {
-                const user = users.find((u: any) => u.id === req.requestedById)
-                return (
-                  <TableRow key={req.id}>
-                    <TableCell>
-                        <div className="font-medium">{req.itemName}</div>
-                        <div className="text-sm text-muted-foreground">{req.description}</div>
-                    </TableCell>
-                    <TableCell>{user?.name}</TableCell>
-                    <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
-                        <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <Table>
+        <TableHeader>
+            <TableRow>
+            <TableHead>Item</TableHead>
+            <TableHead>Requested By</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            {procurementRequests.map((req: any) => {
+            const user = users.find((u: any) => u.id === req.requestedById)
+            return (
+                <TableRow key={req.id}>
+                <TableCell>
+                    <div className="font-medium">{req.itemName}</div>
+                    <div className="text-sm text-muted-foreground">{req.description}</div>
+                </TableCell>
+                <TableCell>{user?.name}</TableCell>
+                <TableCell>{req.createdAt.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>
+                    <Badge variant={getStatusVariant(req.status) as any}>{req.status}</Badge>
+                </TableCell>
+                <TableCell className="text-right space-x-2">
+                    <Button variant="outline" size="sm" disabled={req.status !== 'pending'}>Approve</Button>
+                    <Button variant="destructive" size="sm" disabled={req.status !== 'pending'}>Reject</Button>
+                </TableCell>
+                </TableRow>
+            )
+            })}
+        </TableBody>
+        </Table>
     </div>
   )
 }

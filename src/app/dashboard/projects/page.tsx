@@ -27,7 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict
+  DialogDescription as DialogDescriptionComponent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -112,11 +112,10 @@ export default function ProjectsPage() {
   }, []);
   
   const handleFormSubmit = () => {
-    fetchData(); // Refetch data after a new submission
+    fetchData();
     setIsFormOpen(false);
   }
 
-  // Mock user for role-based actions. In a real app, this would come from auth context.
   const currentUser = { role: 'coordinator' };
 
   const getAvailableActions = (status: Project['status']) => {
@@ -135,7 +134,7 @@ export default function ProjectsPage() {
   }
   
   return (
-    <div className="flex-1 space-y-4 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
@@ -145,7 +144,7 @@ export default function ProjectsPage() {
         </div>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" /> New Project
             </Button>
           </DialogTrigger>
@@ -158,15 +157,14 @@ export default function ProjectsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project: any) => {
           const projectLead = users.find((u: any) => u.id === project.leadId)
           const actions = getAvailableActions(project.status);
 
           return (
-            <Card key={project.id} className="overflow-hidden flex flex-col">
-              <CardHeader className="p-0">
-                <div className="relative w-full h-48">
+            <div key={project.id} className="group">
+                <div className="relative w-full h-48 mb-4">
                   <Image
                     src={`https://placehold.co/600x400.png`}
                     alt={project.title}
@@ -175,48 +173,29 @@ export default function ProjectsPage() {
                     data-ai-hint="rc project"
                   />
                 </div>
-                 <div className="p-6">
-                    <div className="flex justify-between items-start">
-                      {getStatusBadge(project.status)}
-                      {actions.length > 0 && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {actions.map(action => <DropdownMenuItem key={action}>{action}</DropdownMenuItem>)}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                {getStatusBadge(project.status)}
+                <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
+                <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{project.description}</p>
+                <div className="flex items-center gap-4 mt-4">
+                     <div className="flex -space-x-2">
+                        {project.memberIds.map((memberId: string) => {
+                            const member: any = users.find((u: any) => u.id === memberId)
+                            return (
+                            <Avatar key={memberId} className="border-2 border-card h-8 w-8">
+                                <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
+                                <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            )
+                        })}
                     </div>
-                    <CardTitle className="font-headline text-xl mt-2">{project.title}</CardTitle>
-                    <CardDescription className="mt-1 line-clamp-2">{project.description}</CardDescription>
+                    {projectLead && (
+                    <div className="text-sm">
+                        <span className="font-semibold">{projectLead.name}</span>
+                        <span className="text-muted-foreground">, Lead</span>
+                    </div>
+                    )}
                 </div>
-              </CardHeader>
-              <CardContent className="flex-grow p-6 pt-0">
-              </CardContent>
-              <CardFooter className="flex justify-between items-center bg-muted/30 p-4">
-                <div className="flex -space-x-2">
-                  {project.memberIds.map((memberId: string) => {
-                    const member: any = users.find((u: any) => u.id === memberId)
-                    return (
-                      <Avatar key={memberId} className="border-2 border-card">
-                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
-                        <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    )
-                  })}
-                </div>
-                {projectLead && (
-                  <div className="text-sm text-right">
-                    <span className="text-muted-foreground">Lead: </span>
-                    <span className="font-semibold">{projectLead.name}</span>
-                  </div>
-                )}
-              </CardFooter>
-            </Card>
+            </div>
           )
         })}
       </div>
