@@ -20,7 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { AppUser } from "@/context/auth-context";
-import { addRequestToBucket } from "../actions";
+import { addRequestToBucket } from "./actions";
 
 const formSchema = z.object({
   itemName: z.string().min(3, "Item name must be at least 3 characters."),
