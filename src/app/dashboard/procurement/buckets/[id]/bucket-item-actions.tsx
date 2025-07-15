@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Check, X, Loader2 } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
-import { approveNewItemRequest, rejectNewItemRequest } from "../actions"
+import { approveNewItemRequest, rejectNewItemRequest } from "../../actions"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import {
