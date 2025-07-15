@@ -12,8 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut, Flag, ShoppingCart } from "lucide-react";
-import { joinProject, leaveProject } from "./actions";
+import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle } from "lucide-react";
+import { joinProject, leaveProject, completeProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -44,6 +44,7 @@ function getStatusBadge(status: string) {
 
 export default function ProjectDetailsClient({ initialData }: { initialData: any }) {
     const { user: currentUser, loading: authLoading } = useAuth();
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isJoining, setIsJoining] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
     const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
@@ -129,6 +130,19 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
             setIsLeaving(false);
         }
     };
+
+    const handleCompleteProject = async () => {
+        setIsSubmitting(true);
+        try {
+            await completeProject(project.id);
+            toast({ title: "Project Completed", description: "The project has been marked as completed." });
+            router.refresh();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Failed to Complete Project", description: (error as Error).message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
     
     const handleRequestSubmit = () => {
         router.refresh();
@@ -155,13 +169,6 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                         {isMember ? (
                             <>
                                <ProjectActions project={project as any} currentUser={currentUser} />
-
-                               {project.status === 'active' && (
-                                   <DialogTrigger asChild>
-                                        <Button variant="outline"><ShoppingCart className="mr-2"/>Request Inventory</Button>
-                                   </DialogTrigger>
-                               )}
-
                                {!isLead && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -193,6 +200,21 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                         )}
                     </div>
                 </div>
+
+                {isMember && project.status === 'active' && (
+                    <div className="flex items-center gap-2 mt-4 border-t pt-4">
+                        <DialogTrigger asChild>
+                            <Button variant="outline"><ShoppingCart className="mr-2"/>Request Additional Inventory</Button>
+                        </DialogTrigger>
+                         {isLead && (
+                             <Button onClick={handleCompleteProject} disabled={isSubmitting} variant="outline">
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+                                Mark as Completed
+                            </Button>
+                         )}
+                    </div>
+                )}
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">

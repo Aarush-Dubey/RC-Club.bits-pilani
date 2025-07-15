@@ -48,7 +48,6 @@ export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
   const onApprove = () => handleAction(() => approveProject(project.id), "Project Approved", "Inventory has been checked out to the project lead.", "Approval Failed");
   const onReject = () => handleAction(() => rejectProject(project.id), "Project Rejected", "The project has been marked as rejected.", "Rejection Failed");
   const onStart = () => handleAction(() => startProject(project.id), "Project Started", "The project is now active.", "Failed to Start Project");
-  const onComplete = () => handleAction(() => completeProject(project.id), "Project Completed", "The project has been marked as completed.", "Failed to Complete Project");
   const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
   
   const canApprove = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
@@ -111,13 +110,6 @@ export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2"/>}
               Start Project
             </Button>
-          )}
-
-          {project.status === 'active' && isProjectLead && (
-              <Button onClick={onComplete} disabled={isLoading} variant="outline">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
-                Mark as Completed
-              </Button>
           )}
 
           {project.status === 'completed' && canManage && (
