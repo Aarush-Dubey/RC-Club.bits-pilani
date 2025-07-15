@@ -123,10 +123,10 @@ function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: a
                     value={quantity}
                     onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
-                        if (isNaN(value)) {
-                            setQuantity(1); // or some other default like 0
+                         if (e.target.value === '') {
+                            setQuantity(1);
                         } else {
-                            setQuantity(value < 1 ? 1 : value);
+                            setQuantity(isNaN(value) || value < 1 ? 1 : value);
                         }
                     }}
                     min={1}
@@ -379,6 +379,32 @@ function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => v
 }
 
 
+function EditableInventoryItemRow({ item, onFormSubmit }: { item: any, onFormSubmit: () => void }) {
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    return (
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <TableRow>
+                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell>{item.totalQuantity}</TableCell>
+                <TableCell>{item.availableQuantity}</TableCell>
+                <TableCell className="text-right">
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                        </Button>
+                    </DialogTrigger>
+                </TableCell>
+            </TableRow>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit: {item.name}</DialogTitle>
+                </DialogHeader>
+                <EditItemForm item={item} onFormSubmit={() => { onFormSubmit(); setIsEditOpen(false); }} />
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function InventoryPage() {
     const [data, setData] = useState<any>({ inventory: [], inventoryRequests: [], users: [], projects: [] });
     const [loading, setLoading] = useState(true);
@@ -589,31 +615,13 @@ export default function InventoryPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {data.inventory.map((item: any) => {
-                                                    const [isEditOpen, setIsEditOpen] = useState(false);
-                                                    return (
-                                                        <Dialog key={item.id} open={isEditOpen} onOpenChange={setIsEditOpen}>
-                                                            <TableRow>
-                                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                                <TableCell>{item.totalQuantity}</TableCell>
-                                                                <TableCell>{item.availableQuantity}</TableCell>
-                                                                <TableCell className="text-right">
-                                                                    <DialogTrigger asChild>
-                                                                        <Button variant="ghost" size="sm">
-                                                                            <Pencil className="mr-2 h-4 w-4"/> Edit
-                                                                        </Button>
-                                                                    </DialogTrigger>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                            <DialogContent>
-                                                                <DialogHeader>
-                                                                    <DialogTitle>Edit: {item.name}</DialogTitle>
-                                                                </DialogHeader>
-                                                                <EditItemForm item={item} onFormSubmit={() => { fetchData(); setIsEditOpen(false); }} />
-                                                            </DialogContent>
-                                                        </Dialog>
-                                                    );
-                                                })}
+                                                {data.inventory.map((item: any) => (
+                                                    <EditableInventoryItemRow
+                                                        key={item.id}
+                                                        item={item}
+                                                        onFormSubmit={fetchData}
+                                                    />
+                                                ))}
                                             </TableBody>
                                         </Table>
                                     </TabsContent>
@@ -628,3 +636,5 @@ export default function InventoryPage() {
     </Dialog>
   )
 }
+
+    
