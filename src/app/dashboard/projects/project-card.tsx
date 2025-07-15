@@ -27,6 +27,7 @@ export type InventoryItem = {
     id: string;
     name: string;
     totalQuantity: number;
+    availableQuantity: number;
     [key: string]: any;
 }
 
@@ -46,13 +47,13 @@ function getStatusBadge(status: string) {
     case 'rejected':
       return <Badge variant="destructive">Rejected</Badge>
     default:
-      return <Badge variant="outline">{status.replace('_', ' ')}</Badge>
+      return <Badge variant="outline">{status ? status.replace(/_/g, ' ') : 'Unknown'}</Badge>
   }
 }
 
 export const ProjectCard = ({ project, users, currentUser }: { project: Project; users: User[]; currentUser: AppUser | null }) => {
   const projectLead = users.find((u: any) => u.id === project.leadId)
-  const canManage = currentUser?.permissions?.canApproveProjects;
+  const canManage = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
 
   return (
       <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full relative">

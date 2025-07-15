@@ -54,31 +54,14 @@ export function ProjectActions({ project, currentUser, onUpdate }: ProjectAction
   const onStart = () => handleAction(() => startProject(project.id), "Project Started", "The project is now active.", "Failed to Start Project");
   const onComplete = () => handleAction(() => completeProject(project.id), "Project Completed", "The project has been marked as completed.", "Failed to Complete Project");
   const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
-
-  const canApprove = () => {
-    if (!project || project.status !== 'pending_approval' || !currentUser?.permissions?.canApproveProjects) {
-        return false;
-    }
-
-    const role = currentUser.role;
-    if (role === 'admin' || role === 'coordinator') {
-      return true;
-    }
-    if (role === 'drone_lead' && project.type === 'drone') {
-      return true;
-    }
-    if (role === 'plane_lead' && project.type === 'plane') {
-      return true;
-    }
-    return false;
-  };
-
+  
+  const canApprove = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
   const canManage = currentUser?.role && ['admin', 'coordinator'].includes(currentUser.role);
   const isProjectLead = currentUser?.uid === project.leadId;
   const isMember = currentUser && project.memberIds.includes(currentUser.uid);
 
 
-  if (canApprove()) {
+  if (canApprove) {
     return (
       <div className="flex gap-2">
         <AlertDialog>
