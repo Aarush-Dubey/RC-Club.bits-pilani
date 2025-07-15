@@ -9,6 +9,9 @@ export async function approveProject(projectId: string) {
     try {
         await runTransaction(db, async (transaction) => {
             const projectRef = doc(db, "projects", projectId);
+            
+            // --- 1. READ PHASE ---
+            // Read the project document first.
             const projectDoc = await transaction.get(projectRef);
 
             if (!projectDoc.exists() || projectDoc.data().status !== 'pending_approval') {
@@ -17,34 +20,51 @@ export async function approveProject(projectId: string) {
             
             const projectData = projectDoc.data();
 
-            // 1. Update project status
-            transaction.update(projectRef, { 
-                status: 'approved',
-                approvedAt: serverTimestamp(),
-                // In a real app, this would be the current user's ID
-                approvedById: 'system-admin' 
-            });
-
-            // 2. Process inventory requests
+            // Find all pending inventory requests for this project.
             const requestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), where("status", "==", "pending"));
             const requestsSnapshot = await getDocs(requestsQuery);
 
+            // Collect all item IDs and read the corresponding inventory documents within the transaction.
+            const itemRefs: { [key: string]: any } = {};
+            const itemDocs: { [key: string]: any } = {};
+            
             for (const requestDoc of requestsSnapshot.docs) {
-                const requestRef = doc(db, "inventory_requests", requestDoc.id);
                 const requestData = requestDoc.data();
-                const itemRef = doc(db, "inventory_items", requestData.itemId);
-                const itemDoc = await transaction.get(itemRef);
+                if (!itemRefs[requestData.itemId]) {
+                    itemRefs[requestData.itemId] = doc(db, "inventory_items", requestData.itemId);
+                    itemDocs[requestData.itemId] = await transaction.get(itemRefs[requestData.itemId]);
+                }
+            }
+
+            // --- 2. VALIDATION PHASE ---
+            // Check stock availability after all reads are done.
+            for (const requestDoc of requestsSnapshot.docs) {
+                const requestData = requestDoc.data();
+                const itemDoc = itemDocs[requestData.itemId];
 
                 if (!itemDoc.exists()) {
                     throw new Error(`Inventory item ${requestData.itemId} not found.`);
                 }
-
                 const itemData = itemDoc.data();
                 if (itemData.availableQuantity < requestData.quantity) {
                     throw new Error(`Not enough stock for ${itemData.name}. Available: ${itemData.availableQuantity}, Requested: ${requestData.quantity}.`);
                 }
+            }
 
-                // Update inventory item quantities
+            // --- 3. WRITE PHASE ---
+            // Update project status
+            transaction.update(projectRef, { 
+                status: 'approved',
+                approvedAt: serverTimestamp(),
+                approvedById: 'system-admin' // In a real app, this would be the current user's ID
+            });
+
+            // Process inventory requests: update item quantities and request status
+            for (const requestDoc of requestsSnapshot.docs) {
+                const requestData = requestDoc.data();
+                const itemRef = itemRefs[requestData.itemId];
+                const itemData = itemDocs[requestData.itemId].data();
+
                 const newAvailableQuantity = itemData.availableQuantity - requestData.quantity;
                 const newCheckedOutQuantity = itemData.checkedOutQuantity + requestData.quantity;
                 
@@ -53,16 +73,14 @@ export async function approveProject(projectId: string) {
                     checkedOutQuantity: newCheckedOutQuantity,
                 });
 
-                // Update inventory request status
-                transaction.update(requestRef, { 
+                transaction.update(doc(db, "inventory_requests", requestDoc.id), { 
                     status: 'fulfilled',
                     fulfilledAt: serverTimestamp(),
-                    // Associate with project lead
-                    checkedOutToId: projectData.leadId,
+                    checkedOutToId: projectData.leadId, // Associate with project lead
                 });
             }
 
-            // 3. Add project to each member's list of joined projects
+            // Add project to each member's list of joined projects
             for (const memberId of projectData.memberIds) {
                 const userRef = doc(db, "users", memberId);
                 transaction.update(userRef, {
@@ -76,6 +94,7 @@ export async function approveProject(projectId: string) {
     }
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
+    revalidatePath('/dashboard/projects/approvals');
 }
 
 
@@ -102,6 +121,7 @@ export async function rejectProject(projectId: string) {
     }
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
+    revalidatePath('/dashboard/projects/approvals');
 }
 
 export async function startProject(projectId: string) {
