@@ -222,13 +222,12 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
-    canCreateBuckets: false,
+    canCreateBuckets: true,
   },
   plane_lead: {
     canManageUsers: false,
     canViewAllUsers: false,
     canCreateProjects: true,
-
     canApproveProjects: true, // Specific to plane projects
     canViewAllProjects: false,
     canRequestInventory: true,
@@ -244,7 +243,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: true,
     canAccessAdminPanel: false,
-    canCreateBuckets: false,
+    canCreateBuckets: true,
   },
   member: {
     canManageUsers: false,
@@ -265,7 +264,7 @@ const permissionsByRole = {
     canExportFinanceLogs: false,
     canViewDashboardMetrics: false,
     canAccessAdminPanel: false,
-    canCreateBuckets: false,
+    canCreateBuckets: true,
   }
 };
 
