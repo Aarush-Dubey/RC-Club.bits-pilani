@@ -3,7 +3,27 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, serverTimestamp, updateDoc, collection, query, where, getDocs, writeBatch, documentId } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp, updateDoc, collection, query, where, getDocs, writeBatch, documentId, addDoc } from "firebase/firestore";
+
+export async function requestInventory({ itemId, quantity, userId, reason }: { itemId: string; quantity: number; userId: string; reason: string }) {
+    if (!userId) {
+        throw new Error("User is not authenticated.");
+    }
+    const requestRef = collection(db, "inventory_requests");
+    await addDoc(requestRef, {
+        projectId: null, // This is a general request, not tied to a project
+        requestedById: userId,
+        itemId,
+        quantity,
+        reason,
+        status: "pending",
+        isOverdue: false,
+        createdAt: serverTimestamp(),
+    });
+
+    revalidatePath(`/dashboard/inventory`);
+}
+
 
 export async function approveInventoryRequest(requestId: string, adminId: string) {
     if (!adminId) {
@@ -110,27 +130,32 @@ export async function confirmReturn(requestId: string, adminId: string) {
     });
     
     // 3. Check if this was the last item for the project
-    const otherPendingReturnsQuery = query(
-        collection(db, "inventory_requests"),
-        where("projectId", "==", requestData.projectId),
-        where("status", "==", "pending_return"),
-        where(documentId(), "!=", requestId)
-    );
-    const otherPendingReturnsSnap = await getDocs(otherPendingReturnsQuery);
+    if (requestData.projectId) {
+        const otherPendingReturnsQuery = query(
+            collection(db, "inventory_requests"),
+            where("projectId", "==", requestData.projectId),
+            where("status", "==", "pending_return"),
+            where(documentId(), "!=", requestId)
+        );
+        const otherPendingReturnsSnap = await getDocs(otherPendingReturnsQuery);
 
-    if (otherPendingReturnsSnap.empty) {
-        // This is the last item, so complete the project
-        const projectRef = doc(db, "projects", requestData.projectId);
-        batch.update(projectRef, {
-            status: 'completed',
-            hasPendingReturns: false,
-            completedAt: serverTimestamp(),
-            completedById: adminId
-        });
+        if (otherPendingReturnsSnap.empty) {
+            // This is the last item, so complete the project
+            const projectRef = doc(db, "projects", requestData.projectId);
+            batch.update(projectRef, {
+                status: 'completed',
+                hasPendingReturns: false,
+                completedAt: serverTimestamp(),
+                completedById: adminId
+            });
+        }
     }
+
 
     await batch.commit();
 
     revalidatePath(`/dashboard/inventory`);
-    revalidatePath(`/dashboard/projects/${requestData.projectId}`);
+    if(requestData.projectId) {
+        revalidatePath(`/dashboard/projects/${requestData.projectId}`);
+    }
 }
