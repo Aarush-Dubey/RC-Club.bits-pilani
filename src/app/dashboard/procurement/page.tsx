@@ -3,10 +3,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket, ClipboardCheck, User } from "lucide-react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { PlusCircle, ShoppingBasket, ClipboardCheck } from "lucide-react";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, type AppUser } from "@/context/auth-context";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,16 +28,34 @@ import {
 } from "@/components/ui/dialog";
 import { NewBucketForm } from "./new-bucket-form";
 
-async function getData() {
-  const bucketsQuery = query(collection(db, "procurement_buckets"), orderBy("createdAt", "desc"));
-  const bucketsSnapshot = await getDocs(bucketsQuery);
-  const buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+async function getData(currentUser: AppUser | null) {
+  if (!currentUser) return { buckets: [], users: [] };
 
-  const usersSnapshot = await getDocs(collection(db, "users"));
-  const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // Fetch all procurement buckets without ordering by a different field to avoid composite index requirement
+  const bucketsQuery = query(collection(db, "procurement_buckets"));
+  const bucketsSnapshot = await getDocs(bucketsQuery);
+  let buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  // Sort buckets by date manually in the code
+  buckets.sort((a, b) => {
+    const dateA = a.createdAt?.toDate() || 0;
+    const dateB = b.createdAt?.toDate() || 0;
+    if (dateA > dateB) return -1;
+    if (dateA < dateB) return 1;
+    return 0;
+  });
+
+  const userIds = [...new Set(buckets.map(b => b.createdBy))];
+  let users: any[] = [];
+  if (userIds.length > 0) {
+    const usersQuery = query(collection(db, "users"), where("id", "in", userIds.slice(0, 30)));
+    const usersSnap = await getDocs(usersQuery);
+    users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 
   return { buckets, users };
 }
+
 
 const getStatusVariant = (status: string) => {
   switch (status) {
@@ -58,7 +76,7 @@ export default function ProcurementBucketsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const fetchedData = await getData();
+      const fetchedData = await getData(currentUser);
       setData(fetchedData);
     } catch (error) {
       console.error("Failed to fetch procurement data:", error);
@@ -68,8 +86,10 @@ export default function ProcurementBucketsPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
   
   const handleFormSubmit = () => {
     fetchData();
