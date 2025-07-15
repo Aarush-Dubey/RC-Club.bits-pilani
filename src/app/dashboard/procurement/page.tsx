@@ -216,7 +216,7 @@ export default function ProcurementPage() {
                                 <TableBody>
                                     {data.singleRequests.map((req: any) => (
                                         <TableRow key={req.id}>
-                                            <TableCell className="font-medium whitespace-nowrap">{req.itemName} (x{req.quantity})</TableCell>
+                                            <TableCell className="font-medium">{req.itemName} (x{req.quantity})</TableCell>
                                             <TableCell>
                                                 <StatusCircle status={req.status} />
                                             </TableCell>
