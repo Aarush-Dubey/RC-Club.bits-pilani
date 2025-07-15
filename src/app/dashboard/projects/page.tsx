@@ -7,7 +7,7 @@ import Image from "next/image"
 import { PlusCircle } from "lucide-react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { useAuth } from "@/context/auth-context"
+import { useAuth, type AppUser } from "@/context/auth-context"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -99,11 +99,12 @@ async function getData(currentUser: any) {
     return { myProjects, approvalRequests, users, inventory };
 }
 
-const ProjectCard = ({ project, users }: { project: Project; users: User[] }) => {
+const ProjectCard = ({ project, users, currentUser }: { project: Project; users: User[]; currentUser: AppUser | null }) => {
   const projectLead = users.find((u: any) => u.id === project.leadId)
-  
+  const canManage = currentUser?.role === 'admin' || currentUser?.role === 'coordinator'
+
   return (
-      <div key={project.id} className="group">
+      <div key={project.id} className="group flex flex-col">
         <Link href={`/dashboard/projects/${project.id}`}>
           <div className="relative w-full h-48 mb-4 overflow-hidden rounded-md">
               <Image
@@ -117,7 +118,7 @@ const ProjectCard = ({ project, users }: { project: Project; users: User[] }) =>
         </Link>
           {getStatusBadge(project.status)}
           <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
-          <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{project.description}</p>
+          <p className="text-muted-foreground text-sm mt-1 line-clamp-2 flex-grow">{project.description}</p>
           <div className="flex items-center gap-4 mt-4">
                <div className="flex -space-x-2">
                   {project.memberIds.map((memberId: string) => {
@@ -137,6 +138,13 @@ const ProjectCard = ({ project, users }: { project: Project; users: User[] }) =>
               </div>
               )}
           </div>
+          {canManage && (
+            <Link href={`/dashboard/projects/${project.id}`} className="mt-4">
+              <Button variant="outline" className="w-full">
+                Manage Project
+              </Button>
+            </Link>
+          )}
       </div>
   )
 }
@@ -181,7 +189,9 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (currentUser) {
+      fetchData();
+    }
   }, [currentUser]);
   
   const handleFormSubmit = () => {
@@ -218,7 +228,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
                       {approvalRequests.map((project) => (
-                          <ProjectCard key={project.id} project={project} users={users} />
+                          <ProjectCard key={project.id} project={project} users={users} currentUser={currentUser} />
                       ))}
                   </div>
                 <Separator className="my-12" />
@@ -233,7 +243,7 @@ export default function ProjectsPage() {
                 {myProjects.length > 0 ? (
                   <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
                     {myProjects.map((project) => (
-                      <ProjectCard key={project.id} project={project} users={users} />
+                      <ProjectCard key={project.id} project={project} users={users} currentUser={currentUser}/>
                     ))}
                   </div>
                 ) : (
