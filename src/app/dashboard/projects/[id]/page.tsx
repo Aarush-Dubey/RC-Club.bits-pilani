@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, type AppUser } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,7 +159,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
                     </div>
                     <p className="text-muted-foreground mt-2 max-w-2xl">{project.description}</p>
                 </div>
-                <ProjectActions project={project as any} currentUserRole={currentUser?.role || 'member'} />
+                <ProjectActions project={project as any} currentUser={currentUser} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

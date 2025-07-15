@@ -119,10 +119,136 @@ const reimbursements = [
     }
 ];
 
+const permissionsByRole = {
+  admin: {
+    canManageUsers: true,
+    canViewAllUsers: true,
+    canCreateProjects: true,
+    canApproveProjects: true,
+    canViewAllProjects: true,
+    canRequestInventory: true,
+    canApproveInventory: true,
+    canManageInventoryStock: true,
+    canViewInventoryLogs: true,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: true,
+    canMarkNewItemOrdered: true,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: true,
+    canViewFinanceSummary: true,
+    canExportFinanceLogs: true,
+    canViewDashboardMetrics: true,
+    canAccessAdminPanel: true,
+  },
+  coordinator: {
+    canManageUsers: false,
+    canViewAllUsers: true,
+    canCreateProjects: true,
+    canApproveProjects: true,
+    canViewAllProjects: true,
+    canRequestInventory: true,
+    canApproveInventory: true,
+    canManageInventoryStock: false,
+    canViewInventoryLogs: true,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: true,
+    canMarkNewItemOrdered: true,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: true,
+    canViewFinanceSummary: true,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: true,
+    canAccessAdminPanel: false,
+  },
+  inventory_manager: {
+    canManageUsers: false,
+    canViewAllUsers: false,
+    canCreateProjects: true,
+    canApproveProjects: false,
+    canViewAllProjects: true,
+    canRequestInventory: true,
+    canApproveInventory: true,
+    canManageInventoryStock: true,
+    canViewInventoryLogs: true,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: true,
+    canMarkNewItemOrdered: true,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: false,
+    canViewFinanceSummary: false,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: true,
+    canAccessAdminPanel: false,
+  },
+  drone_lead: {
+    canManageUsers: false,
+    canViewAllUsers: false,
+    canCreateProjects: true,
+    canApproveProjects: true, // Specific to drone projects
+    canViewAllProjects: false,
+    canRequestInventory: true,
+    canApproveInventory: false,
+    canManageInventoryStock: false,
+    canViewInventoryLogs: false,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: false,
+    canMarkNewItemOrdered: false,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: false,
+    canViewFinanceSummary: false,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: true,
+    canAccessAdminPanel: false,
+  },
+  plane_lead: {
+    canManageUsers: false,
+    canViewAllUsers: false,
+    canCreateProjects: true,
+
+    canApproveProjects: true, // Specific to plane projects
+    canViewAllProjects: false,
+    canRequestInventory: true,
+    canApproveInventory: false,
+    canManageInventoryStock: false,
+    canViewInventoryLogs: false,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: false,
+    canMarkNewItemOrdered: false,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: false,
+    canViewFinanceSummary: false,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: true,
+    canAccessAdminPanel: false,
+  },
+  member: {
+    canManageUsers: false,
+    canViewAllUsers: false,
+    canCreateProjects: true,
+    canApproveProjects: false,
+    canViewAllProjects: false,
+    canRequestInventory: true,
+    canApproveInventory: false,
+    canManageInventoryStock: false,
+    canViewInventoryLogs: false,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: false,
+    canMarkNewItemOrdered: false,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: false,
+    canViewFinanceSummary: false,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: false,
+    canAccessAdminPanel: false,
+  }
+};
+
+
 const seedCollection = async (collectionName: string, data: any[], subcollection?: { name: string, data: any[], foreignKey: string }) => {
   console.log(`Seeding ${collectionName}...`);
   const promises = data.map(async (item) => {
-    const docRef = doc(db, collectionName, item.id);
+    const docId = item.id || item.name; // Use id or name for doc reference
+    const docRef = doc(db, collectionName, docId);
     const dataWithTimestamp = {
         ...item,
         createdAt: item.createdAt || serverTimestamp(),
@@ -141,6 +267,17 @@ const seedCollection = async (collectionName: string, data: any[], subcollection
   await Promise.all(promises);
   console.log(`${collectionName} seeded successfully.`);
 };
+
+const seedPermissions = async () => {
+    console.log('Seeding permissions...');
+    const promises = Object.entries(permissionsByRole).map(([role, permissions]) => {
+        const docRef = doc(db, 'permissions', role);
+        return setDoc(docRef, permissions);
+    });
+    await Promise.all(promises);
+    console.log('Permissions seeded successfully.');
+};
+
 
 const seedSystemDocs = async () => {
     console.log('Seeding system documents...');
@@ -161,12 +298,13 @@ const seedSystemDocs = async () => {
 
 const seedDatabase = async () => {
   try {
-    await seedCollection('users', users.map(u => ({...u, permissions: [u.role]})));
+    await seedCollection('users', users);
     await seedCollection('projects', projects, { name: 'updates', data: projectUpdates, foreignKey: 'projectId' });
     await seedCollection('inventory_items', inventoryItems);
     await seedCollection('inventory_requests', inventoryRequests);
     await seedCollection('new_item_requests', newItemRequests);
     await seedCollection('reimbursements', reimbursements);
+    await seedPermissions();
     await seedSystemDocs();
     
     console.log('\n✅ Database seeded successfully!');

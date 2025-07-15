@@ -8,9 +8,14 @@ import { doc, getDoc } from "firebase/firestore"
 
 import { auth, db } from "@/lib/firebase"
 
+export type Permissions = {
+  [key: string]: boolean;
+};
+
 // Extend the User type to include our custom Firestore data
 export type AppUser = User & {
   role?: string;
+  permissions?: Permissions;
   // add other custom fields here
 };
 
@@ -38,9 +43,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          const role = userData.role || 'member'; // Default to member role
+          let permissions: Permissions = {};
+          
+          // Fetch permissions for the role
+          const permissionDocRef = doc(db, "permissions", role);
+          const permissionDocSnap = await getDoc(permissionDocRef);
+          if (permissionDocSnap.exists()) {
+            permissions = permissionDocSnap.data() as Permissions;
+          }
+
           setUser({
             ...firebaseUser,
-            role: userData.role,
+            role,
+            permissions,
           });
         } else {
           // Handle case where user exists in Auth but not in Firestore

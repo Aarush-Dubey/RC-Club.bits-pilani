@@ -19,13 +19,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Project } from "../page";
 import { approveProject, rejectProject, startProject, completeProject, closeProject } from "./actions";
+import type { AppUser } from "@/context/auth-context";
 
 interface ProjectActionsProps {
   project: Project;
-  currentUserRole: string;
+  currentUser: AppUser | null;
 }
 
-export function ProjectActions({ project, currentUserRole }: ProjectActionsProps) {
+export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -51,9 +52,11 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
   const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
 
   const canApprove = () => {
-    if (!project || project.status !== 'pending_approval') return false;
+    if (!project || project.status !== 'pending_approval' || !currentUser?.permissions?.canApproveProjects) {
+        return false;
+    }
 
-    const role = currentUserRole;
+    const role = currentUser.role;
     if (role === 'admin' || role === 'coordinator') {
       return true;
     }
@@ -66,7 +69,9 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
     return false;
   };
 
-  const canManage = ['admin', 'coordinator'].includes(currentUserRole);
+  const canManage = currentUser?.role && ['admin', 'coordinator'].includes(currentUser.role);
+  const isProjectLead = currentUser?.uid === project.leadId;
+
 
   if (canApprove()) {
     return (
@@ -119,13 +124,13 @@ export function ProjectActions({ project, currentUserRole }: ProjectActionsProps
   // Other actions for project lifecycle
   return (
     <div className="flex gap-2">
-        {project.status === 'approved' && (
+        {project.status === 'approved' && isProjectLead && (
           <Button onClick={onStart} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2"/>}
             Start Project
           </Button>
         )}
-        {project.status === 'active' && (
+        {project.status === 'active' && isProjectLead && (
           <>
             <Button disabled><Flag className="mr-2"/>Post Update</Button>
             <Button onClick={onComplete} disabled={isLoading} variant="outline">
