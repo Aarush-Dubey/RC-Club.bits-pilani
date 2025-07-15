@@ -1,5 +1,7 @@
-import { CheckCircle, HandCoins, ShoppingCart, Users, ToyBrick } from "lucide-react"
-import { collection, getDocs, doc, getDoc, query, where, limit } from "firebase/firestore"
+
+import { CheckCircle, HandCoins, ShoppingCart, Users, ToyBrick, ArrowRight } from "lucide-react"
+import { collection, getDocs, doc, getDoc, query, where, limit, orderBy } from "firebase/firestore"
+import Link from "next/link"
 
 import { db } from "@/lib/firebase"
 import { Badge } from "@/components/ui/badge"
@@ -9,8 +11,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 
 async function getDashboardData() {
   const projectsSnapshot = await getDocs(collection(db, "projects"));
@@ -52,7 +55,7 @@ async function getDashboardData() {
   const pendingReimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), where("status", "==", "pending")));
   const pendingReimbursements = pendingReimbursementsSnapshot.size;
   
-  const recentProjectsQuery = query(collection(db, "projects"), limit(5));
+  const recentProjectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"), limit(5));
   const recentProjectsSnapshot = await getDocs(recentProjectsQuery);
   const recentProjects = recentProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -67,6 +70,25 @@ async function getDashboardData() {
     pendingReimbursements,
     recentProjects
   };
+}
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'pending_approval':
+      return <Badge variant="secondary">Pending Approval</Badge>
+    case 'approved':
+      return <Badge className="bg-yellow-500 text-white">Approved</Badge>
+    case 'active':
+      return <Badge className="bg-blue-500 text-white">Active</Badge>
+    case 'completed':
+      return <Badge className="bg-green-500 text-white">Completed</Badge>
+    case 'closed':
+      return <Badge variant="outline">Closed</Badge>
+    case 'rejected':
+      return <Badge variant="destructive">Rejected</Badge>
+    default:
+      return <Badge variant="outline">{status ? status.replace(/_/g, ' ') : 'Unknown'}</Badge>
+  }
 }
 
 
@@ -138,13 +160,26 @@ export default async function DashboardPage() {
       </div>
       <div>
           <h3 className="text-2xl font-headline font-bold mb-4">Recent Projects</h3>
-          <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
               {recentProjects.map((project: any) => (
-                  <div key={project.id}>
-                      <Badge variant={project.status === 'completed' ? 'default' : 'secondary'}>{project.status.replace('_', ' ')}</Badge>
-                      <h4 className="font-headline text-lg font-semibold mt-2">{project.title}</h4>
-                      <p className="text-muted-foreground text-sm mt-1">{project.description.substring(0,100)}...</p>
-                  </div>
+                  <Card key={project.id} className="flex flex-col">
+                    <CardHeader>
+                        <div className="flex items-start justify-between">
+                            <CardTitle className="font-headline text-lg group-hover:text-primary transition-colors">{project.title}</CardTitle>
+                             {getStatusBadge(project.status)}
+                        </div>
+                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow"></CardContent>
+                    <CardFooter>
+                         <Link href={`/dashboard/projects/${project.id}`} className="w-full">
+                            <Button variant="outline" className="w-full">
+                                View Project
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        </Link>
+                    </CardFooter>
+                </Card>
               ))}
           </div>
       </div>
