@@ -187,7 +187,6 @@ export default function ProcurementPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Item</TableHead>
-                                    <TableHead>Justification</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Est. Cost</TableHead>
                                 </TableRow>
@@ -196,7 +195,6 @@ export default function ProcurementPage() {
                                 {data.singleRequests.map((req: any) => (
                                     <TableRow key={req.id}>
                                         <TableCell className="font-medium">{req.itemName} (x{req.quantity})</TableCell>
-                                        <TableCell className="text-muted-foreground">{req.justification}</TableCell>
                                         <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
                                         <TableCell className="text-right font-mono">₹{(req.estimatedCost * req.quantity).toFixed(2)}</TableCell>
                                     </TableRow>
