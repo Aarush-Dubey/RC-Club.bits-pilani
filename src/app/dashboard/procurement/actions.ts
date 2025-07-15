@@ -3,15 +3,18 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, addDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc } from "firebase/firestore";
 
 export async function createProcurementBucket({ description, createdById }: { description: string; createdById: string }) {
     if (!createdById) {
         throw new Error("User is not authenticated.");
     }
 
+    // First, create a reference to a new document to get a unique ID
     const bucketRef = doc(collection(db, "procurement_buckets"));
-    await addDoc(collection(db, "procurement_buckets"), {
+    
+    // Now, use setDoc to create the document with the generated ID included in its data
+    await setDoc(bucketRef, {
         id: bucketRef.id,
         createdBy: createdById,
         status: "open",
