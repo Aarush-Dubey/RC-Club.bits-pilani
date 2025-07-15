@@ -45,6 +45,7 @@ const getStatusVariant = (status: string) => {
   }
 };
 
+// Helper to convert Firestore Timestamps to strings for client-side state
 const serializeFirestoreTimestamps = (data: any): any => {
     if (!data) return data;
     if (Array.isArray(data)) {
@@ -76,11 +77,11 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         setLoading(true);
         const bucketRef = doc(db, "procurement_buckets", bucketId);
 
-        const unsubscribe = onSnapshot(bucketRef, async (bucketSnap) => {
+        // Listen for changes on the bucket document itself (e.g., status changes)
+        const unsubscribeBucket = onSnapshot(bucketRef, async (bucketSnap) => {
             if (!bucketSnap.exists()) {
                 setData(null);
                 setLoading(false);
-                notFound();
                 return;
             }
 
@@ -103,9 +104,22 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
             setLoading(false);
         });
 
-        // Cleanup subscription on unmount
-        return () => unsubscribe();
-    }, [bucketId]);
+        // Also listen for changes in the requests collection for this bucket
+        const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
+        const unsubscribeRequests = onSnapshot(requestsQuery, async (requestsSnap) => {
+             if (data?.bucket) {
+                const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+                setData((prevData: any) => ({ ...prevData, requests }));
+             }
+        });
+
+
+        // Cleanup subscriptions on unmount
+        return () => {
+            unsubscribeBucket();
+            unsubscribeRequests();
+        };
+    }, [bucketId, data?.bucket]);
 
 
     const handleFormSubmit = () => {
