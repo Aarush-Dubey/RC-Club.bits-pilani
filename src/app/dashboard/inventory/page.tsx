@@ -156,14 +156,6 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="mb-4 bg-yellow-50 border-yellow-200">
-        <CardHeader>
-            <CardTitle className="text-lg">Dev Tool: Permissions Check</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p>Can Approve New Item Request: <span className="font-bold">{String(canManageProcurement)}</span></p>
-        </CardContent>
-      </Card>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Inventory</h2>
