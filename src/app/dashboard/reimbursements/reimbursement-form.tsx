@@ -37,14 +37,16 @@ export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurem
   const { toast } = useToast();
 
   const orderedItems = procurementItems.filter(item => {
-    // Single requests that are approved
+    // A single request that is approved and requested by the user is eligible for reimbursement.
     if (!item.linkedBucketId && item.status === 'approved' && item.requestedById === currentUser?.uid) {
         return true;
     }
-    // Items in an ordered bucket created by the user
-    const bucket = procurementBuckets.find(b => b.id === item.linkedBucketId);
-    if (bucket && bucket.status === 'ordered' && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
-        return true;
+    // An item in a bucket is eligible if the item is approved AND the bucket is ordered AND the bucket was created by the current user.
+    if(item.linkedBucketId) {
+        const bucket = procurementBuckets.find(b => b.id === item.linkedBucketId);
+        if (bucket && bucket.status === 'ordered' && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
+            return true;
+        }
     }
     return false;
   });
