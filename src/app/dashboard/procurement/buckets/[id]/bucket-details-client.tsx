@@ -74,10 +74,13 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
     const { toast } = useToast();
 
     useEffect(() => {
-        setLoading(true);
-        const bucketRef = doc(db, "procurement_buckets", bucketId);
+        if (!bucketId) return;
 
-        // Listen for changes on the bucket document itself (e.g., status changes)
+        setLoading(true);
+
+        const bucketRef = doc(db, "procurement_buckets", bucketId);
+        const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
+
         const unsubscribeBucket = onSnapshot(bucketRef, async (bucketSnap) => {
             if (!bucketSnap.exists()) {
                 setData(null);
@@ -87,43 +90,37 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
 
             const bucketData = bucketSnap.data();
             const memberIds = Array.isArray(bucketData.members) && bucketData.members.length > 0 ? bucketData.members : [];
-            const bucket = serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData });
-
-            const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
-            const requestsSnap = await getDocs(requestsQuery);
-            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
-
+            
             let members: AppUser[] = [];
             if (memberIds.length > 0) {
                 const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
                 const usersSnap = await getDocs(usersQuery);
                 members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
             }
-            
-            setData({ bucket, requests, members });
+
+            setData((prevData: any) => ({
+                ...prevData,
+                bucket: serializeFirestoreTimestamps({ id: bucketSnap.id, ...bucketData }),
+                members,
+            }));
             setLoading(false);
         });
 
-        // Also listen for changes in the requests collection for this bucket
-        const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
-        const unsubscribeRequests = onSnapshot(requestsQuery, async (requestsSnap) => {
-             if (data?.bucket) {
-                const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
-                setData((prevData: any) => ({ ...prevData, requests }));
-             }
+        const unsubscribeRequests = onSnapshot(requestsQuery, (requestsSnap) => {
+            const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+            setData((prevData: any) => ({ ...prevData, requests }));
         });
-
 
         // Cleanup subscriptions on unmount
         return () => {
             unsubscribeBucket();
             unsubscribeRequests();
         };
-    }, [bucketId, data?.bucket]);
+    }, [bucketId]);
 
 
     const handleFormSubmit = () => {
-        // No need to manually refresh, onSnapshot will handle it.
+        router.refresh();
         setIsFormOpen(false);
     };
 
@@ -139,7 +136,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
         }
     };
 
-    if (loading || authLoading || !data) {
+    if (loading || authLoading || !data || !data.bucket) {
         return (
              <div className="space-y-6">
                 <Skeleton className="h-10 w-1/3" />
@@ -263,7 +260,7 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {requests.length > 0 ? requests.map((req: any) => {
+                                {requests && requests.length > 0 ? requests.map((req: any) => {
                                     const user = members.find((u: any) => u.id === req.requestedById);
                                     return (
                                         <TableRow key={req.id}>
