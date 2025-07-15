@@ -1,6 +1,5 @@
 
 import Link from "next/link"
-import Image from "next/image"
 import type { AppUser } from "@/context/auth-context"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -56,21 +55,15 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
   const canManage = currentUser?.permissions?.canApproveProjects;
 
   return (
-      <div key={project.id} className="group flex flex-col">
-        <Link href={`/dashboard/projects/${project.id}`}>
-          <div className="relative w-full h-48 mb-4 overflow-hidden rounded-md">
-              <Image
-                src={`https://placehold.co/600x400.png`}
-                alt={project.title}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="rc project"
-              />
-          </div>
-        </Link>
+      <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full">
           {getStatusBadge(project.status)}
-          <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors">{project.title}</h3>
-          <p className="text-muted-foreground text-sm mt-1 line-clamp-2 flex-grow">{project.description}</p>
+          <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors flex-grow">
+            <Link href={`/dashboard/projects/${project.id}`}>
+              <span className="absolute inset-0" />
+              {project.title}
+            </Link>
+          </h3>
+          <p className="text-muted-foreground text-sm mt-1 line-clamp-2 ">{project.description}</p>
           <div className="flex items-center gap-4 mt-4">
                <div className="flex -space-x-2">
                   {project.memberIds.slice(0,3).map((memberId: string) => {
@@ -96,7 +89,7 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
               </div>
               )}
           </div>
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-center gap-2 mt-4 z-10 relative">
             <Link href={`/dashboard/projects/${project.id}`} className="flex-1">
                 <Button variant="outline" className="w-full">
                 View Project

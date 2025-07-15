@@ -25,21 +25,19 @@ import { ProjectCard, type Project, type User, type InventoryItem } from "./proj
 async function getData(currentUser: AppUser | null) {
     if (!currentUser) return { myProjects: [], users: [], inventory: [] };
     
+    // Fetch projects the current user is a member of
     const myProjectsQuery = query(
         collection(db, "projects"), 
         where("memberIds", "array-contains", currentUser.uid)
     );
-
     const myProjectsSnapshot = await getDocs(myProjectsQuery);
     const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
-    const userIds = [...new Set(myProjects.flatMap(p => p.memberIds))];
-    let users: User[] = [];
-    if (userIds.length > 0) {
-        const usersSnapshot = await getDocs(query(collection(db, "users"), where("id", "in", userIds.slice(0,30))));
-        users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
-    }
+    // Fetch ALL users so they can be added to new projects
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
     
+    // Fetch all inventory items for the new project form
     const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
     const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
 
@@ -50,9 +48,9 @@ const ProjectListSkeleton = () => (
   <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
     {[...Array(3)].map((_, i) => (
       <div key={i}>
-        <Skeleton className="h-48 w-full mb-4" />
-        <Skeleton className="h-5 w-1/4 mb-2" />
-        <Skeleton className="h-6 w-3/4 mb-2" />
+        <Skeleton className="h-6 w-1/4 mb-2" />
+        <Skeleton className="h-7 w-3/4 mb-2" />
+        <Skeleton className="h-16 w-full mb-4" />
         <Skeleton className="h-10 w-full" />
       </div>
     ))}
