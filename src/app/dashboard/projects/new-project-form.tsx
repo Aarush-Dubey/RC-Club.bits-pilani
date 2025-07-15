@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler, Controller } from "react-ho
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { addDoc, collection, doc, serverTimestamp, writeBatch } from "firebase/firestore"
-import { CalendarIcon, Loader2, Sparkles, Trash2, PlusCircle } from "lucide-react"
+import { CalendarIcon, Loader2, Sparkles, Trash2, PlusCircle, ChevronsUpDown, Check } from "lucide-react"
 import { format } from "date-fns"
 
 import { db } from "@/lib/firebase"
@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { User, InventoryItem } from "./page"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 
 // Mock current user - in a real app, this would come from an auth provider
@@ -63,12 +64,16 @@ interface NewProjectFormProps {
 
 export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [memberSearch, setMemberSearch] = useState("")
+  const [memberPopoverOpen, setMemberPopoverOpen] = useState(false)
+
   const { toast } = useToast()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
+      type: "plane",
       description: "",
       memberIds: [mockCurrentUser.id], // Default to current user
       leadId: mockCurrentUser.id,
@@ -83,6 +88,8 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
 
   const selectedMembers = form.watch("memberIds")
   const availableLeads = users.filter(u => selectedMembers?.includes(u.id))
+  
+  const filteredUsers = users.filter(user => user.name.toLowerCase().includes(memberSearch.toLowerCase()))
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsSubmitting(true)
@@ -194,57 +201,49 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                 control={form.control}
                 name="memberIds"
                 render={({ field }) => (
-                  <FormItem className="m-2">
+                  <FormItem className="m-2 flex flex-col">
                     <FormLabel>Team Members</FormLabel>
-                    <Popover>
+                    <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button variant="outline" role="combobox" className={cn("w-full justify-start", !field.value?.length && "text-muted-foreground")}>
                             {field.value?.length > 0
-                              ? users.filter(u => field.value.includes(u.id)).map(u => u.name.split(' ')[0]).join(', ')
+                              ? `${field.value.length} selected`
                               : "Select team members..."
                             }
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <ScrollArea className="h-48">
-                          <div className="p-2 space-y-1">
-                          {users.map((user) => (
-                            <FormField
-                              key={user.id}
-                              control={form.control}
-                              name="memberIds"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={user.id}
-                                    className="flex flex-row items-start space-x-3 space-y-0 p-2 hover:bg-accent rounded-md"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(user.id)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...(field.value || []), user.id])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== user.id
-                                                )
-                                              )
-                                        }}
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                           <CommandInput placeholder="Search members..." onValueChange={setMemberSearch} />
+                            <CommandList>
+                              <CommandEmpty>No members found.</CommandEmpty>
+                              <CommandGroup>
+                                {filteredUsers.map((user) => (
+                                    <CommandItem
+                                      key={user.id}
+                                      value={user.name}
+                                      onSelect={() => {
+                                        const selected = field.value?.includes(user.id)
+                                        const newValue = selected
+                                          ? field.value?.filter((id) => id !== user.id)
+                                          : [...(field.value || []), user.id]
+                                        field.onChange(newValue)
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value?.includes(user.id) ? "opacity-100" : "opacity-0"
+                                        )}
                                       />
-                                    </FormControl>
-                                    <FormLabel className="font-normal w-full cursor-pointer">
                                       {user.name}
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                          </div>
-                        </ScrollArea>
+                                    </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                        </Command>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
@@ -258,7 +257,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                 render={({ field }) => (
                   <FormItem className="m-2">
                     <FormLabel>Project Lead</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableLeads.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={availableLeads.length === 0}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a project lead from the team" />
@@ -280,7 +279,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               control={form.control}
               name="targetCompletionDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col m-2">
+                <FormItem className="m-2 flex flex-col">
                   <FormLabel>Target Completion Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -316,7 +315,7 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
               )}
             />
 
-            <div className="space-y-4 m-2">
+            <div className="m-2 space-y-4">
                 <FormLabel>Requested Inventory</FormLabel>
                 <div className="space-y-2">
                   {fields.map((field, index) => (
@@ -326,18 +325,56 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
                               name={`requestedInventory.${index}.itemId`}
                               render={({ field }) => (
                                   <FormItem className="flex-1">
-                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
                                           <FormControl>
-                                              <SelectTrigger>
-                                                  <SelectValue placeholder="Select an item" />
-                                              </SelectTrigger>
+                                            <Button
+                                              variant="outline"
+                                              role="combobox"
+                                              className={cn(
+                                                "w-full justify-between",
+                                                !field.value && "text-muted-foreground"
+                                              )}
+                                            >
+                                              {field.value
+                                                ? inventory.find(
+                                                    (item) => item.id === field.value
+                                                  )?.name
+                                                : "Select item"}
+                                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
                                           </FormControl>
-                                          <SelectContent>
-                                              {inventory.map(item => (
-                                                  <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                                              ))}
-                                          </SelectContent>
-                                      </Select>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                          <Command>
+                                            <CommandInput placeholder="Search inventory..." />
+                                            <CommandList>
+                                              <CommandEmpty>No item found.</CommandEmpty>
+                                              <CommandGroup>
+                                                {inventory.map((item) => (
+                                                  <CommandItem
+                                                    value={item.name}
+                                                    key={item.id}
+                                                    onSelect={() => {
+                                                      form.setValue(`requestedInventory.${index}.itemId`, item.id)
+                                                    }}
+                                                  >
+                                                    <Check
+                                                      className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        item.id === field.value
+                                                          ? "opacity-100"
+                                                          : "opacity-0"
+                                                      )}
+                                                    />
+                                                    {item.name}
+                                                  </CommandItem>
+                                                ))}
+                                              </CommandGroup>
+                                            </CommandList>
+                                          </Command>
+                                        </PopoverContent>
+                                      </Popover>
                                       <FormMessage />
                                   </FormItem>
                               )}
@@ -407,3 +444,5 @@ export function NewProjectForm({ onFormSubmit, users, inventory }: NewProjectFor
     </Form>
   )
 }
+
+    
