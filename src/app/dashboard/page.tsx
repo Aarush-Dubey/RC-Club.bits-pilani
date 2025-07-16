@@ -77,6 +77,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+       <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md">
+            <p className="font-bold">Hi from AI</p>
+       </div>
        <div>
         <h2 className="text-3xl font-bold tracking-tight font-headline">
           Welcome, {user?.displayName || 'Club Member'}!
