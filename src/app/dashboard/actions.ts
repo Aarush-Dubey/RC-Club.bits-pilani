@@ -67,7 +67,16 @@ export async function getPendingProjectApprovals(currentUserId: string) {
 
   // Get items that are currently checked out to the user ('fulfilled') or are pending return
   const itemsOnLoan = currentUserData.checkout_items?.filter((item: any) => ['fulfilled', 'pending_return'].includes(item.status)) || [];
-  const pendingReimbursements = currentUserData.reimbursement?.filter((item: any) => ['pending', 'approved'].includes(item.status)) || [];
+  
+  // Get reimbursement requests for the user that are 'pending' or 'approved'
+  const reimbursementsQuery = query(
+    collection(db, 'reimbursements'), 
+    where('submittedById', '==', currentUserId),
+    where('status', 'in', ['pending', 'approved'])
+  );
+  const reimbursementsSnapshot = await getDocs(reimbursementsQuery);
+  const pendingReimbursements = reimbursementsSnapshot.docs.map(serializeData);
+
 
   // Get the full inventory item details for the items on loan
   const inventoryItemIds = [...new Set(itemsOnLoan.map((item: any) => item.itemId).filter(Boolean))];

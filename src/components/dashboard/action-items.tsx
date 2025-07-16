@@ -83,7 +83,7 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
                     <HandCoins className="h-5 w-5 text-green-500" />
                     <div>
                        <p className="font-medium">
-                        Reimbursement Status:{' '}
+                        Reimbursement:{' '}
                          <span className='font-mono'>₹{req.amount.toFixed(2)}</span>
                       </p>
                        <p className="text-xs text-muted-foreground capitalize">
