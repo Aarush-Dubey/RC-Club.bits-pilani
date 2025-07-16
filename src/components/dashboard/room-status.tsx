@@ -40,7 +40,7 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt }: RoomStatusProps) {
         try {
             await toggleRoomStatus(user.uid);
             toast({ title: "Status Updated", description: `Room is now ${isOpen ? 'Closed' : 'Open'}.` });
-            // The revalidatePath in the action will trigger a refresh.
+            router.refresh();
         } catch (error) {
             toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
         } finally {
