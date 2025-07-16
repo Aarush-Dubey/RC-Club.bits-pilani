@@ -99,3 +99,39 @@ export async function getPendingProjectApprovals(currentUserId: string) {
     inventoryItems: inventoryItems,
   }));
 }
+
+export async function getSystemStatus() {
+    // --- Room Status ---
+    const roomStatusRef = doc(db, 'system', 'room_status');
+    const roomStatusSnap = await getDoc(roomStatusRef);
+    const roomStatus = roomStatusSnap.exists() ? serializeData(roomStatusSnap) : { isOpen: false };
+
+    // --- Key Status ---
+    const keyStatusRef = doc(db, 'system', 'key_status');
+    const keyStatusSnap = await getDoc(keyStatusRef);
+    const keyStatusData = keyStatusSnap.exists() ? serializeData(keyStatusSnap) : {};
+
+    const keyHolderIds = Object.values(keyStatusData)
+        .map((key: any) => key.holderId)
+        .filter(Boolean);
+
+    const users: Record<string, User> = {};
+    if (keyHolderIds.length > 0) {
+        const usersQuery = query(collection(db, "users"), where("id", "in", keyHolderIds));
+        const usersSnap = await getDocs(usersQuery);
+        usersSnap.docs.forEach(doc => {
+            users[doc.id] = serializeData(doc) as User;
+        });
+    }
+    
+    // Combine key data with user data
+    const keyStatus = Object.entries(keyStatusData)
+        .filter(([key]) => key !== 'recentTransfers' && key !== 'id')
+        .map(([key, value]: [string, any]) => ({
+            keyName: key,
+            holder: users[value.holderId]?.name || 'Unknown',
+            heldSince: value.heldSince,
+        }));
+    
+    return JSON.parse(JSON.stringify({ roomStatus, keyStatus }));
+}

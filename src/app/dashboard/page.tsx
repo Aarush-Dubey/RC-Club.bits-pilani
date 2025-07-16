@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/auth-context'
-import { getPendingProjectApprovals } from './actions'
+import { getPendingProjectApprovals, getSystemStatus } from './actions'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { Project, User } from './projects/project-card'
 import { ArrowRight, PackageCheck } from 'lucide-react'
 import { ActionItems } from '@/components/dashboard/action-items'
+import { RoomStatus } from '@/components/dashboard/room-status'
+import { KeyStatus } from '@/components/dashboard/key-status'
 
 type DashboardData = {
     approvalRequests: Project[],
@@ -21,6 +23,11 @@ type DashboardData = {
         reimbursements: any[]
     },
     inventoryItems: Record<string, any>
+}
+
+type SystemStatusData = {
+    roomStatus: { isOpen: boolean, [key: string]: any },
+    keyStatus: { keyName: string, holder: string, heldSince: string }[]
 }
 
 const ApprovalListSkeleton = () => (
@@ -39,10 +46,10 @@ const ApprovalListSkeleton = () => (
     </div>
 );
 
-
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatusData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const canApproveProjects = user?.permissions?.canApproveProjects && user?.role !== 'coordinator';
@@ -56,11 +63,16 @@ export default function DashboardPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const approvalData = await getPendingProjectApprovals(user.uid);
+            const [approvalData, statusData] = await Promise.all([
+                getPendingProjectApprovals(user.uid),
+                getSystemStatus()
+            ]);
             setData(approvalData);
+            setSystemStatus(statusData);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             setData(null);
+            setSystemStatus(null);
         } finally {
             setLoading(false);
         }
@@ -88,6 +100,20 @@ export default function DashboardPage() {
             </Link>
         )}
       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {loading || !systemStatus ? (
+                <>
+                    <Skeleton className="h-36 w-full" />
+                    <Skeleton className="h-36 w-full" />
+                </>
+            ) : (
+                <>
+                    <RoomStatus isOpen={systemStatus.roomStatus.isOpen} />
+                    <KeyStatus keys={systemStatus.keyStatus} />
+                </>
+            )}
+        </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="flex flex-col gap-8 lg:col-span-2">
