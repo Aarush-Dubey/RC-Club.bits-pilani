@@ -45,7 +45,7 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
               if (!inventoryItem || inventoryItem.isPerishable) return null
               return (
                 <li
-                  key={item.id}
+                  key={item.requestId}
                   className="flex items-center justify-between gap-4 rounded-md border p-3"
                 >
                   <div className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
                         {inventoryItem.name} (x{item.quantity})
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Project: {item.reason}
+                        Project: {item.projectId}
                       </p>
                     </div>
                   </div>

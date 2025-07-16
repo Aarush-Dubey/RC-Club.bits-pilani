@@ -1,7 +1,10 @@
+
 'use server'
 
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -25,17 +28,14 @@ const serializeData = (doc: any): any => {
 };
 
 
-export async function getPendingProjectApprovals() {
+export async function getPendingProjectApprovals(currentUserId: string) {
+  // Fetch pending project approvals
   const approvalRequestsQuery = query(
     collection(db, "projects"),
     where("status", "==", "pending_approval")
   );
   const approvalRequestsSnapshot = await getDocs(approvalRequestsQuery);
   const approvalRequests = approvalRequestsSnapshot.docs.map(serializeData) as Project[];
-
-  if (approvalRequests.length === 0) {
-    return { approvalRequests: [], users: {} };
-  }
 
   const userIds = [...new Set(approvalRequests.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean)))];
   const users: Record<string, User> = {};
@@ -55,5 +55,30 @@ export async function getPendingProjectApprovals() {
     }
   }
 
-  return { approvalRequests, users };
+  // Fetch current user's data for action items
+  const currentUserDoc = await getDoc(doc(db, "users", currentUserId));
+  const currentUserData = currentUserDoc.exists() ? currentUserDoc.data() : { checkout_items: [], reimbursement: [] };
+
+  const itemsToReturn = currentUserData.checkout_items?.filter((item: any) => item.status === 'pending_return') || [];
+  const pendingReimbursements = currentUserData.reimbursement?.filter((item: any) => ['pending', 'approved'].includes(item.status)) || [];
+
+  const inventoryItemIds = [...new Set(itemsToReturn.map((item: any) => item.itemId).filter(Boolean))];
+  const inventoryItems: Record<string, any> = {};
+  if (inventoryItemIds.length > 0) {
+      const itemsQuery = query(collection(db, "inventory_items"), where("id", "in", inventoryItemIds));
+      const itemsSnap = await getDocs(itemsQuery);
+      itemsSnap.docs.forEach(doc => {
+          inventoryItems[doc.id] = serializeData(doc);
+      });
+  }
+
+  return { 
+    approvalRequests, 
+    users, 
+    actionItems: {
+        itemsToReturn: JSON.parse(JSON.stringify(itemsToReturn)),
+        reimbursements: JSON.parse(JSON.stringify(pendingReimbursements)),
+    },
+    inventoryItems: JSON.parse(JSON.stringify(inventoryItems)),
+  };
 }
