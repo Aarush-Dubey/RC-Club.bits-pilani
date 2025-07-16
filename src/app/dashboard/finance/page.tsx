@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BalanceSheet from "./balance-sheet";
+import Logbook from "./logbook";
 
 export default function FinancePage() {
   return (
@@ -15,13 +16,13 @@ export default function FinancePage() {
       <Tabs defaultValue="balance-sheet">
         <TabsList>
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
-          <TabsTrigger value="pnl" disabled>Profit & Loss</TabsTrigger>
+          <TabsTrigger value="logbook">Logbook</TabsTrigger>
         </TabsList>
         <TabsContent value="balance-sheet" className="mt-4">
             <BalanceSheet />
         </TabsContent>
-        <TabsContent value="pnl">
-            {/* Profit & Loss content will go here */}
+        <TabsContent value="logbook" className="mt-4">
+            <Logbook />
         </TabsContent>
       </Tabs>
     </div>
