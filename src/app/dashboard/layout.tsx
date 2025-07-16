@@ -13,6 +13,7 @@ import {
   ToyBrick,
   Truck,
   Settings,
+  Users,
 } from "lucide-react"
 
 import { useAuth } from "@/context/auth-context"
@@ -30,15 +31,23 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 
-const menuItems = [
+const baseMenuItems = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
   { href: "/dashboard/projects", icon: ToyBrick, label: "Projects" },
   { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
   { href: "/dashboard/procurement", icon: Truck, label: "Procurement" },
   { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements" },
-  { href: "/dashboard/finance", icon: LineChart, label: "Finance AI" },
-  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+  { href: "/dashboard/finance", icon: LineChart, label: "Finance" },
+];
+
+const adminMenuItems = [
+    { href: "/dashboard/manage-club", icon: Users, label: "Manage Club", permission: "canManageUsers" },
 ]
+
+const bottomMenuItems = [
+    { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+]
+
 
 export default function DashboardLayout({
   children,
@@ -77,6 +86,12 @@ export default function DashboardLayout({
       </div>
     )
   }
+
+  const menuItems = [
+      ...baseMenuItems,
+      ...adminMenuItems.filter(item => user.permissions?.[item.permission]),
+      ...bottomMenuItems
+  ]
 
   return (
     <SidebarProvider>
