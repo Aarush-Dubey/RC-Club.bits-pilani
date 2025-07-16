@@ -32,7 +32,7 @@ export default function Logbook() {
         const fetchLogbookData = async () => {
             setLoading(true);
             try {
-                const logbookQuery = query(collection(db, "logbook"), orderBy("date", "asc"));
+                const logbookQuery = query(collection(db, "logbook"), orderBy("date", "desc"));
                 const querySnapshot = await getDocs(logbookQuery);
                 const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LogbookEntry));
                 setLogbookData(data);
