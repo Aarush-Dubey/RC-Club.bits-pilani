@@ -108,40 +108,52 @@ export default function ReimbursementsPage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
   
-  const fetchData = async () => {
-    setLoading(true);
-    let { reimbursements, users, newItems, buckets } = await getData();
-
-    // Custom sort logic
-    const statusOrder = { pending: 1, approved: 2, paid: 3, rejected: 4 };
-    reimbursements.sort((a, b) => {
-      const orderA = statusOrder[a.status as keyof typeof statusOrder] || 5;
-      const orderB = statusOrder[b.status as keyof typeof statusOrder] || 5;
-      if (orderA !== orderB) {
-        return orderA - orderB;
-      }
-      // If statuses are the same, sort by creation date (newest first)
-      const dateA = a.createdAt?.toDate() || 0;
-      const dateB = b.createdAt?.toDate() || 0;
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    setData({ reimbursements, users, newItems, buckets });
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+        setLoading(true);
+        let { reimbursements, users, newItems, buckets } = await getData();
+
+        // Custom sort logic
+        const statusOrder = { pending: 1, approved: 2, paid: 3, rejected: 4 };
+        reimbursements.sort((a, b) => {
+            const orderA = statusOrder[a.status as keyof typeof statusOrder] || 5;
+            const orderB = statusOrder[b.status as keyof typeof statusOrder] || 5;
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            // If statuses are the same, sort by creation date (newest first)
+            const dateA = a.createdAt?.toDate() || 0;
+            const dateB = b.createdAt?.toDate() || 0;
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        setData({ reimbursements, users, newItems, buckets });
+        setLoading(false);
+    };
+
     fetchData()
   }, []);
   
   const handleFormSubmit = () => {
-    fetchData(); 
+    const fetchDataAndClose = async () => {
+        setLoading(true);
+        let { reimbursements, users, newItems, buckets } = await getData();
+        setData({ reimbursements, users, newItems, buckets });
+        setLoading(false);
+    };
+    fetchDataAndClose(); 
     setIsFormOpen(false);
     router.refresh(); 
   }
 
   const handleActionComplete = () => {
-    fetchData();
+    const fetchDataAndClose = async () => {
+        setLoading(true);
+        let { reimbursements, users, newItems, buckets } = await getData();
+        setData({ reimbursements, users, newItems, buckets });
+        setLoading(false);
+    };
+    fetchDataAndClose();
     setSelectedRequest(null);
   }
 
