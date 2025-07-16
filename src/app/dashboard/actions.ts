@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   where,
+  documentId,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { AppUser } from '@/context/auth-context'
@@ -23,7 +24,7 @@ const serializeData = (data: any): any => {
     if (Array.isArray(data)) {
         return data.map(serializeData);
     }
-    if (typeof data === 'object') {
+    if (data !== null && typeof data === 'object' && !data.hasOwnProperty('seconds')) {
         const newObj: { [key: string]: any } = {};
         for (const key in data) {
             newObj[key] = serializeData(data[key]);
@@ -106,8 +107,8 @@ export async function getDashboardData(currentUser: AppUser) {
     getDocs(allProjectsQuery),
     getDocs(itemsOnLoanQuery),
     getDoc(roomStatusQuery),
-    getDocs(myBorrowedItemsSnap),
-    getDocs(myReimbursementsSnap),
+    getDocs(myBorrowedItemsQuery),
+    getDocs(myReimbursementsQuery),
     getDocs(recentProjectUpdatesQuery),
     getDocs(recentInventoryRequestsQuery),
     getDocs(recentProcurementRequestsQuery),
@@ -121,8 +122,8 @@ export async function getDashboardData(currentUser: AppUser) {
   }
 
   // Process Overview Metrics
-  const allProjects = allProjectsSnap.docs.map((doc) => doc.data())
-  const itemsOnLoan = itemsOnLoanSnap.docs.map((doc) => doc.data())
+  const allProjects = allProjectsSnap.docs.map((doc) => serializeData(doc.data()));
+  const itemsOnLoan = itemsOnLoanSnap.docs.map((doc) => serializeData(doc.data()));
   const roomStatusData = roomStatusSnap.exists()
     ? serializeData(roomStatusSnap.data())
     : { isOpen: false }
@@ -137,9 +138,9 @@ export async function getDashboardData(currentUser: AppUser) {
   const overviewMetrics = {
     activeProjects: allProjects.filter((p) => p.status === 'active').length,
     totalProjects: allProjects.length,
-    itemsOnLoan: itemsOnLoan.reduce((sum, req) => sum + req.quantity, 0),
-    overdueItems: itemsOnLoan.filter((req) => req.isOverdue).length,
-    pendingReimbursements: approvalQueues.reimbursements, // This is the same as the approval queue item
+    itemsOnLoan: itemsOnLoan.reduce((sum: number, req: any) => sum + req.quantity, 0),
+    overdueItems: itemsOnLoan.filter((req: any) => req.isOverdue).length,
+    pendingReimbursements: approvalQueues.reimbursements,
     roomStatus: {
       occupied: roomStatusData.isOpen,
       user: roomOccupancyUser,
@@ -152,31 +153,31 @@ export async function getDashboardData(currentUser: AppUser) {
 
   // Process User Action Items
   const actionItems = {
-    itemsToReturn: myBorrowedItemsSnap.docs.map((doc) => doc.data()),
-    reimbursements: myReimbursementsSnap.docs.map((doc) => doc.data()),
+    itemsToReturn: myBorrowedItemsSnap.docs.map((doc) => serializeData(doc.data())),
+    reimbursements: myReimbursementsSnap.docs.map((doc) => serializeData(doc.data())),
   }
 
   // Process Activity Feed
   const recentProjects = recentProjectsSnap.docs.map((doc) => ({
     type: 'project',
-    ...doc.data(),
+    ...serializeData(doc.data()),
   }))
   const recentInventory = recentInventoryRequestsSnap.docs.map((doc) => ({
     type: 'inventory',
-    ...doc.data(),
+    ...serializeData(doc.data()),
   }))
   const recentProcurement = recentProcurementRequestsSnap.docs.map((doc) => ({
     type: 'procurement',
-    ...doc.data(),
+    ...serializeData(doc.data()),
   }))
 
   const combinedFeed = [...recentProjects, ...recentInventory, ...recentProcurement]
   
   // Convert Timestamps to Dates before sorting
   combinedFeed.sort((a, b) => {
-    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
-    return dateB.getTime() - dateA.getTime();
+    const dateA = new Date(a.createdAt ?? 0).getTime();
+    const dateB = new Date(b.createdAt ?? 0).getTime();
+    return dateB - dateA;
   })
   
   const userIds = [...new Set(combinedFeed.flatMap((item: any) => [item.requestedById, item.postedById, item.leadId, item.fulfilledById, item.returnedById, item.rejectedById, item.createdBy].filter(Boolean)))]
@@ -188,10 +189,11 @@ export async function getDashboardData(currentUser: AppUser) {
         userChunks.push(userIds.slice(i, i + 30));
     }
     for (const chunk of userChunks) {
+        if (chunk.length === 0) continue;
         const usersQuery = query(collection(db, "users"), where("id", "in", chunk));
         const usersSnap = await getDocs(usersQuery);
         usersSnap.docs.forEach(doc => {
-            users[doc.id] = doc.data();
+            users[doc.id] = serializeData(doc.data());
         });
     }
   }
@@ -202,17 +204,16 @@ export async function getDashboardData(currentUser: AppUser) {
     const itemsQuery = query(collection(db, "inventory_items"), where("id", "in", inventoryItemIds.slice(0,30)));
     const itemsSnap = await getDocs(itemsQuery);
     itemsSnap.docs.forEach(doc => {
-        inventoryItems[doc.id] = doc.data();
+        inventoryItems[doc.id] = serializeData(doc.data());
     });
   }
 
-  // Final serialization before returning
-  return JSON.parse(JSON.stringify({
+  return {
     approvalQueues,
     overviewMetrics,
     actionItems,
     activityFeed: combinedFeed.slice(0, 15),
     users,
     inventoryItems
-  }));
+  };
 }
