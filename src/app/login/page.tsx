@@ -1,6 +1,6 @@
 
 "use client"
-
+console.log("Hello Login started")
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -108,3 +108,4 @@ export default function LoginPage() {
     </div>
   )
 }
+console.log("Hello Login finised")
