@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -64,17 +65,39 @@ async function getData() {
     const reimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), orderBy("createdAt", "desc")));
     const reimbursements = reimbursementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
     const newItemsSnapshot = await getDocs(collection(db, "new_item_requests"));
     const newItems = newItemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+    // Collect all user IDs from reimbursements and new item requests (requesters and approvers)
+    const userIds = [
+      ...new Set([
+        ...reimbursements.map((req: any) => req.submittedById),
+        ...newItems.map((item: any) => item.requestedById),
+        ...newItems.map((item: any) => item.approvedById)
+      ].filter(Boolean))
+    ];
+    
+    let users: any[] = [];
+    if (userIds.length > 0) {
+        // Chunk userIds to avoid Firestore 'in' query limit of 30
+        const userChunks = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+            userChunks.push(userIds.slice(i, i + 30));
+        }
+
+        for (const chunk of userChunks) {
+            const usersQuery = query(collection(db, "users"), where("id", "in", chunk));
+            const usersSnap = await getDocs(usersQuery);
+            users.push(...usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+    }
+    
     const bucketsSnapshot = await getDocs(collection(db, "procurement_buckets"));
     const buckets = bucketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return { reimbursements, users, newItems, buckets };
 }
+
 
 export default function ReimbursementsPage() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], newItems: any[], buckets: any[] }>({ reimbursements: [], users: [], newItems: [], buckets: [] });
@@ -107,6 +130,18 @@ export default function ReimbursementsPage() {
   }
 
   const canApprove = currentUser?.permissions?.canApproveReimbursements;
+  
+  const selectedProcurementItem = selectedRequest?.newItemRequestId 
+    ? data.newItems.find(item => item.id === selectedRequest.newItemRequestId) 
+    : null;
+
+  const procurementRequester = selectedProcurementItem
+    ? data.users.find(u => u.id === selectedProcurementItem.requestedById)
+    : null;
+
+  const procurementApprover = selectedProcurementItem
+    ? data.users.find(u => u.id === selectedProcurementItem.approvedById)
+    : null;
 
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -149,7 +184,7 @@ export default function ReimbursementsPage() {
                                     <StatusCircle status={req.status} />
                                     <div>
                                         <div className="font-medium">{user?.name}</div>
-                                        <div className="text-xs text-muted-foreground">{req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'MMM d, yyyy') : 'N/A'}</div>
+                                        <div className="text-xs text-muted-foreground">{req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</div>
                                     </div>
                                 </div>
                             </TableCell>
@@ -174,10 +209,28 @@ export default function ReimbursementsPage() {
                             <span className="text-muted-foreground">Submitted by: </span>
                             <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
                         </div>
-                        <div>
-                            <h4 className="font-medium mb-1 text-sm text-muted-foreground">Notes/Reason</h4>
-                            <p className="text-sm">{selectedRequest.notes || 'No notes provided.'}</p>
-                        </div>
+
+                         {selectedProcurementItem && (
+                          <Card className="bg-muted/50">
+                            <CardHeader className="p-4">
+                              <CardTitle className="text-base">Associated Procurement Request</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 text-sm space-y-2">
+                               <p><span className="font-medium text-muted-foreground">Item:</span> {selectedProcurementItem.itemName} (x{selectedProcurementItem.quantity})</p>
+                               <p><span className="font-medium text-muted-foreground">Justification:</span> {selectedProcurementItem.justification}</p>
+                               <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
+                               <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {!selectedProcurementItem && (
+                          <div>
+                              <h4 className="font-medium mb-1 text-sm text-muted-foreground">Notes/Reason</h4>
+                              <p className="text-sm">{selectedRequest.notes || 'No notes provided.'}</p>
+                          </div>
+                        )}
+
                         <div>
                             <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
                             {selectedRequest.proofImageUrls?.[0] ? (
