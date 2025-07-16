@@ -324,7 +324,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   coordinator: {
-    canManageUsers: false,
+    canManageUsers: true,
     canViewAllUsers: true,
     canCreateProjects: true,
     canApproveProjects: true,
