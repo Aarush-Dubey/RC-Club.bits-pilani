@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/auth-context'
 import { getPendingProjectApprovals, getSystemStatus } from './actions'
@@ -58,33 +58,32 @@ export default function DashboardPage() {
 
   const canApproveProjects = user?.permissions?.canApproveProjects && user?.role !== 'coordinator';
   
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+        const [approvalData, statusData] = await Promise.all([
+            getPendingProjectApprovals(user.uid),
+            getSystemStatus()
+        ]);
+        setData(approvalData);
+        setSystemStatus(statusData);
+    } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        setData(null);
+        setSystemStatus(null);
+    } finally {
+        setLoading(false);
+    }
+  }, [user]);
+  
   useEffect(() => {
     if (authLoading || !user) {
       setLoading(false);
       return;
     }
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [approvalData, statusData] = await Promise.all([
-                getPendingProjectApprovals(user.uid),
-                getSystemStatus()
-            ]);
-            setData(approvalData);
-            setSystemStatus(statusData);
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-            setData(null);
-            setSystemStatus(null);
-        } finally {
-            setLoading(false);
-        }
-    };
-    
     fetchData();
-
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchData]);
 
 
   return (
@@ -117,6 +116,7 @@ export default function DashboardPage() {
                         isOpen={systemStatus.roomStatus.isOpen} 
                         updatedBy={systemStatus.roomStatus.updatedBy}
                         updatedAt={systemStatus.roomStatus.updatedAt}
+                        onStatusChange={fetchData}
                     />
                     <KeyStatus keys={systemStatus.keyStatus} />
                 </>

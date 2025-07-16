@@ -10,18 +10,16 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { toggleRoomStatus } from "@/app/dashboard/actions";
-import { useRouter } from "next/navigation";
-
 
 type RoomStatusProps = {
     isOpen: boolean;
     updatedBy: string | null;
     updatedAt: string | null;
+    onStatusChange: () => void;
 };
 
-export function RoomStatus({ isOpen, updatedBy, updatedAt }: RoomStatusProps) {
+export function RoomStatus({ isOpen, updatedBy, updatedAt, onStatusChange }: RoomStatusProps) {
     const { user } = useAuth();
-    const router = useRouter();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -40,7 +38,7 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt }: RoomStatusProps) {
         try {
             await toggleRoomStatus(user.uid);
             toast({ title: "Status Updated", description: `Room is now ${isOpen ? 'Closed' : 'Open'}.` });
-            router.refresh();
+            onStatusChange(); // This will trigger the data refetch on the parent page
         } catch (error) {
             toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
         } finally {
