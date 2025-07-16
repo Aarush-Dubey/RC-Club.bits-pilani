@@ -2,13 +2,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getUsers, updateUserRole } from '../actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -59,11 +60,18 @@ export default function ManageUsersPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight font-headline">User Management</h2>
-        <p className="text-muted-foreground">
-          Assign and update roles for all club members.
-        </p>
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/manage-club">
+            <Button variant="outline" size="icon">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+        </Link>
+        <div>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">User Management</h2>
+            <p className="text-muted-foreground">
+              Assign and update roles for all club members.
+            </p>
+        </div>
       </div>
       <Card>
         <CardHeader>
