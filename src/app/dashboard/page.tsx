@@ -82,7 +82,9 @@ export default function DashboardPage() {
         </p>
       </div>
       
-      <Button>dummy</Button>
+      <Link href="/dashboard/manage-club">
+        <Button>dummy</Button>
+      </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="flex flex-col gap-8 lg:col-span-2">
