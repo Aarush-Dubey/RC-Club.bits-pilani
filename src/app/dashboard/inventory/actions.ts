@@ -3,14 +3,27 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, serverTimestamp, updateDoc, collection, query, where, getDocs, writeBatch, documentId, addDoc } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp, updateDoc, collection, query, where, getDocs, writeBatch, documentId, addDoc, getDoc, arrayUnion } from "firebase/firestore";
 
 export async function requestInventory({ itemId, quantity, userId, reason }: { itemId: string; quantity: number; userId: string; reason: string }) {
     if (!userId) {
         throw new Error("User is not authenticated.");
     }
-    const requestRef = collection(db, "inventory_requests");
-    await addDoc(requestRef, {
+
+    const batch = writeBatch(db);
+    
+    // Get item name for denormalization
+    const itemRef = doc(db, "inventory_items", itemId);
+    const itemSnap = await getDoc(itemRef);
+    if (!itemSnap.exists()) {
+        throw new Error("Inventory item not found.");
+    }
+    const itemName = itemSnap.data().name;
+
+    // Create the inventory request
+    const requestRef = doc(collection(db, "inventory_requests"));
+    batch.set(requestRef, {
+        id: requestRef.id,
         projectId: null, // This is a general request, not tied to a project
         requestedById: userId,
         itemId,
@@ -20,6 +33,20 @@ export async function requestInventory({ itemId, quantity, userId, reason }: { i
         isOverdue: false,
         createdAt: serverTimestamp(),
     });
+
+    // Update the user's checkout_items array
+    const userRef = doc(db, "users", userId);
+    batch.update(userRef, {
+        checkout_items: arrayUnion({
+            requestId: requestRef.id,
+            itemId: itemId,
+            itemName: itemName,
+            quantity: quantity,
+            status: "pending"
+        })
+    });
+
+    await batch.commit();
 
     revalidatePath(`/dashboard/inventory`);
 }
@@ -66,6 +93,18 @@ export async function approveInventoryRequest(requestId: string, adminId: string
                 fulfilledById: adminId,
                 checkedOutToId: requestData.requestedById, // Assign to the requester
             });
+
+            // Update user's checkout_items status
+            const userRef = doc(db, "users", requestData.requestedById);
+            const userDoc = await transaction.get(userRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const checkoutItems = userData.checkout_items || [];
+                const updatedItems = checkoutItems.map((item: any) => 
+                    item.requestId === requestId ? { ...item, status: 'fulfilled' } : item
+                );
+                transaction.update(userRef, { checkout_items: updatedItems });
+            }
         });
     } catch (error) {
         console.error("Transaction failed: ", error);
@@ -79,12 +118,36 @@ export async function rejectInventoryRequest(requestId: string, adminId: string)
     if (!adminId) {
         throw new Error("User is not authenticated.");
     }
+
+    const batch = writeBatch(db);
     const requestRef = doc(db, "inventory_requests", requestId);
-    await updateDoc(requestRef, {
+
+    // Get request data to find the user
+    const requestSnap = await getDoc(requestRef);
+    if (!requestSnap.exists()) {
+        throw new Error("Request not found.");
+    }
+    const requestData = requestSnap.data();
+
+    // Mark the request as rejected
+    batch.update(requestRef, {
         status: 'rejected',
         rejectedAt: serverTimestamp(),
         rejectedById: adminId
     });
+
+    // Update the user's checkout_items status
+    const userRef = doc(db, "users", requestData.requestedById);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+        const checkoutItems = userSnap.data().checkout_items || [];
+        const updatedItems = checkoutItems.map((item: any) => 
+            item.requestId === requestId ? { ...item, status: 'rejected' } : item
+        );
+        batch.update(userRef, { checkout_items: updatedItems });
+    }
+
+    await batch.commit();
     revalidatePath(`/dashboard/inventory`);
 }
 
@@ -97,12 +160,12 @@ export async function confirmReturn(requestId: string, adminId: string) {
     const batch = writeBatch(db);
 
     const requestRef = doc(db, "inventory_requests", requestId);
-    const requestDoc = await getDocs(query(collection(db, "inventory_requests"), where(documentId(), "==", requestId)));
+    const requestDocSnap = await getDoc(requestRef);
     
-    if (requestDoc.empty) {
+    if (!requestDocSnap.exists()) {
         throw new Error("Return request not found.");
     }
-    const requestData = requestDoc.docs[0].data();
+    const requestData = requestDocSnap.data();
 
     if (requestData.status !== 'pending_return') {
         throw new Error("This item is not pending return.");
@@ -110,11 +173,12 @@ export async function confirmReturn(requestId: string, adminId: string) {
 
     // 1. Update inventory item stock
     const itemRef = doc(db, "inventory_items", requestData.itemId);
-    const itemDoc = await getDocs(query(collection(db, "inventory_items"), where(documentId(), "==", requestData.itemId)));
-    if (itemDoc.empty) {
+    const itemDoc = await getDoc(itemRef);
+
+    if (!itemDoc.exists()) {
         throw new Error("Inventory item not found.");
     }
-    const itemData = itemDoc.docs[0].data();
+    const itemData = itemDoc.data();
     const newAvailableQuantity = itemData.availableQuantity + requestData.quantity;
     const newCheckedOutQuantity = itemData.checkedOutQuantity - requestData.quantity;
     
@@ -130,7 +194,19 @@ export async function confirmReturn(requestId: string, adminId: string) {
         returnedById: adminId,
     });
     
-    // 3. Check if this was the last item for the project
+    // 3. Update user's checkout_items status
+    const checkedOutToId = requestData.checkedOutToId || requestData.requestedById;
+    const userRef = doc(db, "users", checkedOutToId);
+    const userSnap = await getDoc(userRef);
+    if(userSnap.exists()){
+        const checkoutItems = userSnap.data().checkout_items || [];
+        const updatedItems = checkoutItems.map((item: any) => 
+            item.requestId === requestId ? { ...item, status: 'returned' } : item
+        );
+        batch.update(userRef, { checkout_items: updatedItems });
+    }
+
+    // 4. Check if this was the last item for the project
     if (requestData.projectId) {
         const otherPendingReturnsQuery = query(
             collection(db, "inventory_requests"),

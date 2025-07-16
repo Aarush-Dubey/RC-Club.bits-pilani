@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc, writeBatch, documentId } from "firebase/firestore";
+import { doc, runTransaction, collection, getDocs, query, where, arrayUnion, arrayRemove, serverTimestamp, updateDoc, addDoc, writeBatch, documentId, getDoc } from "firebase/firestore";
 
 export async function approveProject(projectId: string) {
     try {
@@ -18,6 +18,7 @@ export async function approveProject(projectId: string) {
             }
             
             const projectData = projectDoc.data();
+            const projectLeadRef = doc(db, "users", projectData.leadId);
 
             const requestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), where("status", "==", "pending"));
             const requestsSnapshot = await getDocs(requestsQuery);
@@ -78,6 +79,18 @@ export async function approveProject(projectId: string) {
                     fulfilledAt: serverTimestamp(),
                     checkedOutToId: projectData.leadId,
                 });
+
+                // Update the project lead's checkout_items status
+                transaction.update(projectLeadRef, {
+                    checkout_items: arrayUnion({
+                        requestId: requestDoc.id,
+                        itemId: requestData.itemId,
+                        itemName: itemData.name,
+                        quantity: requestData.quantity,
+                        status: 'fulfilled',
+                        projectId: projectId
+                    })
+                });
             }
 
             for (const memberId of projectData.memberIds) {
@@ -112,6 +125,19 @@ export async function rejectProject(projectId: string) {
 
             for(const requestDoc of requestsSnapshot.docs) {
                  transaction.update(doc(db, "inventory_requests", requestDoc.id), { status: 'rejected' });
+                 
+                 // Update user's checkout_items status
+                 const requestData = requestDoc.data();
+                 const userRef = doc(db, "users", requestData.requestedById);
+                 const userDoc = await transaction.get(userRef);
+                 if (userDoc.exists()) {
+                     const userData = userDoc.data();
+                     const checkoutItems = userData.checkout_items || [];
+                     const updatedItems = checkoutItems.map((item: any) => 
+                         item.requestId === requestDoc.id ? { ...item, status: 'rejected' } : item
+                     );
+                     transaction.update(userRef, { checkout_items: updatedItems });
+                 }
             }
         });
     } catch (e) {
@@ -172,6 +198,19 @@ export async function initiateProjectCompletion(projectId: string) {
         const item = itemDocs.get(reqDoc.data().itemId);
         if (item && !item.isPerishable) {
             batch.update(reqDoc.ref, { status: "pending_return" });
+
+            // Update user's checkout_items status
+            const reqData = reqDoc.data();
+            const userRef = doc(db, "users", reqData.checkedOutToId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const checkoutItems = userSnap.data().checkout_items || [];
+                const updatedItems = checkoutItems.map((ci: any) => 
+                    ci.requestId === reqDoc.id ? { ...ci, status: 'pending_return' } : ci
+                );
+                batch.update(userRef, { checkout_items: updatedItems });
+            }
+
             hasPendingReturns = true;
         }
     }
@@ -320,9 +359,19 @@ export async function addInventoryRequest({
   try {
     const batch = writeBatch(db);
     const reason = `Additional request for project: ${projectTitle}`;
+    const userRef = doc(db, "users", userId);
 
     for (const req of requests) {
       const requestRef = doc(collection(db, "inventory_requests"));
+      
+       // Get item name for denormalization
+        const itemRef = doc(db, "inventory_items", req.itemId);
+        const itemSnap = await getDoc(itemRef);
+        if (!itemSnap.exists()) {
+            throw new Error(`Inventory item ${req.itemId} not found.`);
+        }
+        const itemName = itemSnap.data().name;
+
       batch.set(requestRef, {
         id: requestRef.id,
         projectId: projectId,
@@ -334,6 +383,18 @@ export async function addInventoryRequest({
         isOverdue: false,
         createdAt: serverTimestamp(),
       });
+
+      // Update the user's checkout_items array
+        batch.update(userRef, {
+            checkout_items: arrayUnion({
+                requestId: requestRef.id,
+                itemId: req.itemId,
+                itemName: itemName,
+                quantity: req.quantity,
+                status: "pending",
+                projectId: projectId,
+            })
+        });
     }
 
     await batch.commit();
