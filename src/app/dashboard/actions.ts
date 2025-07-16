@@ -109,7 +109,7 @@ export async function getSystemStatus() {
     // --- Key Status ---
     const keyStatusRef = doc(db, 'system', 'key_status');
     const keyStatusSnap = await getDoc(keyStatusRef);
-    const keyStatusData = keyStatusSnap.exists() ? serializeData(keyStatusSnap) : {};
+    const keyStatusData = keyStatusSnap.exists() ? keyStatusSnap.data() : {}; // Don't serialize the whole doc yet
 
     const keyHolderIds = Object.values(keyStatusData)
         .map((key: any) => key.holderId)
@@ -126,11 +126,11 @@ export async function getSystemStatus() {
     
     // Combine key data with user data
     const keyStatus = Object.entries(keyStatusData)
-        .filter(([key]) => key !== 'recentTransfers' && key !== 'id')
+        .filter(([key]) => key !== 'recentTransfers')
         .map(([key, value]: [string, any]) => ({
             keyName: key,
             holder: users[value.holderId]?.name || 'Unknown',
-            heldSince: value.heldSince,
+            heldSince: value.heldSince?.toDate ? value.heldSince.toDate().toISOString() : null,
         }));
     
     return JSON.parse(JSON.stringify({ roomStatus, keyStatus }));

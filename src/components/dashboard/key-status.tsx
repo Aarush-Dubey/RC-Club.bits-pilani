@@ -9,7 +9,7 @@ type KeyStatusProps = {
     keys: {
         keyName: string;
         holder: string;
-        heldSince: string;
+        heldSince: string | null;
     }[];
 };
 
@@ -32,7 +32,7 @@ export function KeyStatus({ keys }: KeyStatusProps) {
                                 </div>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(key.heldSince), { addSuffix: true })}
+                                {key.heldSince ? formatDistanceToNow(new Date(key.heldSince), { addSuffix: true }) : 'N/A'}
                             </p>
                         </li>
                     ))}
