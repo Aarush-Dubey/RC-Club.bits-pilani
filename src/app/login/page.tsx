@@ -19,19 +19,30 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+
+const devUsers: Record<string, string> = {
+  admin: 'alex.doe@example.com',
+  coordinator: 'jane.smith@example.com',
+  inventory_manager: 'sam.wilson@example.com',
+  drone_lead: 'peter.jones@example.com',
+  plane_lead: 'mary.jane@example.com',
+  member: 'member.fresh@example.com',
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isBypassLoading, setIsBypassLoading] = useState(false)
+  const [bypassRole, setBypassRole] = useState("inventory_manager")
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleLogin = async (emailToLogin: string, passwordToLogin: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(auth, emailToLogin, passwordToLogin)
       toast({
         title: "Login Successful",
         description: "Welcome back!",
@@ -47,9 +58,20 @@ export default function LoginPage() {
         title: "Login Failed",
         description: errorMessage,
       })
-    } finally {
-      setIsLoading(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    await handleLogin(email, password)
+    setIsLoading(false)
+  }
+
+  const handleBypass = async () => {
+    setIsBypassLoading(true)
+    await handleLogin(devUsers[bypassRole], "password") // Assuming all dev users have this password
+    setIsBypassLoading(false)
   }
 
   return (
@@ -103,6 +125,38 @@ export default function LoginPage() {
               Sign up
             </Link>
           </div>
+          
+          {process.env.NODE_ENV === 'development' && (
+            <>
+              <Separator className="my-6" />
+              <div className="space-y-4">
+                <p className="text-center text-sm text-muted-foreground">For Development Only</p>
+                <div className="space-y-2">
+                    <Label htmlFor="role-select">Bypass Login As</Label>
+                     <Select value={bypassRole} onValueChange={setBypassRole}>
+                        <SelectTrigger id="role-select">
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="coordinator">Coordinator</SelectItem>
+                            <SelectItem value="drone_lead">Drone Lead</SelectItem>
+                            <SelectItem value="plane_lead">Plane Lead</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button variant="secondary" className="w-full" onClick={handleBypass} disabled={isBypassLoading}>
+                    {isBypassLoading && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Bypass Login
+                </Button>
+              </div>
+            </>
+          )}
+
         </CardContent>
       </Card>
     </div>
