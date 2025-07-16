@@ -87,9 +87,12 @@ export default function DashboardLayout({
     )
   }
 
+  // DEV BOX: Display canManageUsers permission
+  console.log('User has "canManageUsers" permission:', !!user.permissions?.canManageUsers);
+
   const menuItems = [
       ...baseMenuItems,
-      ...adminMenuItems.filter(item => user.permissions?.[item.permission]),
+      ...adminMenuItems.filter(item => user.permissions?.[item.permission as keyof typeof user.permissions]),
       ...bottomMenuItems
   ]
 
