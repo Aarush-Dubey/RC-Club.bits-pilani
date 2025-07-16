@@ -73,13 +73,20 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-       <div>
-        <h2 className="text-3xl font-bold tracking-tight font-headline">
-          Welcome, {user?.displayName || 'Club Member'}!
-        </h2>
-        <p className="text-muted-foreground">
-          Here's a quick overview of what's happening in the club.
-        </p>
+       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight font-headline">
+            Welcome, {user?.displayName || 'Club Member'}!
+          </h2>
+          <p className="text-muted-foreground">
+            Here's a quick overview of what's happening in the club.
+          </p>
+        </div>
+        {user?.role === 'coordinator' && (
+            <Link href="/dashboard/manage-club">
+                <Button>Manage Club</Button>
+            </Link>
+        )}
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
