@@ -50,7 +50,10 @@ export default function RegisterPage() {
         email: email,
         role: "member", // Default role
         createdAt: serverTimestamp(),
-        joinedProjects: []
+        joinedProjects: [],
+        checkout_items: [],
+        reimbursement: [],
+        procurement: [],
       })
 
       toast({
