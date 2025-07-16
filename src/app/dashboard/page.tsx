@@ -26,8 +26,12 @@ type DashboardData = {
 }
 
 type SystemStatusData = {
-    roomStatus: { isOpen: boolean, [key: string]: any },
-    keyStatus: { keyName: string, holder: string, heldSince: string }[]
+    roomStatus: { 
+        isOpen: boolean,
+        updatedBy: string | null,
+        updatedAt: string | null 
+    },
+    keyStatus: { keyName: string, holder: string, heldSince: string | null }[]
 }
 
 const ApprovalListSkeleton = () => (
@@ -104,12 +108,16 @@ export default function DashboardPage() {
        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {loading || !systemStatus ? (
                 <>
-                    <Skeleton className="h-36 w-full" />
-                    <Skeleton className="h-36 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
                 </>
             ) : (
                 <>
-                    <RoomStatus isOpen={systemStatus.roomStatus.isOpen} />
+                    <RoomStatus 
+                        isOpen={systemStatus.roomStatus.isOpen} 
+                        updatedBy={systemStatus.roomStatus.updatedBy}
+                        updatedAt={systemStatus.roomStatus.updatedAt}
+                    />
                     <KeyStatus keys={systemStatus.keyStatus} />
                 </>
             )}

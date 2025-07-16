@@ -8,9 +8,12 @@ import {
   getDocs,
   query,
   where,
+  runTransaction,
+  serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Project, User } from './projects/project-card'
+import { revalidatePath } from 'next/cache'
 
 
 // Helper to convert Firestore Timestamps to JSON-serializable strings
@@ -104,12 +107,25 @@ export async function getSystemStatus() {
     // --- Room Status ---
     const roomStatusRef = doc(db, 'system', 'room_status');
     const roomStatusSnap = await getDoc(roomStatusRef);
-    const roomStatus = roomStatusSnap.exists() ? serializeData(roomStatusSnap) : { isOpen: false };
+    const roomStatusData = roomStatusSnap.exists() ? roomStatusSnap.data() : { isOpen: false, updatedById: null, updatedAt: null };
+
+    let updatedByUser = null;
+    if (roomStatusData.updatedById) {
+        const userSnap = await getDoc(doc(db, "users", roomStatusData.updatedById));
+        if (userSnap.exists()) {
+            updatedByUser = userSnap.data().name;
+        }
+    }
+    const roomStatus = {
+        isOpen: roomStatusData.isOpen,
+        updatedBy: updatedByUser,
+        updatedAt: roomStatusData.updatedAt?.toDate ? roomStatusData.updatedAt.toDate().toISOString() : null,
+    };
 
     // --- Key Status ---
     const keyStatusRef = doc(db, 'system', 'key_status');
     const keyStatusSnap = await getDoc(keyStatusRef);
-    const keyStatusData = keyStatusSnap.exists() ? keyStatusSnap.data() : {}; // Don't serialize the whole doc yet
+    const keyStatusData = keyStatusSnap.exists() ? keyStatusSnap.data() : {};
 
     const keyHolderIds = Object.values(keyStatusData)
         .map((key: any) => key.holderId)
@@ -124,7 +140,6 @@ export async function getSystemStatus() {
         });
     }
     
-    // Combine key data with user data
     const keyStatus = Object.entries(keyStatusData)
         .filter(([key]) => key !== 'recentTransfers')
         .map(([key, value]: [string, any]) => ({
@@ -134,4 +149,24 @@ export async function getSystemStatus() {
         }));
     
     return JSON.parse(JSON.stringify({ roomStatus, keyStatus }));
+}
+
+export async function toggleRoomStatus(userId: string) {
+    if (!userId) {
+        throw new Error("User must be logged in to change room status.");
+    }
+    const roomStatusRef = doc(db, 'system', 'room_status');
+
+    await runTransaction(db, async (transaction) => {
+        const roomStatusDoc = await transaction.get(roomStatusRef);
+        const currentStatus = roomStatusDoc.exists() ? roomStatusDoc.data().isOpen : false;
+        
+        transaction.set(roomStatusRef, {
+            isOpen: !currentStatus,
+            updatedById: userId,
+            updatedAt: serverTimestamp(),
+        }, { merge: true });
+    });
+
+    revalidatePath('/dashboard');
 }
