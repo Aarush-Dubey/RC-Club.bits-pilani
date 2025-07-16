@@ -7,6 +7,9 @@ import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 
 interface Account {
     name: string;
@@ -68,11 +71,19 @@ const BalanceSheetTable = ({ data }: { data: BalanceSheetData }) => {
         { title: "Fixed Assets", data: data.fixedAssets },
         { title: "Owner's Equity", data: data.ownersEquity },
     ];
+    const { user: currentUser } = useAuth();
+    const isTreasurer = currentUser?.role === 'treasurer';
 
     return (
          <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Balance Sheet</CardTitle>
+                 {isTreasurer && (
+                    <Button variant="outline" size="sm">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
+                )}
             </CardHeader>
             <CardContent>
                 <Table>

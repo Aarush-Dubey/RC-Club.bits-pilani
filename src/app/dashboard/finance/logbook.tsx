@@ -11,6 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 
 interface LogbookEntry {
     id: string;
@@ -55,6 +58,9 @@ export default function Logbook() {
     const [allItems, setAllItems] = useState<any[]>([]);
     const [selectedLog, setSelectedLog] = useState<LogbookEntry | null>(null);
     const [loading, setLoading] = useState(true);
+    const { user: currentUser } = useAuth();
+
+    const isTreasurer = currentUser?.role === 'treasurer';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -109,9 +115,17 @@ export default function Logbook() {
     return (
         <Dialog open={!!selectedReimbursement} onOpenChange={(isOpen) => !isOpen && setSelectedLog(null)}>
             <Card>
-                <CardHeader>
-                    <CardTitle>Financial Logbook</CardTitle>
-                    <CardDescription>A detailed record of all financial transactions. Click on a reimbursement log for more details.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Financial Logbook</CardTitle>
+                        <CardDescription>A detailed record of all financial transactions. Click on a reimbursement log for more details.</CardDescription>
+                    </div>
+                    {isTreasurer && (
+                        <Button variant="outline" size="sm">
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>
