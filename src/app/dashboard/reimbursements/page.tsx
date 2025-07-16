@@ -4,15 +4,16 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { PlusCircle } from "lucide-react"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
+import Image from "next/image"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,6 +29,8 @@ import {
 import { ReimbursementForm } from "./reimbursement-form"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { ReimbursementActions } from "./reimbursement-actions"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -56,9 +59,8 @@ const StatusCircle = ({ status }: { status: string }) => {
   );
 };
 
-
 async function getData() {
-    const reimbursementsSnapshot = await getDocs(collection(db, "reimbursements"));
+    const reimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), orderBy("createdAt", "desc")));
     const reimbursements = reimbursementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const usersSnapshot = await getDocs(collection(db, "users"));
@@ -75,9 +77,10 @@ async function getData() {
 
 export default function ReimbursementsPage() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], newItems: any[], buckets: any[] }>({ reimbursements: [], users: [], newItems: [], buckets: [] });
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter()
+  const router = useRouter();
   const { user: currentUser } = useAuth();
   
   const fetchData = async () => {
@@ -97,71 +100,140 @@ export default function ReimbursementsPage() {
     router.refresh(); 
   }
 
+  const handleActionComplete = () => {
+    fetchData();
+    setSelectedRequest(null);
+  }
+
+  const canApprove = currentUser?.permissions?.canApproveReimbursements;
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
-          <p className="text-muted-foreground">
-            Submit and track expense reimbursement requests.
-          </p>
-        </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+       <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
+            <p className="text-muted-foreground">
+              Submit and track expense reimbursement requests.
+            </p>
+          </div>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>New Reimbursement Request</DialogTitle>
-            </DialogHeader>
-            <ReimbursementForm 
-              setOpen={setIsFormOpen} 
-              onFormSubmit={handleFormSubmit}
-              currentUser={currentUser}
-              procurementItems={data.newItems}
-              procurementBuckets={data.buckets}
-            />
-          </DialogContent>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
+              </Button>
+            </DialogTrigger>
+        </div>
+        
+        <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Reimbursement Requests</CardTitle>
+              <CardDescription>
+                {canApprove ? "Review and process reimbursement requests." : "A log of all reimbursement requests."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                    <TableRow>
+                      <TableHead>Submitted By</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      {canApprove && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {data.reimbursements.map((req: any) => {
+                      const user = data.users.find((u: any) => u.id === req.submittedById);
+                      let details = req.notes || '';
+                      if (req.newItemRequestId) {
+                          const newItem: any = data.newItems.find((i: any) => i.id === req.newItemRequestId);
+                          if (newItem) {
+                              details = `Purchase: ${newItem.itemName}`;
+                          }
+                      }
+                      
+                      return (
+                          <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
+                            <TableCell className="font-medium">{user?.name}</TableCell>
+                            <TableCell>{details}</TableCell>
+                            <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
+                            <TableCell>
+                                <StatusCircle status={req.status} />
+                            </TableCell>
+                            <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
+                            {canApprove && (
+                              <TableCell className="text-right">
+                                  <ReimbursementActions request={req} onActionComplete={handleActionComplete} />
+                              </TableCell>
+                            )}
+                          </TableRow>
+                      )
+                    })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+           <DialogContent className="sm:max-w-md">
+            {selectedRequest && (
+              <>
+                <DialogHeader>
+                    <DialogTitle>Reimbursement Details</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Submitted by</span>
+                    <span className="font-medium">{data.users.find(u => u.id === selectedRequest.submittedById)?.name}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Notes/Reason</h4>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Receipt</h4>
+                    {selectedRequest.proofImageUrls?.[0] ? (
+                      <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
+                        <Image 
+                          src={selectedRequest.proofImageUrls[0]}
+                          alt="Receipt"
+                          width={400}
+                          height={400}
+                          className="rounded-md border object-contain"
+                        />
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                    )}
+                  </div>
+                </div>
+                 {canApprove && (
+                    <div className="pt-4 border-t">
+                        <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
+                    </div>
+                )}
+              </>
+            )}
+           </DialogContent>
         </Dialog>
       </div>
-      
-      <Table>
-        <TableHeader>
-            <TableRow>
-            <TableHead>Submitted By</TableHead>
-            <TableHead>Details</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {data.reimbursements.map((req: any) => {
-            const user = data.users.find((u: any) => u.id === req.submittedById);
-            let details = req.notes || '';
-            if (req.newItemRequestId) {
-                const newItem: any = data.newItems.find((i: any) => i.id === req.newItemRequestId);
-                if (newItem) {
-                    details = `Purchase: ${newItem.itemName}`;
-                }
-            }
-            
-            return (
-                <TableRow key={req.id}>
-                <TableCell className="font-medium">{user?.name}</TableCell>
-                <TableCell>{details}</TableCell>
-                <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
-                <TableCell>
-                    <StatusCircle status={req.status} />
-                </TableCell>
-                <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
-                </TableRow>
-            )
-            })}
-        </TableBody>
-        </Table>
-    </div>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New Reimbursement Request</DialogTitle>
+        </DialogHeader>
+        <ReimbursementForm 
+          setOpen={setIsFormOpen} 
+          onFormSubmit={handleFormSubmit}
+          currentUser={currentUser}
+          procurementItems={data.newItems}
+          procurementBuckets={data.buckets}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }
