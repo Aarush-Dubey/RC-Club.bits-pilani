@@ -3,6 +3,8 @@
 
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -11,6 +13,26 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { AppUser } from '@/context/auth-context'
+
+// Helper to convert Firestore Timestamps to JSON-serializable strings
+const serializeData = (data: any): any => {
+    if (!data) return data;
+    if (typeof data.toDate === 'function') { // Check for Firestore Timestamp
+        return data.toDate().toISOString();
+    }
+    if (Array.isArray(data)) {
+        return data.map(serializeData);
+    }
+    if (typeof data === 'object') {
+        const newObj: { [key: string]: any } = {};
+        for (const key in data) {
+            newObj[key] = serializeData(data[key]);
+        }
+        return newObj;
+    }
+    return data;
+};
+
 
 export async function getDashboardData(currentUser: AppUser) {
   // Queries for Approval Queues (for admins/coordinators)
@@ -84,8 +106,8 @@ export async function getDashboardData(currentUser: AppUser) {
     getDocs(allProjectsQuery),
     getDocs(itemsOnLoanQuery),
     getDoc(roomStatusQuery),
-    getDocs(myBorrowedItemsQuery),
-    getDocs(myReimbursementsQuery),
+    getDocs(myBorrowedItemsSnap),
+    getDocs(myReimbursementsSnap),
     getDocs(recentProjectUpdatesQuery),
     getDocs(recentInventoryRequestsQuery),
     getDocs(recentProcurementRequestsQuery),
@@ -102,7 +124,7 @@ export async function getDashboardData(currentUser: AppUser) {
   const allProjects = allProjectsSnap.docs.map((doc) => doc.data())
   const itemsOnLoan = itemsOnLoanSnap.docs.map((doc) => doc.data())
   const roomStatusData = roomStatusSnap.exists()
-    ? roomStatusSnap.data()
+    ? serializeData(roomStatusSnap.data())
     : { isOpen: false }
   let roomOccupancyUser = 'N/A'
   if (roomStatusData.isOpen && roomStatusData.openedById) {
@@ -122,8 +144,7 @@ export async function getDashboardData(currentUser: AppUser) {
       occupied: roomStatusData.isOpen,
       user: roomOccupancyUser,
       since: roomStatusData.openedAt
-        ? roomStatusData.openedAt
-            .toDate()
+        ? new Date(roomStatusData.openedAt)
             .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : '',
     },
@@ -150,10 +171,12 @@ export async function getDashboardData(currentUser: AppUser) {
   }))
 
   const combinedFeed = [...recentProjects, ...recentInventory, ...recentProcurement]
+  
+  // Convert Timestamps to Dates before sorting
   combinedFeed.sort((a, b) => {
-    const dateA = a.createdAt?.toDate() || 0
-    const dateB = b.createdAt?.toDate() || 0
-    return dateB - dateA
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+    return dateB.getTime() - dateA.getTime();
   })
   
   const userIds = [...new Set(combinedFeed.flatMap((item: any) => [item.requestedById, item.postedById, item.leadId, item.fulfilledById, item.returnedById, item.rejectedById, item.createdBy].filter(Boolean)))]
@@ -183,7 +206,7 @@ export async function getDashboardData(currentUser: AppUser) {
     });
   }
 
-
+  // Final serialization before returning
   return JSON.parse(JSON.stringify({
     approvalQueues,
     overviewMetrics,
