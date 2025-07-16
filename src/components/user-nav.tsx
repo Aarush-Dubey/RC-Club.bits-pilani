@@ -62,14 +62,21 @@ export function UserNav() {
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
+             {user.role && (
+                <p className="text-xs leading-none text-muted-foreground capitalize pt-1">
+                    Role: {user.role.replace(/_/g, ' ')}
+                </p>
+             )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>
-            <UserIcon />
-            Profile
-          </DropdownMenuItem>
+          <Link href="/dashboard/settings" passHref>
+            <DropdownMenuItem>
+                <UserIcon />
+                Profile
+            </DropdownMenuItem>
+          </Link>
           <Link href="/dashboard/settings" passHref>
             <DropdownMenuItem>
               <Settings />
