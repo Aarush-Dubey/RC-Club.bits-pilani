@@ -64,6 +64,7 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
         description: `Paid reimbursement to ${userName}`,
         credit: reimbursementData.amount,
         balance: newBalance,
+        reimbursementId: reimbursementId, // Link to the reimbursement
     });
 
     // --- Update Reimbursement Status ---
