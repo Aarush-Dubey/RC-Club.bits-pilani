@@ -4,6 +4,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import Image from "next/image"
 import {
   BarChart,
   HandCoins,
@@ -98,7 +99,7 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
-            <BarChart className="size-7 text-primary" />
+            <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={28} height={28} className="size-7" />
             <h2 className="text-lg font-bold tracking-tighter text-sidebar-foreground font-headline">
               RC Club Manager
             </h2>

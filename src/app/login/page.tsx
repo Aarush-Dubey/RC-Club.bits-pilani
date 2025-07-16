@@ -3,6 +3,7 @@
 console.log("Hello Login started")
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { BarChart, Loader2 } from "lucide-react"
@@ -57,7 +58,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center gap-2">
-            <BarChart className="size-8 text-primary" />
+            <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={32} height={32} className="size-8" />
             <h1 className="text-2xl font-bold tracking-tighter font-headline">
               RC Club Manager
             </h1>
