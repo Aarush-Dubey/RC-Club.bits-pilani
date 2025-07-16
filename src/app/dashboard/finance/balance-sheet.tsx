@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { addAccount, deleteAccount, updateAccount } from "./actions";
+import { addAccount, deleteAccount, updateAccountsBatch } from "./actions";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Account {
     id: string;
@@ -86,35 +88,8 @@ const accountFormSchema = z.object({
 });
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
-const EditAccountForm = ({ account, onUpdate }: { account: Account, onUpdate: () => void }) => {
-    const [balance, setBalance] = useState(account.balance);
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
 
-    const handleUpdate = async () => {
-        setIsLoading(true);
-        try {
-            await updateAccount(account.id, balance);
-            toast({ title: "Success", description: "Account balance updated." });
-            onUpdate();
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: (error as Error).message });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    return (
-        <div className="flex items-center gap-2">
-            <Input type="number" value={balance} onChange={e => setBalance(Number(e.target.value))} className="h-8" />
-            <Button onClick={handleUpdate} disabled={isLoading} size="sm">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-            </Button>
-        </div>
-    );
-};
-
-const AddAccountForm = ({ onAdd }: { onAdd: () => void }) => {
+const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog: () => void }) => {
     const { toast } = useToast();
     const form = useForm<AccountFormValues>({
         resolver: zodResolver(accountFormSchema),
@@ -127,6 +102,7 @@ const AddAccountForm = ({ onAdd }: { onAdd: () => void }) => {
             toast({ title: "Success", description: "New account added." });
             form.reset();
             onAdd();
+            closeDialog();
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: (error as Error).message });
         }
@@ -174,10 +150,25 @@ const AddAccountForm = ({ onAdd }: { onAdd: () => void }) => {
     )
 }
 
-const BalanceSheetEditor = ({ accounts, onUpdate }: { accounts: Account[], onUpdate: () => void }) => {
+const BalanceSheetEditor = ({ accounts, onUpdate, closeDialog }: { accounts: Account[], onUpdate: () => void, closeDialog: () => void }) => {
+    const [localAccounts, setLocalAccounts] = useState<Account[]>(() => JSON.parse(JSON.stringify(accounts)));
+    const [isDirty, setIsDirty] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
     const { toast } = useToast();
+
+    useEffect(() => {
+        setLocalAccounts(JSON.parse(JSON.stringify(accounts)));
+        setIsDirty(false);
+    }, [accounts]);
     
+    const handleBalanceChange = (accountId: string, newBalance: number) => {
+        setLocalAccounts(prev => prev.map(acc => acc.id === accountId ? { ...acc, balance: newBalance } : acc));
+        setIsDirty(true);
+    };
+
     const handleDelete = async (accountId: string) => {
         setIsDeleting(accountId);
         try {
@@ -190,33 +181,107 @@ const BalanceSheetEditor = ({ accounts, onUpdate }: { accounts: Account[], onUpd
             setIsDeleting(null);
         }
     }
-    return (
-        <div className="space-y-8">
-            <Card>
-                <CardHeader><CardTitle>Manage Accounts</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    {accounts.map(acc => (
-                         <div key={acc.id} className="flex items-center justify-between gap-4">
-                            <span className="font-medium flex-1">{acc.name}</span>
-                            <div className="flex-1">
-                                <EditAccountForm account={acc} onUpdate={onUpdate} />
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)} disabled={!!isDeleting}>
-                                {isDeleting === acc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
-                            </Button>
-                         </div>
-                    ))}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>Add New Account</CardTitle></CardHeader>
+    
+    const handleUpdateAll = async () => {
+        setIsLoading(true);
+        try {
+            const updates = localAccounts
+                .filter((localAcc, index) => localAcc.balance !== accounts[index].balance)
+                .map(acc => ({ id: acc.id, balance: acc.balance }));
+            
+            if (updates.length > 0) {
+                await updateAccountsBatch(updates);
+                toast({ title: "Success", description: "All account changes have been saved." });
+                onUpdate();
+                setIsDirty(false);
+            } else {
+                toast({ title: "No Changes", description: "No changes were detected." });
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleClose = () => {
+        if (isDirty) {
+            setShowUnsavedAlert(true);
+        } else {
+            closeDialog();
+        }
+    }
+
+    if (showAddForm) {
+        return (
+             <div>
+                <CardHeader>
+                    <CardTitle>Add New Account</CardTitle>
+                </CardHeader>
                 <CardContent>
-                    <AddAccountForm onAdd={onUpdate} />
+                    <AddAccountForm onAdd={onUpdate} closeDialog={() => setShowAddForm(false)} />
                 </CardContent>
-            </Card>
-        </div>
-    )
-}
+                <CardContent>
+                     <Button variant="outline" onClick={() => setShowAddForm(false)} className="w-full">Cancel</Button>
+                </CardContent>
+             </div>
+        )
+    }
+
+    return (
+        <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+            <DialogHeader>
+                <DialogTitle>Edit Balance Sheet</DialogTitle>
+                <DialogDescription>Add, remove, or update accounts.</DialogDescription>
+            </DialogHeader>
+            <div className="flex-grow overflow-hidden flex flex-col">
+                <ScrollArea className="flex-grow pr-6 -mr-6">
+                    <div className="space-y-4">
+                        {localAccounts.map(acc => (
+                            <div key={acc.id} className="flex items-center justify-between gap-4">
+                                <span className="font-medium flex-1 truncate" title={acc.name}>{acc.name}</span>
+                                <div className="w-32">
+                                     <Input 
+                                        type="number" 
+                                        value={acc.balance} 
+                                        onChange={e => handleBalanceChange(acc.id, Number(e.target.value))} 
+                                        className="h-8 text-right" 
+                                    />
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)} disabled={!!isDeleting}>
+                                    {isDeleting === acc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
+            <DialogFooter className="pt-4 border-t gap-2">
+                 <Button variant="ghost" className="mr-auto" onClick={() => setShowAddForm(true)}>
+                    <Plus className="mr-2 h-4 w-4"/>
+                    New Account
+                 </Button>
+                 <Button variant="outline" onClick={handleClose}>Close</Button>
+                 <Button onClick={handleUpdateAll} disabled={isLoading || !isDirty}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Update Accounts
+                </Button>
+            </DialogFooter>
+             <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>You have unsaved changes</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to close? Your changes will be lost.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={closeDialog}>Discard Changes</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+};
 
 
 const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetData, accounts: Account[], onUpdate: () => void }) => {
@@ -228,9 +293,10 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
     ];
     const { user: currentUser } = useAuth();
     const isTreasurer = currentUser?.role === 'treasurer';
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
 
     return (
-        <Dialog>
+        <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Balance Sheet</CardTitle>
@@ -278,12 +344,8 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
                     </Table>
                 </CardContent>
             </Card>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Edit Balance Sheet</DialogTitle>
-                    <DialogDescription>Add, remove, or update accounts.</DialogDescription>
-                </DialogHeader>
-                <BalanceSheetEditor accounts={accounts} onUpdate={onUpdate} />
+            <DialogContent className="h-[90vh] flex flex-col">
+                <BalanceSheetEditor accounts={accounts} onUpdate={onUpdate} closeDialog={() => setIsEditorOpen(false)} />
             </DialogContent>
         </Dialog>
     )
@@ -303,7 +365,7 @@ export default function BalanceSheet() {
     useEffect(() => {
         fetchData(); // Initial fetch
         // Listen for real-time updates on accounts
-        const unsubscribe = onSnapshot(collection(db, "accounts"), (snapshot) => {
+        const unsubscribe = onSnapshot(query(collection(db, "accounts"), orderBy("name")), (snapshot) => {
             const fetchedAccounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Account[];
             setAccounts(fetchedAccounts);
             setLoading(false);
@@ -355,3 +417,5 @@ export default function BalanceSheet() {
 
     return <BalanceSheetTable data={data} accounts={accounts} onUpdate={fetchData} />;
 }
+
+    

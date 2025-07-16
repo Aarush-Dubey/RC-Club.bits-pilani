@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc, writeBatch } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // ----- Balance Sheet Actions -----
@@ -16,11 +16,13 @@ export async function addAccount(data: { name: string; group: string; balance: n
   revalidatePath("/dashboard/finance");
 }
 
-export async function updateAccount(accountId: string, newBalance: number) {
-  const accountRef = doc(db, "accounts", accountId);
-  await updateDoc(accountRef, {
-    balance: newBalance,
+export async function updateAccountsBatch(updates: { id: string; balance: number }[]) {
+  const batch = writeBatch(db);
+  updates.forEach(update => {
+    const accountRef = doc(db, "accounts", update.id);
+    batch.update(accountRef, { balance: update.balance });
   });
+  await batch.commit();
   revalidatePath("/dashboard/finance");
 }
 
@@ -60,3 +62,5 @@ export async function deleteLogbookEntry(logId: string) {
     await deleteDoc(logRef);
     revalidatePath("/dashboard/finance");
 }
+
+    
