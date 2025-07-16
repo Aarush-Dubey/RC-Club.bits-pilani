@@ -72,6 +72,7 @@ async function getData() {
     const userIds = [
       ...new Set([
         ...reimbursements.map((req: any) => req.submittedById),
+        ...reimbursements.map((req: any) => req.approvedById),
         ...newItems.map((item: any) => item.requestedById),
         ...newItems.map((item: any) => item.approvedById)
       ].filter(Boolean))
@@ -157,6 +158,8 @@ export default function ReimbursementsPage() {
   const procurementApprover = selectedProcurementItem
     ? data.users.find(u => u.id === selectedProcurementItem.approvedById)
     : null;
+    
+  const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
 
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -264,7 +267,7 @@ export default function ReimbursementsPage() {
                         </div>
                     </div>
                 </ScrollArea>
-                 {canApprove && (
+                 {shouldShowActions && (
                     <div className="pt-4 border-t">
                         <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
                     </div>
