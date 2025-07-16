@@ -50,7 +50,7 @@ const StatusCircle = ({ status }: { status: string }) => {
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger>
-          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+          <div className={cn("h-2.5 w-2.5 rounded-full", config.color)}></div>
         </TooltipTrigger>
         <TooltipContent>
           <p>{config.tooltip}</p>
@@ -135,9 +135,7 @@ export default function ReimbursementsPage() {
               <Table>
                 <TableHeader>
                     <TableRow>
-                      <TableHead>Submitted By</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Request</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -146,10 +144,14 @@ export default function ReimbursementsPage() {
                       const user = data.users.find((u: any) => u.id === req.submittedById);
                       return (
                           <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
-                            <TableCell className="font-medium">{user?.name}</TableCell>
-                            <TableCell>{req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</TableCell>
                             <TableCell>
-                                <StatusCircle status={req.status} />
+                                <div className="flex items-center gap-3">
+                                    <StatusCircle status={req.status} />
+                                    <div>
+                                        <div className="font-medium">{user?.name}</div>
+                                        <div className="text-xs text-muted-foreground">{req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'MMM d, yyyy') : 'N/A'}</div>
+                                    </div>
+                                </div>
                             </TableCell>
                             <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
                           </TableRow>
@@ -159,42 +161,41 @@ export default function ReimbursementsPage() {
               </Table>
             </CardContent>
           </Card>
-           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+           <DialogContent className="sm:max-w-sm">
             {selectedRequest && (
               <>
                 <DialogHeader>
                     <DialogTitle>Reimbursement Details</DialogTitle>
+                    <p className="text-2xl font-bold font-mono pt-2">₹{selectedRequest.amount.toFixed(2)}</p>
                 </DialogHeader>
-                <div className="space-y-4 py-4 pr-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Amount</span>
-                    <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Submitted by</span>
-                    <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Notes/Reason</h4>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Receipt</h4>
-                    {selectedRequest.proofImageUrls?.[0] ? (
-                      <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
-                        <Image 
-                          src={selectedRequest.proofImageUrls[0]}
-                          alt="Receipt"
-                          width={400}
-                          height={400}
-                          className="w-full h-auto rounded-md border object-contain"
-                        />
-                      </a>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
-                    )}
-                  </div>
-                </div>
+                <ScrollArea className="max-h-[60vh] -mx-6">
+                    <div className="px-6 space-y-4">
+                        <div className="text-sm">
+                            <span className="text-muted-foreground">Submitted by: </span>
+                            <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
+                        </div>
+                        <div>
+                            <h4 className="font-medium mb-1 text-sm text-muted-foreground">Notes/Reason</h4>
+                            <p className="text-sm">{selectedRequest.notes || 'No notes provided.'}</p>
+                        </div>
+                        <div>
+                            <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
+                            {selectedRequest.proofImageUrls?.[0] ? (
+                            <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
+                                <Image 
+                                src={selectedRequest.proofImageUrls[0]}
+                                alt="Receipt"
+                                width={400}
+                                height={400}
+                                className="w-full h-auto rounded-md border object-contain"
+                                />
+                            </a>
+                            ) : (
+                            <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                            )}
+                        </div>
+                    </div>
+                </ScrollArea>
                  {canApprove && (
                     <div className="pt-4 border-t">
                         <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
@@ -220,3 +221,5 @@ export default function ReimbursementsPage() {
     </Dialog>
   )
 }
+
+  
