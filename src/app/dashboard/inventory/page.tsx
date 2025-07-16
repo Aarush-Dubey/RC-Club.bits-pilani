@@ -73,28 +73,8 @@ const StatusCircle = ({ status }: { status: string }) => {
 
 function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: any, currentUser: AppUser | null, setOpen: (open: boolean) => void, onFormSubmit: () => void }) {
     const [quantity, setQuantity] = useState(1);
-    const [reason, setReason] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [isEnhancing, setIsEnhancing] = useState(false);
     const { toast } = useToast();
-
-    const handleEnhanceReason = async () => {
-        if (!reason) {
-          toast({ variant: "destructive", title: "Cannot Enhance", description: "Please provide a basic reason first." });
-          return;
-        }
-        setIsEnhancing(true);
-        try {
-          const result = await enhanceJustification({ itemName: item.name, justification: reason });
-          setReason(result.enhancedJustification);
-          toast({ title: "Reason Enhanced", description: "The justification has been updated with AI." });
-        } catch (error) {
-          console.error("Error enhancing reason:", error);
-          toast({ variant: "destructive", title: "Enhancement Failed", description: "Could not enhance the reason." });
-        } finally {
-          setIsEnhancing(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,7 +87,7 @@ function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: a
 
         setIsLoading(true);
         try {
-            await requestInventory({ itemId: item.id, quantity, userId: currentUser.uid, reason });
+            await requestInventory({ itemId: item.id, quantity, userId: currentUser.uid });
             toast({ title: "Request Submitted", description: `Your request for ${item.name} has been submitted for approval.` });
             onFormSubmit();
             setOpen(false);
@@ -143,24 +123,8 @@ function RequestItemForm({ item, currentUser, setOpen, onFormSubmit }: { item: a
                     required
                 />
             </div>
-             <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                    <Label htmlFor="reason">Reason for Request</Label>
-                    <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceReason} disabled={isEnhancing || isLoading}>
-                        {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Enhance
-                    </Button>
-                </div>
-                <Textarea
-                    id="reason"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="e.g. For personal practice, replacement part for a non-project device, etc."
-                    required
-                />
-            </div>
-            <Button type="submit" disabled={isLoading || isEnhancing} className="w-full">
-                {(isLoading || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Request
             </Button>
         </form>

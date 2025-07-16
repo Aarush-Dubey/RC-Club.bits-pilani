@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
 import { doc, runTransaction, serverTimestamp, updateDoc, collection, query, where, getDocs, writeBatch, documentId, addDoc, getDoc, arrayUnion } from "firebase/firestore";
 
-export async function requestInventory({ itemId, quantity, userId, reason }: { itemId: string; quantity: number; userId: string; reason: string }) {
+export async function requestInventory({ itemId, quantity, userId }: { itemId: string; quantity: number; userId: string; }) {
     if (!userId) {
         throw new Error("User is not authenticated.");
     }
@@ -28,7 +28,7 @@ export async function requestInventory({ itemId, quantity, userId, reason }: { i
         requestedById: userId,
         itemId,
         quantity,
-        reason,
+        reason: "General Use",
         status: "pending",
         isOverdue: false,
         createdAt: serverTimestamp(),
