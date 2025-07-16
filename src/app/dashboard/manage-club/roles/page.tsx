@@ -20,7 +20,7 @@ const formatPermissionName = (name: string) => {
 
 interface Role {
   id: string;
-  permissions: string[];
+  permissions: Record<string, boolean>;
 }
 
 const PermissionToggleButton = ({ permission, isEnabled: initialIsEnabled }: { permission: string, isEnabled: boolean }) => {
@@ -52,7 +52,7 @@ export default function ManageRolesPage() {
     async function fetchData() {
       try {
         const fetchedRoles = await getRolesAndPermissions();
-        setRoles(fetchedRoles);
+        setRoles(fetchedRoles as Role[]);
       } catch (error) {
         console.error("Failed to fetch roles:", error);
       } finally {
@@ -116,8 +116,8 @@ export default function ManageRolesPage() {
                         </AccordionTrigger>
                         <AccordionContent>
                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-2 gap-x-4 pt-2">
-                                {role.permissions.map(permission => (
-                                    <PermissionToggleButton key={permission} permission={permission} isEnabled={true} />
+                                {Object.entries(role.permissions).map(([permission, isEnabled]) => (
+                                    <PermissionToggleButton key={permission} permission={permission} isEnabled={isEnabled} />
                                 ))}
                            </div>
                         </AccordionContent>

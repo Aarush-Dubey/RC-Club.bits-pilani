@@ -14,14 +14,19 @@ export async function getRolesAndPermissions() {
     }
 
     const roles = snapshot.docs.map(doc => {
-        const permissions = doc.data();
-        const enabledPermissions = Object.entries(permissions)
-            .filter(([, value]) => value === true)
-            .map(([key]) => key);
+        const permissionsData = doc.data();
+        
+        // Sort keys alphabetically
+        const sortedPermissions = Object.entries(permissionsData)
+            .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+            .reduce((obj, [key, value]) => {
+                obj[key] = value;
+                return obj;
+            }, {} as Record<string, boolean>);
 
         return {
             id: doc.id,
-            permissions: enabledPermissions.sort()
+            permissions: sortedPermissions,
         };
     });
 
