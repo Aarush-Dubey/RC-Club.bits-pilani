@@ -81,6 +81,8 @@ export default function DashboardPage() {
           Here's a quick overview of what's happening in the club.
         </p>
       </div>
+      
+      <Button>dummy</Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="flex flex-col gap-8 lg:col-span-2">
