@@ -58,9 +58,11 @@ export default function ManageClubPage() {
             </p>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" disabled>
-              Manage Permissions (Coming Soon)
-            </Button>
+            <Link href="/dashboard/manage-club/roles" className="w-full">
+                <Button className="w-full">
+                Manage Permissions <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+            </Link>
           </CardFooter>
         </Card>
       </div>
