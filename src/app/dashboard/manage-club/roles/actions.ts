@@ -2,7 +2,8 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, doc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
+import { revalidatePath } from "next/cache";
 
 export async function getRolesAndPermissions() {
     const permissionsCollection = collection(db, "permissions");
@@ -31,4 +32,18 @@ export async function getRolesAndPermissions() {
     });
 
     return roles;
+}
+
+
+export async function createNewRole(roleName: string, permissions: Record<string, boolean>) {
+    const roleId = roleName.toLowerCase().replace(/\s+/g, '_');
+    const roleRef = doc(db, "permissions", roleId);
+
+    const docSnapshot = await getDoc(roleRef);
+    if (docSnapshot.exists()) {
+        throw new Error(`Role '${roleId}' already exists.`);
+    }
+
+    await setDoc(roleRef, permissions);
+    revalidatePath("/dashboard/manage-club/roles");
 }
