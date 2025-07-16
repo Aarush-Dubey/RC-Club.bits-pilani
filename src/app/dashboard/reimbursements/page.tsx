@@ -129,7 +129,7 @@ export default function ReimbursementsPage() {
             <CardHeader>
               <CardTitle>Reimbursement Requests</CardTitle>
               <CardDescription>
-                {canApprove ? "Review and process reimbursement requests." : "A log of all reimbursement requests."}
+                {canApprove ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -141,7 +141,6 @@ export default function ReimbursementsPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      {canApprove && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -164,11 +163,6 @@ export default function ReimbursementsPage() {
                                 <StatusCircle status={req.status} />
                             </TableCell>
                             <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
-                            {canApprove && (
-                              <TableCell className="text-right">
-                                  <ReimbursementActions request={req} onActionComplete={handleActionComplete} />
-                              </TableCell>
-                            )}
                           </TableRow>
                       )
                     })}
