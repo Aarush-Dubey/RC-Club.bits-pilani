@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import type { Project } from "../page";
-import { approveProject, rejectProject, startProject, completeProject, closeProject } from "./actions";
+import { approveProject, rejectProject, startProject, initiateProjectCompletion, closeProject } from "./actions";
 import type { AppUser } from "@/context/auth-context";
 
 interface ProjectActionsProps {
@@ -111,7 +111,28 @@ export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
               Start Project
             </Button>
           )}
-
+          {project.status === 'active' && isProjectLead && (
+             <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button disabled={isLoading} variant="outline">
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2"/>}
+                        Mark as Completed
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Ready to complete the project?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will start the item return process. The project will be marked as 'completed' once all non-perishable items have been returned and confirmed by an inventory manager.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleAction(() => initiateProjectCompletion(project.id), "Project Completion Initiated", "Please return all non-perishable items to the inventory manager.", "Failed to Initiate Completion")}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+          )}
           {project.status === 'completed' && canManage && (
               <Button onClick={onClose} disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}

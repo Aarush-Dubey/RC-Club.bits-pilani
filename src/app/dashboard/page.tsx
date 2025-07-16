@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Project, User } from './projects/project-card'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, PackageCheck } from 'lucide-react'
 import { ActionItems } from '@/components/dashboard/action-items'
 
 type DashboardData = {
@@ -116,7 +116,8 @@ export default function DashboardPage() {
                                 ))}
                             </div>
                           ) : (
-                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg flex flex-col items-center gap-2">
+                                <PackageCheck className="h-10 w-10 text-green-500" />
                                 <h3 className="text-xl font-semibold">All Clear!</h3>
                                 <p>There are no projects waiting for approval.</p>
                             </div>

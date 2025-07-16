@@ -21,27 +21,27 @@ export async function approveProject(projectId: string) {
             const projectLeadRef = doc(db, "users", projectData.leadId);
 
             const requestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId), where("status", "==", "pending"));
-            const requestsSnapshot = await getDocs(requestsQuery);
+            const requestsSnapshot = await getDocs(requestsQuery); // This is outside the transaction but okay for reads before writes begin.
 
-            const itemRefs: { [key: string]: any } = {};
-            const itemDocs: { [key: string]: any } = {};
+            const itemDocs = new Map<string, any>();
+            const itemRefs = new Map<string, any>();
             
-            // Batch read all unique item documents
+            // Batch read all unique item documents needed for validation and updates
             const uniqueItemIds = [...new Set(requestsSnapshot.docs.map(d => d.data().itemId))];
             if (uniqueItemIds.length > 0) {
-                const itemQuery = query(collection(db, "inventory_items"), where(documentId(), "in", uniqueItemIds));
-                const itemSnapshots = await getDocs(itemQuery);
-                itemSnapshots.docs.forEach(doc => {
-                    itemRefs[doc.id] = doc.ref;
-                    itemDocs[doc.id] = doc;
-                });
+                 for (const itemId of uniqueItemIds) {
+                    const itemRef = doc(db, "inventory_items", itemId);
+                    const itemDoc = await transaction.get(itemRef);
+                    itemDocs.set(itemId, itemDoc);
+                    itemRefs.set(itemId, itemRef);
+                }
             }
 
 
             // --- 2. VALIDATION PHASE ---
             for (const requestDoc of requestsSnapshot.docs) {
                 const requestData = requestDoc.data();
-                const itemDoc = itemDocs[requestData.itemId];
+                const itemDoc = itemDocs.get(requestData.itemId);
 
                 if (!itemDoc || !itemDoc.exists()) {
                     throw new Error(`Inventory item ${requestData.itemId} not found.`);
@@ -53,6 +53,7 @@ export async function approveProject(projectId: string) {
             }
 
             // --- 3. WRITE PHASE ---
+            // Now, we can safely perform all writes
             const hasInventoryRequests = requestsSnapshot.docs.length > 0;
             transaction.update(projectRef, { 
                 status: 'approved',
@@ -63,8 +64,8 @@ export async function approveProject(projectId: string) {
 
             for (const requestDoc of requestsSnapshot.docs) {
                 const requestData = requestDoc.data();
-                const itemRef = itemRefs[requestData.itemId];
-                const itemData = itemDocs[requestData.itemId].data();
+                const itemRef = itemRefs.get(requestData.itemId);
+                const itemData = itemDocs.get(requestData.itemId).data();
 
                 const newAvailableQuantity = itemData.availableQuantity - requestData.quantity;
                 const newCheckedOutQuantity = itemData.checkedOutQuantity + requestData.quantity;
@@ -106,7 +107,7 @@ export async function approveProject(projectId: string) {
     }
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
-    revalidatePath('/dashboard/projects/approvals');
+    revalidatePath('/dashboard');
 }
 
 
@@ -118,25 +119,37 @@ export async function rejectProject(projectId: string) {
              if (!projectDoc.exists() || projectDoc.data().status !== 'pending_approval') {
                 throw new Error("Project not found or not pending approval.");
             }
-            transaction.update(projectRef, { status: 'rejected' });
 
+            const projectData = projectDoc.data();
             const requestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
             const requestsSnapshot = await getDocs(requestsQuery);
+
+            const userRefsToUpdate: { [key: string]: any } = {};
+
+            // Read all user docs that might need updates
+            for (const requestDoc of requestsSnapshot.docs) {
+                const requestData = requestDoc.data();
+                if (!userRefsToUpdate[requestData.requestedById]) {
+                    const userRef = doc(db, "users", requestData.requestedById);
+                    userRefsToUpdate[requestData.requestedById] = await transaction.get(userRef);
+                }
+            }
+            
+            // Now perform all writes
+            transaction.update(projectRef, { status: 'rejected' });
 
             for(const requestDoc of requestsSnapshot.docs) {
                  transaction.update(doc(db, "inventory_requests", requestDoc.id), { status: 'rejected' });
                  
-                 // Update user's checkout_items status
                  const requestData = requestDoc.data();
-                 const userRef = doc(db, "users", requestData.requestedById);
-                 const userDoc = await transaction.get(userRef);
-                 if (userDoc.exists()) {
+                 const userDoc = userRefsToUpdate[requestData.requestedById];
+                 if (userDoc && userDoc.exists()) {
                      const userData = userDoc.data();
                      const checkoutItems = userData.checkout_items || [];
                      const updatedItems = checkoutItems.map((item: any) => 
                          item.requestId === requestDoc.id ? { ...item, status: 'rejected' } : item
                      );
-                     transaction.update(userRef, { checkout_items: updatedItems });
+                     transaction.update(doc(db, "users", requestData.requestedById), { checkout_items: updatedItems });
                  }
             }
         });
@@ -146,7 +159,7 @@ export async function rejectProject(projectId: string) {
     }
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');
-    revalidatePath('/dashboard/projects/approvals');
+    revalidatePath('/dashboard');
 }
 
 export async function startProject(projectId: string) {

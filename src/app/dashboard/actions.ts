@@ -18,13 +18,19 @@ const serializeData = (doc: any): any => {
     const data = doc.data();
     if (!data) return null;
 
+    const serializedData: { [key: string]: any } = {};
+
     // Convert all Timestamp fields to ISO strings
     for (const key in data) {
-        if (data[key]?.toDate) {
-            data[key] = data[key].toDate().toISOString();
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            if (data[key]?.toDate) {
+                serializedData[key] = data[key].toDate().toISOString();
+            } else {
+                serializedData[key] = data[key];
+            }
         }
     }
-    return { id: doc.id, ...data };
+    return { id: doc.id, ...serializedData };
 };
 
 
@@ -72,13 +78,13 @@ export async function getPendingProjectApprovals(currentUserId: string) {
       });
   }
 
-  return { 
+  return JSON.parse(JSON.stringify({
     approvalRequests, 
     users, 
     actionItems: {
-        itemsToReturn: JSON.parse(JSON.stringify(itemsToReturn)),
-        reimbursements: JSON.parse(JSON.stringify(pendingReimbursements)),
+        itemsToReturn: itemsToReturn,
+        reimbursements: pendingReimbursements,
     },
-    inventoryItems: JSON.parse(JSON.stringify(inventoryItems)),
-  };
+    inventoryItems: inventoryItems,
+  }));
 }
