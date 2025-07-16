@@ -137,7 +137,6 @@ export default function ReimbursementsPage() {
                 <TableHeader>
                     <TableRow>
                       <TableHead>Submitted By</TableHead>
-                      <TableHead>Details</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
@@ -146,18 +145,9 @@ export default function ReimbursementsPage() {
                 <TableBody>
                     {data.reimbursements.map((req: any) => {
                       const user = data.users.find((u: any) => u.id === req.submittedById);
-                      let details = req.notes || '';
-                      if (req.newItemRequestId) {
-                          const newItem: any = data.newItems.find((i: any) => i.id === req.newItemRequestId);
-                          if (newItem) {
-                              details = `Purchase: ${newItem.itemName}`;
-                          }
-                      }
-                      
                       return (
                           <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
                             <TableCell className="font-medium">{user?.name}</TableCell>
-                            <TableCell>{details}</TableCell>
                             <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
                             <TableCell>
                                 <StatusCircle status={req.status} />
