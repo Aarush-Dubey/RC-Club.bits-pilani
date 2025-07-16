@@ -2,7 +2,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
@@ -134,7 +134,7 @@ export default function ReimbursementsPage() {
     fetchData()
   }, []);
   
-  const handleFormSubmit = () => {
+  const handleFormSubmit = useCallback(() => {
     const fetchDataAndClose = async () => {
         setLoading(true);
         let { reimbursements, users, newItems, buckets } = await getData();
@@ -144,9 +144,9 @@ export default function ReimbursementsPage() {
     fetchDataAndClose(); 
     setIsFormOpen(false);
     router.refresh(); 
-  }
+  }, [router]);
 
-  const handleActionComplete = () => {
+  const handleActionComplete = useCallback(() => {
     const fetchDataAndClose = async () => {
         setLoading(true);
         let { reimbursements, users, newItems, buckets } = await getData();
@@ -155,7 +155,7 @@ export default function ReimbursementsPage() {
     };
     fetchDataAndClose();
     setSelectedRequest(null);
-  }
+  }, []);
 
   const canApprove = currentUser?.permissions?.canApproveReimbursements;
   
