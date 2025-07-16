@@ -5,13 +5,14 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { approveInventoryRequest, rejectInventoryRequest, confirmReturn, requestInventory } from "./actions"
 import { updateItemQuantity, deleteInventoryItem } from "./manage-actions"
+import { NewInventoryItemForm } from "./new-item-form"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -764,27 +765,60 @@ const ManageLogsView = ({ data }: { data: any }) => (
     </Table>
 );
 
-const ManageStockView = ({ data, fetchData }: { data: any, fetchData: () => void }) => (
-    <Table>
-        <TableHeader>
-            <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Available</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {data.inventory.map((item: any) => (
-                <EditableInventoryItemRow
-                    key={item.id}
-                    item={item}
-                    onFormSubmit={fetchData}
-                />
-            ))}
-        </TableBody>
-    </Table>
-);
+function ManageStockView({ data, fetchData }: { data: any, fetchData: () => void }) {
+    const [isNewItemFormOpen, setIsNewItemFormOpen] = useState(false);
+
+    const handleFormSubmit = () => {
+        fetchData();
+        setIsNewItemFormOpen(false);
+    };
+    
+    return (
+        <Dialog open={isNewItemFormOpen} onOpenChange={setIsNewItemFormOpen}>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Manage Stock</CardTitle>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Item
+                        </Button>
+                    </DialogTrigger>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Item</TableHead>
+                                <TableHead>Total</TableHead>
+                                <TableHead>Available</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {data.inventory.map((item: any) => (
+                                <EditableInventoryItemRow
+                                    key={item.id}
+                                    item={item}
+                                    onFormSubmit={fetchData}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Inventory Item</DialogTitle>
+                    <DialogDescription>
+                        Add a new item to the club's inventory.
+                    </DialogDescription>
+                </DialogHeader>
+                <NewInventoryItemForm onFormSubmit={handleFormSubmit} />
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 
 export default function InventoryPage() {
