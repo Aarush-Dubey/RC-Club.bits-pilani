@@ -16,6 +16,7 @@ import type { AppUser } from '@/context/auth-context'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface ReimbursementFormProps {
   setOpen: (open: boolean) => void;
@@ -152,119 +153,121 @@ export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurem
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-       <div className="flex items-center space-x-2">
-        <Switch 
-          id="procurement-toggle" 
-          checked={isForProcurement}
-          onCheckedChange={setIsForProcurement}
-        />
-        <Label htmlFor="procurement-toggle">Is this for a pre-approved procurement item?</Label>
-      </div>
-
-      {isForProcurement && (
-        <div>
-          <Label htmlFor="procurement-item">Procurement Item *</Label>
-          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-             <SelectTrigger id="procurement-item" className="mt-1">
-                <SelectValue placeholder="Select an ordered item" />
-            </SelectTrigger>
-            <SelectContent>
-                {orderedItems.length > 0 ? orderedItems.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                        {item.itemName} (₹{(item.estimatedCost * item.quantity).toFixed(2)})
-                    </SelectItem>
-                )) : (
-                    <SelectItem value="none" disabled>No items awaiting reimbursement.</SelectItem>
-                )}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      <div>
-        <Label htmlFor="amount">Amount (INR) *</Label>
-        <Input
-          id="amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          required
-          className="mt-1"
-          disabled={isForProcurement}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g., Purchase of new servos for Project Phoenix"
-          className="mt-1"
-           disabled={isForProcurement}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="receipt-upload">Receipt Image *</Label>
-        <div className="mt-1">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="receipt-upload"
+    <ScrollArea className="h-[70vh] sm:h-auto">
+      <form onSubmit={handleSubmit} className="space-y-4 pr-4">
+        <div className="flex items-center space-x-2">
+          <Switch 
+            id="procurement-toggle" 
+            checked={isForProcurement}
+            onCheckedChange={setIsForProcurement}
           />
-          <label
-            htmlFor="receipt-upload"
-            className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
-          >
-            {preview ? (
-              <img
-                src={preview}
-                alt="Receipt Preview"
-                className="h-full w-full object-contain rounded-md p-1"
-              />
-            ) : (
-              <div className="text-center text-muted-foreground">
-                <Upload className="mx-auto h-8 w-8" />
-                <p className="mt-2 text-sm">Click to select an image</p>
-              </div>
-            )}
-          </label>
+          <Label htmlFor="procurement-toggle">Is this for a pre-approved procurement item?</Label>
         </div>
-      </div>
 
-      <Button
-        type="submit"
-        disabled={uploading}
-        className="w-full"
-      >
-        {uploading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Submitting...
-          </>
-        ) : (
-          'Submit Request'
+        {isForProcurement && (
+          <div>
+            <Label htmlFor="procurement-item">Procurement Item *</Label>
+            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+              <SelectTrigger id="procurement-item" className="mt-1">
+                  <SelectValue placeholder="Select an ordered item" />
+              </SelectTrigger>
+              <SelectContent>
+                  {orderedItems.length > 0 ? orderedItems.map(item => (
+                      <SelectItem key={item.id} value={item.id}>
+                          {item.itemName} (₹{(item.estimatedCost * item.quantity).toFixed(2)})
+                      </SelectItem>
+                  )) : (
+                      <SelectItem value="none" disabled>No items awaiting reimbursement.</SelectItem>
+                  )}
+              </SelectContent>
+            </Select>
+          </div>
         )}
-      </Button>
 
-      {message.text && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
-          {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
-          {message.type === 'success' && <CheckCircle className="h-4 w-4" />}
-          <AlertTitle>
-            {message.type === 'error' ? 'Error' : message.type === 'success' ? 'Success' : 'Info'}
-          </AlertTitle>
-          <AlertDescription>
-            {message.text}
-          </AlertDescription>
-        </Alert>
-      )}
-    </form>
+        <div>
+          <Label htmlFor="amount">Amount (INR) *</Label>
+          <Input
+            id="amount"
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            required
+            className="mt-1"
+            disabled={isForProcurement}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g., Purchase of new servos for Project Phoenix"
+            className="mt-1"
+            disabled={isForProcurement}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="receipt-upload">Receipt Image *</Label>
+          <div className="mt-1">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="receipt-upload"
+            />
+            <label
+              htmlFor="receipt-upload"
+              className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+            >
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Receipt Preview"
+                  className="h-full w-full object-contain rounded-md p-1"
+                />
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <Upload className="mx-auto h-8 w-8" />
+                  <p className="mt-2 text-sm">Click to select an image</p>
+                </div>
+              )}
+            </label>
+          </div>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={uploading}
+          className="w-full"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            'Submit Request'
+          )}
+        </Button>
+
+        {message.text && (
+          <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+            {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
+            {message.type === 'success' && <CheckCircle className="h-4 w-4" />}
+            <AlertTitle>
+              {message.type === 'error' ? 'Error' : message.type === 'success' ? 'Success' : 'Info'}
+            </AlertTitle>
+            <AlertDescription>
+              {message.text}
+            </AlertDescription>
+          </Alert>
+        )}
+      </form>
+    </ScrollArea>
   )
 }
