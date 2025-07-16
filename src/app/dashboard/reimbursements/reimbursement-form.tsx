@@ -26,7 +26,7 @@ interface ReimbursementFormProps {
   procurementBuckets: any[];
 }
 
-export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurementItems, procurementBuckets }: ReimbursementFormProps) {
+const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procurementItems, procurementBuckets }: ReimbursementFormProps) => {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -271,3 +271,5 @@ export function ReimbursementForm({ setOpen, onFormSubmit, currentUser, procurem
     </ScrollArea>
   )
 }
+
+export const ReimbursementForm = React.memo(ReimbursementFormComponent);
