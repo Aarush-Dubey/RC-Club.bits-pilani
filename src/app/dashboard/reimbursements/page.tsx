@@ -158,7 +158,7 @@ export default function ReimbursementsPage() {
               </Table>
             </CardContent>
           </Card>
-           <DialogContent className="sm:max-w-sm">
+           <DialogContent className="sm:max-w-md">
             {selectedRequest && (
               <>
                 <DialogHeader>
@@ -186,7 +186,7 @@ export default function ReimbursementsPage() {
                           alt="Receipt"
                           width={400}
                           height={400}
-                          className="rounded-md border object-contain"
+                          className="w-full h-auto rounded-md border object-contain"
                         />
                       </a>
                     ) : (
@@ -204,7 +204,7 @@ export default function ReimbursementsPage() {
            </DialogContent>
         </Dialog>
       </div>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New Reimbursement Request</DialogTitle>
         </DialogHeader>
