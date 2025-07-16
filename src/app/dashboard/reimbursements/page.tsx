@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -68,7 +69,6 @@ async function getData() {
     const newItemsSnapshot = await getDocs(collection(db, "new_item_requests"));
     const newItems = newItemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Collect all user IDs from reimbursements and new item requests (requesters and approvers)
     const userIds = [
       ...new Set([
         ...reimbursements.map((req: any) => req.submittedById),
@@ -80,7 +80,6 @@ async function getData() {
     
     let users: any[] = [];
     if (userIds.length > 0) {
-        // Chunk userIds to avoid Firestore 'in' query limit of 30
         const userChunks = [];
         for (let i = 0; i < userIds.length; i += 30) {
             userChunks.push(userIds.slice(i, i + 30));
@@ -103,6 +102,7 @@ async function getData() {
 export default function ReimbursementsPage() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], newItems: any[], buckets: any[] }>({ reimbursements: [], users: [], newItems: [], buckets: [] });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'selection' | 'procurement' | 'manual' | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -134,9 +134,16 @@ export default function ReimbursementsPage() {
 
   const onFormSubmit = useCallback(() => {
     fetchData(); 
-    setIsFormOpen(false);
-    router.refresh(); 
-  }, [fetchData, router]);
+    setFormMode(null);
+  }, [fetchData]);
+  
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+        setFormMode('selection');
+    } else {
+        setFormMode(null);
+    }
+  }
 
   const handleActionComplete = useCallback(() => {
     fetchData();
@@ -159,8 +166,48 @@ export default function ReimbursementsPage() {
     
   const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
 
+  const renderFormContent = () => {
+    switch (formMode) {
+      case 'selection':
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>New Reimbursement</DialogTitle>
+              <DialogDescription>Is this reimbursement for a pre-approved procurement item?</DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-4 pt-4">
+              <Button className="flex-1" onClick={() => setFormMode('procurement')}>Yes, it is</Button>
+              <Button className="flex-1" variant="outline" onClick={() => setFormMode('manual')}>No, it's not</Button>
+            </div>
+          </>
+        );
+      case 'procurement':
+        return <ReimbursementForm
+          key="procurement-form"
+          mode="procurement"
+          onFormSubmit={onFormSubmit}
+          currentUser={currentUser}
+          procurementItems={data.newItems}
+          procurementBuckets={data.buckets}
+          onCancel={() => setFormMode('selection')}
+        />
+      case 'manual':
+        return <ReimbursementForm
+            key="manual-form"
+            mode="manual"
+            onFormSubmit={onFormSubmit}
+            currentUser={currentUser}
+            procurementItems={[]}
+            procurementBuckets={[]}
+            onCancel={() => setFormMode('selection')}
+        />
+      default:
+        return null;
+    }
+  }
+
   return (
-    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <Dialog onOpenChange={handleOpenChange}>
        <div className="space-y-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
@@ -276,19 +323,7 @@ export default function ReimbursementsPage() {
         </Dialog>
       </div>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Reimbursement Request</DialogTitle>
-        </DialogHeader>
-        {isFormOpen && (
-            <ReimbursementForm 
-              key="reimbursement-form"
-              setOpen={setIsFormOpen} 
-              onFormSubmit={onFormSubmit}
-              currentUser={currentUser}
-              procurementItems={data.newItems}
-              procurementBuckets={data.buckets}
-            />
-        )}
+        {renderFormContent()}
       </DialogContent>
     </Dialog>
   )
