@@ -75,7 +75,16 @@ const users = [
     reimbursement: [],
     procurement: []
   },
-
+  {
+    id: 'user-7',
+    name: 'Treasurer Tom',
+    email: 'treasurer.tom@example.com',
+    role: 'treasurer',
+    joinedProjects: [],
+    checkout_items: [],
+    reimbursement: [],
+    procurement: []
+  }
 ];
 
 const projects = [
@@ -204,6 +213,21 @@ const procurementBuckets = [
         members: ['user-2', 'user-5']
     }
 ];
+
+const accounts = [
+    { id: 'acc-1', name: "Cash", group: "currentAssets", balance: 635706.56 },
+    { id: 'acc-2', name: "Perishables", group: "currentAssets", balance: 9833 },
+    { id: 'acc-3', name: "Apogee 2025", group: "currentAssets", balance: 1469 },
+    { id: 'acc-4', name: "BOSM24 Equipment", group: "currentAssets", balance: 152.6 },
+    { id: 'acc-5', name: "BOSM Receivable", group: "currentAssets", balance: 0 },
+    { id: 'acc-6', name: "Robofest Receivable", group: "currentAssets", balance: 0 },
+    { id: 'acc-7', name: "General Equipment", group: "fixedAssets", balance: 145766.55 },
+    { id: 'acc-8', name: "Robofest24 Equipment", group: "fixedAssets", balance: 134690.71 },
+    { id: 'acc-9', name: "Apogee 2025", group: "fixedAssets", balance: 32187.31 },
+    { id: 'acc-10', name: "BOSM24 Equipment", group: "fixedAssets", balance: 21234.39 },
+    { id: 'acc-11', name: "Stockholders' Equity", group: "ownersEquity", balance: -980404.12 },
+];
+
 
 const logbookData = [
     { id: 'log-1', date: '2024-06-23', assetGroup: "Owner's Equity", account: "Stockholders' Equity", description: 'Opening Balance', credit: 121517.38, balance: 121517.38 },
@@ -489,6 +513,7 @@ const seedDatabase = async () => {
     await seedCollection('new_item_requests', newItemRequests);
     await seedCollection('procurement_buckets', procurementBuckets);
     await seedCollection('reimbursements', reimbursements);
+    await seedCollection('accounts', accounts);
     await seedCollection('logbook', logbookData);
     await seedPermissions();
     await seedSystemDocs();

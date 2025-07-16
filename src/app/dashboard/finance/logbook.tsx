@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from "next/image"
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,6 @@ import { Pencil } from 'lucide-react';
 interface LogbookEntry {
     id: string;
     date: string;
-    assetGroup: string;
-    account: string;
     description: string;
     debit?: number;
     credit?: number;
@@ -32,12 +30,7 @@ const formatCurrency = (amount: number | undefined) => {
     return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
-async function getFinanceData() {
-    const logbookQuery = query(collection(db, "logbook"), orderBy("date", "desc"));
-    const logbookSnap = await getDocs(logbookQuery);
-    const logbookData = logbookSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LogbookEntry));
-    
-    // Fetch related data needed for the dialog
+async function getRelatedFinanceData() {
     const reimbursementsSnap = await getDocs(collection(db, "reimbursements"));
     const reimbursements = reimbursementsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -47,7 +40,7 @@ async function getFinanceData() {
     const newItemsSnap = await getDocs(collection(db, "new_item_requests"));
     const newItems = newItemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    return { logbookData, reimbursements, users, newItems };
+    return { reimbursements, users, newItems };
 }
 
 
@@ -57,28 +50,34 @@ export default function Logbook() {
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [allItems, setAllItems] = useState<any[]>([]);
     const [selectedLog, setSelectedLog] = useState<LogbookEntry | null>(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const { user: currentUser } = useAuth();
 
     const isTreasurer = currentUser?.role === 'treasurer';
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
+        const fetchAllData = async () => {
             try {
-                const { logbookData, reimbursements, users, newItems } = await getFinanceData();
-                setLogbookData(logbookData);
+                const { reimbursements, users, newItems } = await getRelatedFinanceData();
                 setAllReimbursements(reimbursements);
                 setAllUsers(users);
                 setAllItems(newItems);
             } catch (error) {
-                console.error("Error fetching logbook data: ", error);
-            } finally {
-                setLoading(false);
+                console.error("Error fetching related data: ", error);
             }
         };
 
-        fetchData();
+        fetchAllData(); // Fetch related data once
+
+        const logbookQuery = query(collection(db, "logbook"), orderBy("date", "desc"));
+        const unsubscribe = onSnapshot(logbookQuery, (snapshot) => {
+            const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LogbookEntry));
+            setLogbookData(logs);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const selectedReimbursement = selectedLog?.reimbursementId
@@ -114,54 +113,63 @@ export default function Logbook() {
 
     return (
         <Dialog open={!!selectedReimbursement} onOpenChange={(isOpen) => !isOpen && setSelectedLog(null)}>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Financial Logbook</CardTitle>
-                        <CardDescription>A detailed record of all financial transactions. Click on a reimbursement log for more details.</CardDescription>
-                    </div>
-                    {isTreasurer && (
-                        <Button variant="outline" size="sm">
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                        </Button>
-                    )}
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Account</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                                <TableHead className="text-right">Balance</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {logbookData.map((entry) => (
-                                <TableRow 
-                                    key={entry.id} 
-                                    onClick={() => entry.reimbursementId && setSelectedLog(entry)}
-                                    className={cn(entry.reimbursementId && "cursor-pointer hover:bg-muted/50")}
-                                >
-                                    <TableCell className="whitespace-nowrap">{entry.date}</TableCell>
-                                    <TableCell>{entry.account}</TableCell>
-                                    <TableCell>{entry.description}</TableCell>
-                                    <TableCell className={cn(
-                                        "text-right font-mono",
-                                        entry.debit && "text-green-600",
-                                        entry.credit && "text-red-600"
-                                    )}>
-                                        {entry.debit ? `+${formatCurrency(entry.debit)}` : `-${formatCurrency(entry.credit)}`}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono">{formatCurrency(entry.balance)}</TableCell>
+            <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Financial Logbook</CardTitle>
+                            <CardDescription>A detailed record of all financial transactions. Click on a reimbursement log for more details.</CardDescription>
+                        </div>
+                        {isTreasurer && (
+                             <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                </Button>
+                            </DialogTrigger>
+                        )}
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {logbookData.map((entry) => (
+                                    <TableRow 
+                                        key={entry.id} 
+                                        onClick={() => entry.reimbursementId && setSelectedLog(entry)}
+                                        className={cn(entry.reimbursementId && "cursor-pointer hover:bg-muted/50")}
+                                    >
+                                        <TableCell className="whitespace-nowrap">{entry.date}</TableCell>
+                                        <TableCell>{entry.description}</TableCell>
+                                        <TableCell className={cn(
+                                            "text-right font-mono",
+                                            entry.debit && "text-green-600",
+                                            entry.credit && "text-red-600"
+                                        )}>
+                                            {entry.debit ? `+${formatCurrency(entry.debit)}` : `-${formatCurrency(entry.credit)}`}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(entry.balance)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Logbook</DialogTitle>
+                    </DialogHeader>
+                    {/* Editor component will go here */}
+                    <p>Logbook editing form will be here.</p>
+                </DialogContent>
+            </Dialog>
             {selectedReimbursement && (
                 <DialogContent className="sm:max-w-sm">
                      <DialogHeader>
