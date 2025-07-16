@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -110,15 +109,13 @@ export default function ReimbursementsPage() {
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
        <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
-            <p className="text-muted-foreground">
-              Submit and track expense reimbursement requests.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
+          <p className="text-muted-foreground">
+            Submit and track expense reimbursement requests.
+          </p>
           <DialogTrigger asChild>
-              <Button>
+              <Button className="mt-4">
                 <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
               </Button>
             </DialogTrigger>
