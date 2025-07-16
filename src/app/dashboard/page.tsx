@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const canApproveProjects = user?.permissions?.canApproveProjects;
+  const canApproveProjects = user?.permissions?.canApproveProjects && user?.role !== 'coordinator';
   
   useEffect(() => {
     if (authLoading || !user) {
