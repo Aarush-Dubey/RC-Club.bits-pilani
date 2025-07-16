@@ -30,7 +30,7 @@ import { ReimbursementForm } from "./reimbursement-form"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { ReimbursementActions } from "./reimbursement-actions"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -189,7 +189,7 @@ export default function ReimbursementsPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Submitted by</span>
-                    <span className="font-medium">{data.users.find(u => u.id === selectedRequest.submittedById)?.name}</span>
+                    <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
                   </div>
                   <div>
                     <h4 className="font-medium mb-1">Notes/Reason</h4>
