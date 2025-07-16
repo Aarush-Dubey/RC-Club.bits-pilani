@@ -59,6 +59,7 @@ export async function approveInventoryRequest(requestId: string, adminId: string
     
     try {
         await runTransaction(db, async (transaction) => {
+            // --- 1. READ PHASE ---
             const requestRef = doc(db, "inventory_requests", requestId);
             const requestDoc = await transaction.get(requestRef);
 
@@ -70,6 +71,10 @@ export async function approveInventoryRequest(requestId: string, adminId: string
             const itemRef = doc(db, "inventory_items", requestData.itemId);
             const itemDoc = await transaction.get(itemRef);
 
+            const userRef = doc(db, "users", requestData.requestedById);
+            const userDoc = await transaction.get(userRef);
+            
+            // --- 2. VALIDATION PHASE ---
             if (!itemDoc.exists()) {
                 throw new Error(`Inventory item ${requestData.itemId} not found.`);
             }
@@ -78,33 +83,36 @@ export async function approveInventoryRequest(requestId: string, adminId: string
             if (itemData.availableQuantity < requestData.quantity) {
                 throw new Error(`Not enough stock for ${itemData.name}. Available: ${itemData.availableQuantity}, Requested: ${requestData.quantity}.`);
             }
+            if (!userDoc.exists()) {
+                // This is unlikely but good to handle
+                throw new Error(`Requesting user with ID ${requestData.requestedById} not found.`);
+            }
 
+            // --- 3. WRITE PHASE ---
             const newAvailableQuantity = itemData.availableQuantity - requestData.quantity;
             const newCheckedOutQuantity = itemData.checkedOutQuantity + requestData.quantity;
             
+            // Update inventory item
             transaction.update(itemRef, {
                 availableQuantity: newAvailableQuantity,
                 checkedOutQuantity: newCheckedOutQuantity,
             });
 
+            // Update inventory request
             transaction.update(requestRef, { 
                 status: 'fulfilled',
                 fulfilledAt: serverTimestamp(),
                 fulfilledById: adminId,
-                checkedOutToId: requestData.requestedById, // Assign to the requester
+                checkedOutToId: requestData.requestedById,
             });
 
-            // Update user's checkout_items status
-            const userRef = doc(db, "users", requestData.requestedById);
-            const userDoc = await transaction.get(userRef);
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const checkoutItems = userData.checkout_items || [];
-                const updatedItems = checkoutItems.map((item: any) => 
-                    item.requestId === requestId ? { ...item, status: 'fulfilled' } : item
-                );
-                transaction.update(userRef, { checkout_items: updatedItems });
-            }
+            // Update user's checkout_items array status
+            const userData = userDoc.data();
+            const checkoutItems = userData.checkout_items || [];
+            const updatedItems = checkoutItems.map((item: any) => 
+                item.requestId === requestId ? { ...item, status: 'fulfilled' } : item
+            );
+            transaction.update(userRef, { checkout_items: updatedItems });
         });
     } catch (error) {
         console.error("Transaction failed: ", error);
