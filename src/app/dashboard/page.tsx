@@ -17,7 +17,7 @@ type DashboardData = {
     approvalRequests: Project[],
     users: Record<string, User>,
     actionItems: {
-        itemsToReturn: any[],
+        itemsOnLoan: any[],
         reimbursements: any[]
     },
     inventoryItems: Record<string, any>
@@ -84,7 +84,15 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="flex flex-col gap-8 lg:col-span-2">
-            {data && <ActionItems data={data.actionItems} inventoryItems={data.inventoryItems} />}
+            {loading ? (
+                <Card>
+                    <CardHeader><Skeleton className='h-8 w-1/3' /></CardHeader>
+                    <CardContent className='space-y-4'>
+                        <Skeleton className='h-12 w-full' />
+                        <Skeleton className='h-12 w-full' />
+                    </CardContent>
+                </Card>
+            ) : data && <ActionItems data={data.actionItems} inventoryItems={data.inventoryItems} />}
         </div>
         <div className="flex flex-col gap-8">
             {canApproveProjects && (

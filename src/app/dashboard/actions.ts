@@ -65,10 +65,12 @@ export async function getPendingProjectApprovals(currentUserId: string) {
   const currentUserDoc = await getDoc(doc(db, "users", currentUserId));
   const currentUserData = currentUserDoc.exists() ? currentUserDoc.data() : { checkout_items: [], reimbursement: [] };
 
-  const itemsToReturn = currentUserData.checkout_items?.filter((item: any) => item.status === 'pending_return') || [];
+  // Get items that are currently checked out to the user ('fulfilled') or are pending return
+  const itemsOnLoan = currentUserData.checkout_items?.filter((item: any) => ['fulfilled', 'pending_return'].includes(item.status)) || [];
   const pendingReimbursements = currentUserData.reimbursement?.filter((item: any) => ['pending', 'approved'].includes(item.status)) || [];
 
-  const inventoryItemIds = [...new Set(itemsToReturn.map((item: any) => item.itemId).filter(Boolean))];
+  // Get the full inventory item details for the items on loan
+  const inventoryItemIds = [...new Set(itemsOnLoan.map((item: any) => item.itemId).filter(Boolean))];
   const inventoryItems: Record<string, any> = {};
   if (inventoryItemIds.length > 0) {
       const itemsQuery = query(collection(db, "inventory_items"), where("id", "in", inventoryItemIds));
@@ -82,7 +84,7 @@ export async function getPendingProjectApprovals(currentUserId: string) {
     approvalRequests, 
     users, 
     actionItems: {
-        itemsToReturn: itemsToReturn,
+        itemsOnLoan: itemsOnLoan,
         reimbursements: pendingReimbursements,
     },
     inventoryItems: inventoryItems,

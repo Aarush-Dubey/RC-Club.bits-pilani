@@ -12,22 +12,23 @@ import {
   ArrowRight,
   HandCoins,
   PackageCheck,
+  PackageOpen,
   Undo2,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 
 type ActionItemsProps = {
   data: {
-    itemsToReturn: any[]
+    itemsOnLoan: any[]
     reimbursements: any[]
   }
   inventoryItems: Record<string, any>
 }
 
 export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
-  const hasItemsToReturn = data.itemsToReturn.length > 0
+  const hasItemsOnLoan = data.itemsOnLoan.length > 0
   const hasPendingReimbursements = data.reimbursements.length > 0
-  const hasActions = hasItemsToReturn || hasPendingReimbursements
+  const hasActions = hasItemsOnLoan || hasPendingReimbursements
 
   return (
     <Card>
@@ -40,23 +41,28 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
       <CardContent>
         {hasActions ? (
           <ul className="space-y-4">
-            {data.itemsToReturn.map((item) => {
+            {data.itemsOnLoan.map((item) => {
               const inventoryItem = inventoryItems[item.itemId]
               if (!inventoryItem || inventoryItem.isPerishable) return null
+
+              const isPendingReturn = item.status === 'pending_return'
+              const Icon = isPendingReturn ? Undo2 : PackageOpen
+              const iconColor = isPendingReturn ? 'text-orange-500' : 'text-blue-500'
+
               return (
                 <li
                   key={item.requestId}
                   className="flex items-center justify-between gap-4 rounded-md border p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <Undo2 className="h-5 w-5 text-blue-500" />
+                    <Icon className={`h-5 w-5 ${iconColor}`} />
                     <div>
                       <p className="font-medium">
-                        Return:{' '}
+                        {isPendingReturn ? 'Return: ' : 'On Loan: '}
                         {inventoryItem.name} (x{item.quantity})
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Project: {item.projectId}
+                        Project: {item.projectName || 'General Use'}
                       </p>
                     </div>
                   </div>
