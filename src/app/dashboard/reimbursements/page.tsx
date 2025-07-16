@@ -31,6 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 import { ReimbursementActions } from "./reimbursement-actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -164,36 +165,38 @@ export default function ReimbursementsPage() {
                 <DialogHeader>
                     <DialogTitle>Reimbursement Details</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Amount</span>
-                    <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
+                <ScrollArea className="max-h-[70vh] pr-6">
+                  <div className="space-y-4 py-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Amount</span>
+                      <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Submitted by</span>
+                      <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-1">Notes/Reason</h4>
+                      <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-1">Receipt</h4>
+                      {selectedRequest.proofImageUrls?.[0] ? (
+                        <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
+                          <Image 
+                            src={selectedRequest.proofImageUrls[0]}
+                            alt="Receipt"
+                            width={400}
+                            height={400}
+                            className="w-full h-auto rounded-md border object-contain"
+                          />
+                        </a>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Submitted by</span>
-                    <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Notes/Reason</h4>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Receipt</h4>
-                    {selectedRequest.proofImageUrls?.[0] ? (
-                      <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
-                        <Image 
-                          src={selectedRequest.proofImageUrls[0]}
-                          alt="Receipt"
-                          width={400}
-                          height={400}
-                          className="w-full h-auto rounded-md border object-contain"
-                        />
-                      </a>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
-                    )}
-                  </div>
-                </div>
+                </ScrollArea>
                  {canApprove && (
                     <div className="pt-4 border-t">
                         <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
