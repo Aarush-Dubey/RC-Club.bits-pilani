@@ -52,14 +52,18 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
     return false;
   });
 
+  const selectedItem = isForProcurement ? orderedItems.find(item => item.id === selectedItemId) : null;
+  const shouldLockFields = !!selectedItem;
+
+
   useEffect(() => {
     if (isForProcurement && selectedItemId) {
-      const selectedItem = orderedItems.find(item => item.id === selectedItemId);
-      if (selectedItem) {
-        setAmount((selectedItem.estimatedCost * selectedItem.quantity).toString());
-        setNotes(`Reimbursement for: ${selectedItem.itemName} (x${selectedItem.quantity})`);
+      const item = orderedItems.find(item => item.id === selectedItemId);
+      if (item) {
+        setAmount((item.estimatedCost * item.quantity).toString());
+        setNotes(`Reimbursement for: ${item.itemName} (x${item.quantity})`);
       }
-    } else {
+    } else if (!isForProcurement) {
       setAmount("");
       setNotes("");
     }
@@ -159,7 +163,12 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
           <Switch 
             id="procurement-toggle" 
             checked={isForProcurement}
-            onCheckedChange={setIsForProcurement}
+            onCheckedChange={(checked) => {
+              setIsForProcurement(checked);
+              if (!checked) {
+                setSelectedItemId(""); // Reset selection when toggling off
+              }
+            }}
           />
           <Label htmlFor="procurement-toggle">Is this for a pre-approved procurement item?</Label>
         </div>
@@ -194,7 +203,7 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
             placeholder="0.00"
             required
             className="mt-1"
-            disabled={isForProcurement}
+            disabled={shouldLockFields}
           />
         </div>
 
@@ -206,7 +215,7 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g., Purchase of new servos for Project Phoenix"
             className="mt-1"
-            disabled={isForProcurement}
+            disabled={shouldLockFields}
           />
         </div>
 
