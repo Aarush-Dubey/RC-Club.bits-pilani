@@ -46,12 +46,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const canApproveProjects = user?.permissions?.canApproveProjects;
-  const canManageClub = user?.permissions?.canManageUsers;
   
-  // DEV BOX: Display canApproveProjects permission for this page
-  console.log('User has "canApproveProjects" permission:', !!canApproveProjects);
-
-
   useEffect(() => {
     if (authLoading || !user) {
       setLoading(false);
@@ -78,10 +73,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-       <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md">
-            <p className="font-bold">Hi from AI</p>
-            <p>Permission to view 'Manage Club' button: {canManageClub ? 'true' : 'false'}</p>
-       </div>
        <div>
         <h2 className="text-3xl font-bold tracking-tight font-headline">
           Welcome, {user?.displayName || 'Club Member'}!
