@@ -303,6 +303,7 @@ const logbookData = [
 
 const permissionsByRole = {
   admin: {
+    canHoldKey: true,
     canManageUsers: true,
     canViewAllUsers: true,
     canCreateProjects: true,
@@ -324,6 +325,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   coordinator: {
+    canHoldKey: true,
     canManageUsers: true,
     canViewAllUsers: true,
     canCreateProjects: true,
@@ -345,6 +347,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   treasurer: {
+    canHoldKey: true,
     canManageUsers: false,
     canViewAllUsers: true,
     canCreateProjects: true,
@@ -366,6 +369,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   inventory_manager: {
+    canHoldKey: true,
     canManageUsers: false,
     canViewAllUsers: false,
     canCreateProjects: true,
@@ -387,6 +391,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   drone_lead: {
+    canHoldKey: true,
     canManageUsers: false,
     canViewAllUsers: false,
     canCreateProjects: true,
@@ -408,6 +413,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   plane_lead: {
+    canHoldKey: true,
     canManageUsers: false,
     canViewAllUsers: false,
     canCreateProjects: true,
@@ -429,6 +435,7 @@ const permissionsByRole = {
     canCreateBuckets: true,
   },
   member: {
+    canHoldKey: false,
     canManageUsers: false,
     canViewAllUsers: false,
     canCreateProjects: true,

@@ -10,6 +10,8 @@ import {
   where,
   runTransaction,
   serverTimestamp,
+  arrayUnion,
+  limit,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Project, User } from './projects/project-card'
@@ -130,10 +132,17 @@ export async function getSystemStatus() {
     const keyHolderIds = Object.values(keyStatusData)
         .map((key: any) => key.holderId)
         .filter(Boolean);
+    
+    // Also get users from recent transfers to avoid extra fetches on client
+    const recentTransferUserIds = (keyStatusData.recentTransfers || [])
+        .flatMap((t: any) => [t.fromId, t.toId])
+        .filter(Boolean);
 
+    const allUserIds = [...new Set([...keyHolderIds, ...recentTransferUserIds])];
+    
     const users: Record<string, User> = {};
-    if (keyHolderIds.length > 0) {
-        const usersQuery = query(collection(db, "users"), where("id", "in", keyHolderIds));
+    if (allUserIds.length > 0) {
+        const usersQuery = query(collection(db, "users"), where("id", "in", allUserIds));
         const usersSnap = await getDocs(usersQuery);
         usersSnap.docs.forEach(doc => {
             users[doc.id] = serializeData(doc) as User;
@@ -145,10 +154,18 @@ export async function getSystemStatus() {
         .map(([key, value]: [string, any]) => ({
             keyName: key,
             holder: users[value.holderId]?.name || 'Unknown',
+            holderId: value.holderId,
             heldSince: value.heldSince?.toDate ? value.heldSince.toDate().toISOString() : null,
         }));
     
-    return JSON.parse(JSON.stringify({ roomStatus, keyStatus }));
+    const recentTransfers = (keyStatusData.recentTransfers || []).map((t: any) => ({
+        ...t,
+        fromName: users[t.fromId]?.name || 'Unknown',
+        toName: users[t.toId]?.name || 'Unknown',
+        timestamp: t.timestamp?.toDate ? t.timestamp.toDate().toISOString() : null,
+    })).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    return JSON.parse(JSON.stringify({ roomStatus, keyStatus, recentTransfers }));
 }
 
 export async function toggleRoomStatus(userId: string) {
@@ -169,4 +186,74 @@ export async function toggleRoomStatus(userId: string) {
     });
 
     revalidatePath('/dashboard');
+}
+
+export async function getEligibleKeyHolders() {
+    // This is not perfectly secure, as a user could have their role changed.
+    // The server action `transferKey` does the actual permission check.
+    const rolesWithPermissionQuery = query(
+        collection(db, 'permissions'),
+        where('canHoldKey', '==', true)
+    );
+    const rolesSnapshot = await getDocs(rolesWithPermissionQuery);
+    const eligibleRoles = rolesSnapshot.docs.map(doc => doc.id);
+
+    if (eligibleRoles.length === 0) return [];
+    
+    const usersQuery = query(collection(db, 'users'), where('role', 'in', eligibleRoles));
+    const usersSnapshot = await getDocs(usersQuery);
+    
+    return usersSnapshot.docs.map(serializeData);
+}
+
+export async function transferKey(keyName: string, fromUserId: string, toUserId: string) {
+    if (!fromUserId || !toUserId || !keyName) {
+        throw new Error("Missing required information for key transfer.");
+    }
+
+    const keyStatusRef = doc(db, 'system', 'key_status');
+    const toUserRef = doc(db, 'users', toUserId);
+
+    await runTransaction(db, async (transaction) => {
+        // --- 1. Read Phase ---
+        const toUserDoc = await transaction.get(toUserRef);
+        const keyStatusDoc = await transaction.get(keyStatusRef);
+
+        // --- 2. Validation Phase ---
+        if (!toUserDoc.exists()) {
+            throw new Error("Recipient user not found.");
+        }
+        
+        const toUserData = toUserDoc.data();
+        const toUserRole = toUserData.role || 'member';
+        const permissionsDoc = await getDoc(doc(db, "permissions", toUserRole));
+
+        if (!permissionsDoc.exists() || !permissionsDoc.data()?.canHoldKey) {
+            throw new Error(`User ${toUserData.name} does not have permission to hold keys.`);
+        }
+        
+        if (!keyStatusDoc.exists()) {
+            throw new Error("Key status document not found.");
+        }
+        const keyStatusData = keyStatusDoc.data();
+        if (keyStatusData[keyName]?.holderId !== fromUserId) {
+            throw new Error("You are not the current holder of this key.");
+        }
+
+        // --- 3. Write Phase ---
+        const newTransferLog = {
+            keyName,
+            fromId: fromUserId,
+            toId: toUserId,
+            timestamp: serverTimestamp()
+        };
+
+        transaction.update(keyStatusRef, {
+            [`${keyName}.holderId`]: toUserId,
+            [`${keyName}.heldSince`]: serverTimestamp(),
+            recentTransfers: arrayUnion(newTransferLog)
+        });
+    });
+
+    revalidatePath("/dashboard");
 }

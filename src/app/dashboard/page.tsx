@@ -31,7 +31,13 @@ type SystemStatusData = {
         updatedBy: string | null,
         updatedAt: string | null 
     },
-    keyStatus: { keyName: string, holder: string, heldSince: string | null }[]
+    keyStatus: { 
+        keyName: string, 
+        holder: string, 
+        holderId: string,
+        heldSince: string | null 
+    }[],
+    recentTransfers: any[]
 }
 
 const ApprovalListSkeleton = () => (
@@ -118,7 +124,11 @@ export default function DashboardPage() {
                         updatedAt={systemStatus.roomStatus.updatedAt}
                         onStatusChange={fetchData}
                     />
-                    <KeyStatus keys={systemStatus.keyStatus} />
+                    <KeyStatus 
+                        keys={systemStatus.keyStatus} 
+                        recentTransfers={systemStatus.recentTransfers}
+                        onStatusChange={fetchData}
+                    />
                 </>
             )}
         </div>
