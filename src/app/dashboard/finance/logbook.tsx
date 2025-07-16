@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface LogbookEntry {
     id: string;
@@ -71,11 +72,9 @@ export default function Logbook() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Date</TableHead>
-                            <TableHead>Asset Group</TableHead>
                             <TableHead>Account</TableHead>
                             <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Debit</TableHead>
-                            <TableHead className="text-right">Credit</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
                             <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -83,11 +82,15 @@ export default function Logbook() {
                         {logbookData.map((entry) => (
                             <TableRow key={entry.id}>
                                 <TableCell className="whitespace-nowrap">{entry.date}</TableCell>
-                                <TableCell>{entry.assetGroup}</TableCell>
                                 <TableCell>{entry.account}</TableCell>
                                 <TableCell>{entry.description}</TableCell>
-                                <TableCell className="text-right font-mono">{formatCurrency(entry.debit)}</TableCell>
-                                <TableCell className="text-right font-mono">{formatCurrency(entry.credit)}</TableCell>
+                                <TableCell className={cn(
+                                    "text-right font-mono",
+                                    entry.debit && "text-green-600",
+                                    entry.credit && "text-red-600"
+                                )}>
+                                    {entry.debit ? `+${formatCurrency(entry.debit)}` : `-${formatCurrency(entry.credit)}`}
+                                </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(entry.balance)}</TableCell>
                             </TableRow>
                         ))}
