@@ -116,12 +116,12 @@ export default function ReimbursementsPage() {
           <p className="text-muted-foreground">
             Submit and track expense reimbursement requests.
           </p>
-          <DialogTrigger asChild>
-              <Button className="mt-4">
-                <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
-              </Button>
-            </DialogTrigger>
         </div>
+        <DialogTrigger asChild>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
+            </Button>
+        </DialogTrigger>
         
         <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
           <Card>
@@ -159,44 +159,42 @@ export default function ReimbursementsPage() {
               </Table>
             </CardContent>
           </Card>
-           <DialogContent className="sm:max-w-md">
+           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             {selectedRequest && (
               <>
                 <DialogHeader>
                     <DialogTitle>Reimbursement Details</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh] pr-6">
-                  <div className="space-y-4 py-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Amount</span>
-                      <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Submitted by</span>
-                      <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-1">Notes/Reason</h4>
-                      <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-1">Receipt</h4>
-                      {selectedRequest.proofImageUrls?.[0] ? (
-                        <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
-                          <Image 
-                            src={selectedRequest.proofImageUrls[0]}
-                            alt="Receipt"
-                            width={400}
-                            height={400}
-                            className="w-full h-auto rounded-md border object-contain"
-                          />
-                        </a>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
-                      )}
-                    </div>
+                <div className="space-y-4 py-4 pr-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-mono font-bold">₹{selectedRequest.amount.toFixed(2)}</span>
                   </div>
-                </ScrollArea>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Submitted by</span>
+                    <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Notes/Reason</h4>
+                    <p className="text-sm text-muted-foreground">{selectedRequest.notes || 'No notes provided.'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Receipt</h4>
+                    {selectedRequest.proofImageUrls?.[0] ? (
+                      <a href={selectedRequest.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
+                        <Image 
+                          src={selectedRequest.proofImageUrls[0]}
+                          alt="Receipt"
+                          width={400}
+                          height={400}
+                          className="w-full h-auto rounded-md border object-contain"
+                        />
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                    )}
+                  </div>
+                </div>
                  {canApprove && (
                     <div className="pt-4 border-t">
                         <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
@@ -207,7 +205,7 @@ export default function ReimbursementsPage() {
            </DialogContent>
         </Dialog>
       </div>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New Reimbursement Request</DialogTitle>
         </DialogHeader>
