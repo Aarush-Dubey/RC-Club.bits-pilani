@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,10 +21,11 @@ import {
 } from "@/components/ui/form";
 import { addInventoryItem } from "./add-item-actions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { generateItemDescription } from "@/ai/flows/generate-item-description";
 
 const formSchema = z.object({
     name: z.string().min(3, "Item name must be at least 3 characters long."),
-    description: z.string().min(10, "Please provide a brief description.").optional(),
+    description: z.string().optional(),
     totalQuantity: z.coerce.number().min(1, "Quantity must be at least 1."),
     costPerUnit: z.coerce.number().min(0, "Cost must be a positive number."),
     isPerishable: z.boolean().default(false),
@@ -38,6 +39,7 @@ interface NewInventoryItemFormProps {
 
 export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -50,6 +52,36 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
       isPerishable: false,
     },
   });
+
+  const handleEnhanceDescription = async () => {
+    const itemName = form.getValues("name");
+    if (!itemName) {
+      toast({
+        variant: "destructive",
+        title: "Item Name Required",
+        description: "Please enter an item name before generating a description.",
+      });
+      return;
+    }
+    setIsEnhancing(true);
+    try {
+      const result = await generateItemDescription({ itemName });
+      form.setValue("description", result.description, { shouldValidate: true });
+      toast({
+        title: "Description Generated",
+        description: "The description has been filled in by AI.",
+      });
+    } catch (error) {
+      console.error("Error generating description:", error);
+      toast({
+        variant: "destructive",
+        title: "Generation Failed",
+        description: "Could not generate a description. Please try again.",
+      });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsSubmitting(true);
@@ -128,10 +160,16 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
           name="description"
           render={({ field }) => (
             <FormItem>
-                <FormLabel>Description (Optional)</FormLabel>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Description (Optional)</FormLabel>
+                   <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceDescription} disabled={isEnhancing || isSubmitting}>
+                      {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                      Enhance with AI
+                  </Button>
+                </div>
               <FormControl>
                 <Textarea
-                  placeholder="Provide a brief description of the item."
+                  placeholder="Provide a brief description of the item, or let AI generate one."
                   {...field}
                   rows={3}
                 />
@@ -159,8 +197,8 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
+          {(isSubmitting || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Add Item to Inventory
         </Button>
       </form>
