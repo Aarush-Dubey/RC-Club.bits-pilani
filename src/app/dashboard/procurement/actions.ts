@@ -42,6 +42,7 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
     }
 
     const batch = writeBatch(db);
+    const userRef = doc(db, "users", requestedById);
 
     for (const request of requests) {
         const requestRef = doc(collection(db, "new_item_requests"));
@@ -59,6 +60,15 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
         };
 
         batch.set(requestRef, requestData);
+        
+        // Denormalize by adding a reference to the user's procurement list
+        batch.update(userRef, {
+            procurement: arrayUnion({
+                itemName: request.itemName,
+                status: "pending",
+                bucketId: bucketId || null
+            })
+        });
     }
     
     if (bucketId) {
