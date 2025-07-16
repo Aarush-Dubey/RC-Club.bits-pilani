@@ -3,17 +3,27 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from "next/image"
-import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { addLogbookEntry, deleteLogbookEntry, updateLogbookEntry } from './actions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { format } from 'date-fns';
 
 interface LogbookEntry {
     id: string;
@@ -23,6 +33,8 @@ interface LogbookEntry {
     credit?: number;
     balance: number;
     reimbursementId?: string;
+    assetGroup: string;
+    account: string;
 }
 
 const formatCurrency = (amount: number | undefined) => {
@@ -43,6 +55,214 @@ async function getRelatedFinanceData() {
     return { reimbursements, users, newItems };
 }
 
+const logFormSchema = z.object({
+    date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format." }),
+    description: z.string().min(3, "Description is required."),
+    assetGroup: z.string().min(3, "Asset group is required."),
+    account: z.string().min(3, "Account is required."),
+    debit: z.coerce.number().optional(),
+    credit: z.coerce.number().optional(),
+}).refine(data => data.debit || data.credit, {
+    message: "Either debit or credit must have a value.",
+    path: ["debit"],
+});
+type LogFormValues = z.infer<typeof logFormSchema>;
+
+const LogEditorForm = ({
+    log,
+    onSuccess,
+    onCancel
+}: {
+    log?: LogbookEntry | null,
+    onSuccess: () => void,
+    onCancel: () => void
+}) => {
+    const { toast } = useToast();
+    const form = useForm<LogFormValues>({
+        resolver: zodResolver(logFormSchema),
+        defaultValues: log ? {
+            ...log,
+            date: log.date,
+        } : {
+            date: format(new Date(), 'yyyy-MM-dd'),
+            description: "",
+            assetGroup: "",
+            account: "",
+            debit: 0,
+            credit: 0
+        }
+    });
+
+    const onSubmit: SubmitHandler<LogFormValues> = async (values) => {
+        try {
+            if (log) {
+                await updateLogbookEntry(log.id, values);
+                toast({ title: "Success", description: "Log entry updated." });
+            } else {
+                await addLogbookEntry(values);
+                toast({ title: "Success", description: "New log entry added." });
+            }
+            onSuccess();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+        }
+    }
+
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="date" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="assetGroup" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Asset Group</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                 <FormField control={form.control} name="account" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Account</FormLabel>
+                        <FormControl><Input {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <div className="grid grid-cols-2 gap-4">
+                     <FormField control={form.control} name="debit" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Debit</FormLabel>
+                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                     <FormField control={form.control} name="credit" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Credit</FormLabel>
+                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                 <DialogFooter className="pt-4 border-t gap-2 sm:justify-between">
+                    <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                     <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {log ? 'Update Entry' : 'Add Entry'}
+                    </Button>
+                </DialogFooter>
+            </form>
+        </Form>
+    )
+}
+
+const LogbookEditor = ({ logs, onUpdate, closeDialog }: { logs: LogbookEntry[], onUpdate: () => void, closeDialog: () => void }) => {
+    const [selectedLog, setSelectedLog] = useState<LogbookEntry | null>(null);
+    const [isAdding, setIsAdding] = useState(false);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const { toast } = useToast();
+    
+    const handleDelete = async (logId: string) => {
+        setIsDeleting(logId);
+        try {
+            await deleteLogbookEntry(logId);
+            toast({ title: "Success", description: "Log entry deleted." });
+            onUpdate();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+        } finally {
+            setIsDeleting(null);
+        }
+    }
+
+    if (selectedLog || isAdding) {
+        return (
+            <div>
+                <DialogHeader>
+                    <DialogTitle>{isAdding ? 'Add New Log Entry' : 'Edit Log Entry'}</DialogTitle>
+                </DialogHeader>
+                 <div className="py-4">
+                    <LogEditorForm 
+                        log={selectedLog} 
+                        onSuccess={() => {
+                            onUpdate();
+                            setSelectedLog(null);
+                            setIsAdding(false);
+                        }}
+                        onCancel={() => {
+                            setSelectedLog(null);
+                            setIsAdding(false);
+                        }}
+                    />
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <>
+            <DialogHeader>
+                <DialogTitle>Edit Logbook</DialogTitle>
+                <DialogDescription>Add, remove, or update financial logbook entries.</DialogDescription>
+            </DialogHeader>
+             <div className="flex-grow overflow-hidden flex flex-col">
+                <ScrollArea className="flex-grow pr-6 -mr-6">
+                    <div className="space-y-2">
+                        {logs.map(log => (
+                            <div key={log.id} className="flex items-center justify-between gap-2 p-2 rounded-md hover:bg-muted/50">
+                                <div className="flex-1 truncate">
+                                    <span className="font-medium">{log.description}</span>
+                                    <p className="text-xs text-muted-foreground">{log.date} - {formatCurrency(log.balance)}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                     <Button variant="ghost" size="icon" onClick={() => setSelectedLog(log)}>
+                                        <Pencil className="h-4 w-4"/>
+                                     </Button>
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" disabled={!!isDeleting}>
+                                                {isDeleting === log.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <p>Deleting this entry may affect the balance of subsequent entries. This action cannot be undone.</p>
+                                            </AlertDialogHeader>
+                                             <DialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(log.id)}>Confirm Delete</AlertDialogAction>
+                                            </DialogFooter>
+                                        </AlertDialogContent>
+                                     </AlertDialog>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+             </div>
+             <DialogFooter className="pt-4 border-t gap-2">
+                 <Button variant="ghost" className="mr-auto" onClick={() => setIsAdding(true)}>
+                    <Plus className="mr-2 h-4 w-4"/>
+                    New Entry
+                 </Button>
+                 <Button variant="outline" onClick={closeDialog}>Close</Button>
+            </DialogFooter>
+        </>
+    )
+}
+
 
 export default function Logbook() {
     const [logbookData, setLogbookData] = useState<LogbookEntry[]>([]);
@@ -55,20 +275,19 @@ export default function Logbook() {
     const { user: currentUser } = useAuth();
 
     const isTreasurer = currentUser?.role === 'treasurer';
+    
+    const fetchData = () => {
+         getRelatedFinanceData().then(({ reimbursements, users, newItems }) => {
+            setAllReimbursements(reimbursements);
+            setAllUsers(users);
+            setAllItems(newItems);
+        }).catch(error => {
+            console.error("Error fetching related data: ", error);
+        });
+    }
 
     useEffect(() => {
-        const fetchAllData = async () => {
-            try {
-                const { reimbursements, users, newItems } = await getRelatedFinanceData();
-                setAllReimbursements(reimbursements);
-                setAllUsers(users);
-                setAllItems(newItems);
-            } catch (error) {
-                console.error("Error fetching related data: ", error);
-            }
-        };
-
-        fetchAllData(); // Fetch related data once
+        fetchData();
 
         const logbookQuery = query(collection(db, "logbook"), orderBy("date", "desc"));
         const unsubscribe = onSnapshot(logbookQuery, (snapshot) => {
@@ -162,12 +381,8 @@ export default function Logbook() {
                         </Table>
                     </CardContent>
                 </Card>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Logbook</DialogTitle>
-                    </DialogHeader>
-                    {/* Editor component will go here */}
-                    <p>Logbook editing form will be here.</p>
+                <DialogContent className="h-[90vh] flex flex-col">
+                    <LogbookEditor logs={logbookData} onUpdate={fetchData} closeDialog={() => setIsEditorOpen(false)} />
                 </DialogContent>
             </Dialog>
             {selectedReimbursement && (
