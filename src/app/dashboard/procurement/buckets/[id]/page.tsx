@@ -54,11 +54,12 @@ async function getInitialBucketData(bucketId: string) {
 }
 
 export default async function BucketDetailsPage({ params }: { params: { id: string } }) {
-    const data = await getInitialBucketData(params.id);
+    const { id } = params;
+    const data = await getInitialBucketData(id);
 
     if (!data) {
         notFound();
     }
 
-    return <BucketDetailsClient initialData={data} bucketId={params.id} />;
+    return <BucketDetailsClient initialData={data} bucketId={id} />;
 }
