@@ -52,10 +52,6 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
     return false;
   });
 
-  const selectedItem = isForProcurement ? orderedItems.find(item => item.id === selectedItemId) : null;
-  const shouldLockFields = !!selectedItem;
-
-
   useEffect(() => {
     if (isForProcurement && selectedItemId) {
       const item = orderedItems.find(item => item.id === selectedItemId);
@@ -203,7 +199,7 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
             placeholder="0.00"
             required
             className="mt-1"
-            disabled={shouldLockFields}
+            disabled={isForProcurement}
           />
         </div>
 
@@ -215,7 +211,7 @@ const ReimbursementFormComponent = ({ setOpen, onFormSubmit, currentUser, procur
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g., Purchase of new servos for Project Phoenix"
             className="mt-1"
-            disabled={shouldLockFields}
+            disabled={isForProcurement}
           />
         </div>
 
