@@ -62,6 +62,9 @@ function FeedItem({ item, users, inventoryItems }: { item: any, users: Record<st
       break
   }
 
+  // Ensure createdAt is a Date object before formatting
+  const createdAtDate = item.createdAt ? new Date(item.createdAt) : new Date();
+
   return (
     <div className="flex items-start gap-4">
        <Avatar className="h-9 w-9 border">
@@ -74,7 +77,7 @@ function FeedItem({ item, users, inventoryItems }: { item: any, users: Record<st
           {text}
         </p>
         <Link href={link} className="text-xs text-muted-foreground hover:underline">
-          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+          {formatDistanceToNow(createdAtDate, { addSuffix: true })}
         </Link>
       </div>
     </div>
