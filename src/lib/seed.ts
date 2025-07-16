@@ -3,12 +3,78 @@ import { db } from './firebase';
 import { collection, doc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 
 const users = [
-  { id: 'user-1', name: 'Alex Doe', email: 'alex.doe@example.com', role: 'admin', joinedProjects: ['proj-1', 'proj-3'] },
-  { id: 'user-2', name: 'Jane Smith', email: 'jane.smith@example.com', role: 'coordinator', joinedProjects: ['proj-2', 'proj-4'] },
-  { id: 'user-3', name: 'Sam Wilson', email: 'sam.wilson@example.com', role: 'inventory_manager', joinedProjects: ['proj-2'] },
-  { id: 'user-4', name: 'Peter Jones', email: 'peter.jones@example.com', role: 'drone_lead', joinedProjects: ['proj-1', 'proj-4'] },
-  { id: 'user-5', name: 'Mary Jane', email: 'mary.jane@example.com', role: 'plane_lead', joinedProjects: ['proj-1', 'proj-3'] },
-  { id: 'user-6', name: 'Member Fresh', email: 'member.fresh@example.com', role: 'member', joinedProjects: [] },
+  { 
+    id: 'user-1', 
+    name: 'Alex Doe', 
+    email: 'alex.doe@example.com', 
+    role: 'admin', 
+    joinedProjects: ['proj-1', 'proj-3'],
+    checkout_items: [],
+    reimbursement: [],
+    procurement: []
+  },
+  { 
+    id: 'user-2', 
+    name: 'Jane Smith', 
+    email: 'jane.smith@example.com', 
+    role: 'coordinator', 
+    joinedProjects: ['proj-2', 'proj-4'],
+    checkout_items: [],
+    reimbursement: [],
+    procurement: []
+  },
+  { 
+    id: 'user-3', 
+    name: 'Sam Wilson', 
+    email: 'sam.wilson@example.com', 
+    role: 'inventory_manager', 
+    joinedProjects: ['proj-2'],
+    checkout_items: [
+        { itemName: 'iMAX B6 Charger', quantity: 1, status: 'fulfilled', projectId: 'proj-2' }
+    ],
+    reimbursement: [],
+    procurement: []
+  },
+  { 
+    id: 'user-4', 
+    name: 'Peter Jones', 
+    email: 'peter.jones@example.com', 
+    role: 'drone_lead', 
+    joinedProjects: ['proj-1', 'proj-4'],
+    checkout_items: [
+        { itemName: 'Lipo Battery 4S 1500mAh', quantity: 2, status: 'pending_return', projectId: 'proj-1' }
+    ],
+    reimbursement: [
+        { amount: 23.50, status: 'pending', notes: 'Reimbursement for: 3D Printer Filament' }
+    ],
+    procurement: [
+        { itemName: '3D Printer Filament (PLA, 1kg)', status: 'ordered', bucketId: null }
+    ]
+  },
+  { 
+    id: 'user-5', 
+    name: 'Mary Jane', 
+    email: 'mary.jane@example.com', 
+    role: 'plane_lead', 
+    joinedProjects: ['proj-1', 'proj-3'],
+    checkout_items: [
+        { itemName: 'FPV Goggles Eachine EV800D', quantity: 1, status: 'fulfilled', projectId: 'proj-3' }
+    ],
+    reimbursement: [
+        { amount: 15.00, status: 'approved', notes: 'Travel for parts pickup' }
+    ],
+    procurement: []
+  },
+  { 
+    id: 'user-6', 
+    name: 'Member Fresh', 
+    email: 'member.fresh@example.com', 
+    role: 'member', 
+    joinedProjects: [],
+    checkout_items: [],
+    reimbursement: [],
+    procurement: []
+  },
 
 ];
 
