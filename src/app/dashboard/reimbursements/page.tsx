@@ -8,6 +8,7 @@ import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
 import Image from "next/image"
+import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -145,7 +146,7 @@ export default function ReimbursementsPage() {
                       return (
                           <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
                             <TableCell className="font-medium">{user?.name}</TableCell>
-                            <TableCell>{req.createdAt?.toDate().toLocaleDateString()}</TableCell>
+                            <TableCell>{req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</TableCell>
                             <TableCell>
                                 <StatusCircle status={req.status} />
                             </TableCell>
@@ -157,7 +158,7 @@ export default function ReimbursementsPage() {
               </Table>
             </CardContent>
           </Card>
-           <DialogContent className="sm:max-w-md">
+           <DialogContent className="sm:max-w-sm">
             {selectedRequest && (
               <>
                 <DialogHeader>
