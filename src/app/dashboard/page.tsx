@@ -46,6 +46,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const canApproveProjects = user?.permissions?.canApproveProjects;
+  
+  // DEV BOX: Display canApproveProjects permission for this page
+  console.log('User has "canApproveProjects" permission:', !!canApproveProjects);
+
 
   useEffect(() => {
     if (authLoading || !user) {
