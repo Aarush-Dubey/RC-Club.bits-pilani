@@ -246,7 +246,7 @@ export async function transferKey(keyName: string, fromUserId: string, toUserId:
             keyName,
             fromId: fromUserId,
             toId: toUserId,
-            timestamp: serverTimestamp()
+            timestamp: new Date() // Use client-side timestamp for arrayUnion
         };
 
         transaction.update(keyStatusRef, {
