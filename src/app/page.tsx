@@ -3,27 +3,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ToyBrick, Truck, HandCoins, Users, Zap, Award } from 'lucide-react';
+import { ToyBrick, Truck, HandCoins } from 'lucide-react';
+import { PublicHeader } from '@/components/public-header';
 
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
-        <Link href="/" className="flex items-center gap-2">
-           <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={32} height={32} className="size-8" />
-            <h1 className="text-xl font-bold tracking-tighter font-headline">
-              RC Club Manager
-            </h1>
-        </Link>
-        <nav className="flex items-center gap-2">
-          <Link href="/login">
-            <Button variant="ghost">Login</Button>
-          </Link>
-          <Link href="/register">
-            <Button>Sign Up</Button>
-          </Link>
-        </nav>
-      </header>
+      <PublicHeader />
 
       <main className="flex-grow">
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-16 md:py-24">
