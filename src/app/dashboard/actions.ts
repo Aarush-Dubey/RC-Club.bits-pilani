@@ -35,7 +35,8 @@ const serializeData = (doc: any): any => {
             }
         }
     }
-    return { id: doc.id, ...serializedData };
+    // The user document ID from Firestore is the UID in Firebase Auth.
+    return { id: doc.id, uid: doc.id, ...serializedData };
 };
 
 
