@@ -671,6 +671,7 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: an
                 <TableHead>Item Details</TableHead>
                 <TableHead>Checked Out To</TableHead>
                 <TableHead>Project</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -687,9 +688,13 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: an
                         <TableRow key={req.id}>
                             <TableCell>
                                 <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                {req.status === 'pending_return' && <Badge variant="outline" className="mt-1 bg-orange-100 text-orange-800 border-orange-200">Pending Return</Badge>}
                             </TableCell>
                             <TableCell>{user?.name || 'N/A'}</TableCell>
                             <TableCell>{project?.title || 'Personal Use'}</TableCell>
+                             <TableCell className="text-right">
+                                <ReturnActions request={req} canConfirm={canManageInventory} onActionComplete={fetchData} />
+                             </TableCell>
                         </TableRow>
                     );
                 })}
