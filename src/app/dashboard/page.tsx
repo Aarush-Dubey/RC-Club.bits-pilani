@@ -19,6 +19,7 @@ type DashboardData = {
     approvalRequests: Project[],
     users: Record<string, User>,
     actionItems: {
+        myLeadProjects: Project[],
         itemsOnLoan: any[],
         reimbursements: any[]
     },
@@ -190,3 +191,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+    

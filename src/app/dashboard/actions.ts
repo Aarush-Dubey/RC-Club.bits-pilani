@@ -49,7 +49,21 @@ export async function getPendingProjectApprovals(currentUserId: string) {
   const approvalRequestsSnapshot = await getDocs(approvalRequestsQuery);
   const approvalRequests = approvalRequestsSnapshot.docs.map(serializeData) as Project[];
 
-  const userIds = [...new Set(approvalRequests.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean)))];
+  // Fetch projects where the current user is the lead and status is 'active' or 'approved'
+  const myLeadProjectsQuery = query(
+    collection(db, "projects"),
+    where("leadId", "==", currentUserId),
+    where("status", "in", ["active", "approved"])
+  );
+  const myLeadProjectsSnapshot = await getDocs(myLeadProjectsQuery);
+  const myLeadProjects = myLeadProjectsSnapshot.docs.map(serializeData) as Project[];
+
+
+  const userIds = [...new Set([
+      ...approvalRequests.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean)),
+      ...myLeadProjects.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean))
+  ])];
+
   const users: Record<string, User> = {};
 
   if (userIds.length > 0) {
@@ -99,6 +113,7 @@ export async function getPendingProjectApprovals(currentUserId: string) {
     approvalRequests, 
     users, 
     actionItems: {
+        myLeadProjects: myLeadProjects,
         itemsOnLoan: itemsOnLoan,
         reimbursements: pendingReimbursements,
     },
@@ -258,3 +273,5 @@ export async function transferKey(keyName: string, fromUserId: string, toUserId:
 
     revalidatePath("/dashboard");
 }
+
+    

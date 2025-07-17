@@ -13,12 +13,14 @@ import {
   HandCoins,
   PackageCheck,
   PackageOpen,
+  ToyBrick,
   Undo2,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 
 type ActionItemsProps = {
   data: {
+    myLeadProjects: any[]
     itemsOnLoan: any[]
     reimbursements: any[]
   }
@@ -26,9 +28,10 @@ type ActionItemsProps = {
 }
 
 export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
+  const hasLeadProjects = data.myLeadProjects.length > 0;
   const hasItemsOnLoan = data.itemsOnLoan.length > 0
   const hasPendingReimbursements = data.reimbursements.length > 0
-  const hasActions = hasItemsOnLoan || hasPendingReimbursements
+  const hasActions = hasLeadProjects || hasItemsOnLoan || hasPendingReimbursements
 
   return (
     <Card>
@@ -41,6 +44,34 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
       <CardContent>
         {hasActions ? (
           <ul className="space-y-4">
+            {data.myLeadProjects.map((project) => {
+              const isPendingStart = project.status === 'approved';
+              const iconColor = isPendingStart ? 'text-blue-500' : 'text-sky-500';
+              return (
+                <li
+                  key={project.id}
+                  className="flex items-center justify-between gap-4 rounded-md border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <ToyBrick className={`h-5 w-5 ${iconColor}`} />
+                    <div>
+                      <p className="font-medium">
+                        {isPendingStart ? 'Start Project: ' : 'Active Project: '}
+                        {project.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        Status: {project.status.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  </div>
+                  <Link href={`/dashboard/projects/${project.id}`}>
+                    <Button variant="outline" size="sm">
+                      View Project <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </li>
+              )
+            })}
             {data.itemsOnLoan.map((item) => {
               const inventoryItem = inventoryItems[item.itemId]
               if (!inventoryItem || inventoryItem.isPerishable) return null
@@ -110,3 +141,5 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
     </Card>
   )
 }
+
+    
