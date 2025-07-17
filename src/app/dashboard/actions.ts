@@ -12,6 +12,8 @@ import {
   serverTimestamp,
   arrayUnion,
   limit,
+  updateDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Project, User } from './projects/project-card'
@@ -53,7 +55,7 @@ export async function getPendingProjectApprovals(currentUserId: string) {
   const myActiveProjectsQuery = query(
     collection(db, "projects"),
     where("memberIds", "array-contains", currentUserId),
-    where("status", "in", ["pending_approval", "active", "approved", "pending_return"])
+    where("status", "in", ["pending_approval", "active", "approved"])
   );
   const myActiveProjectsSnapshot = await getDocs(myActiveProjectsQuery);
   const myActiveProjects = myActiveProjectsSnapshot.docs.map(serializeData) as Project[];
@@ -86,7 +88,7 @@ export async function getPendingProjectApprovals(currentUserId: string) {
   const currentUserData = currentUserDoc.exists() ? currentUserDoc.data() : { checkout_items: [], reimbursement: [] };
 
   // Get items that are currently checked out to the user ('fulfilled') or are pending return
-  const itemsOnLoan = currentUserData.checkout_items?.filter((item: any) => ['fulfilled', 'pending_return'].includes(item.status)) || [];
+  const itemsOnLoan = currentUserData.checkout_items?.filter((item: any) => ['pending', 'fulfilled', 'pending_return'].includes(item.status)) || [];
   
   // Get reimbursement requests for the user that are 'pending' or 'approved'
   const reimbursementsQuery = query(
@@ -108,16 +110,30 @@ export async function getPendingProjectApprovals(currentUserId: string) {
           inventoryItems[doc.id] = serializeData(doc);
       });
   }
+  
+  const projectIds = [...new Set(itemsOnLoan.map((item: any) => item.projectId).filter(Boolean))];
+  const projects: Record<string, any> = {};
+    if (projectIds.length > 0) {
+        const projectsQuery = query(collection(db, "projects"), where("id", "in", projectIds));
+        const projectsSnap = await getDocs(projectsQuery);
+        projectsSnap.docs.forEach(doc => {
+            projects[doc.id] = serializeData(doc);
+        });
+    }
+
 
   return JSON.parse(JSON.stringify({
     approvalRequests, 
     users, 
     actionItems: {
         myActiveProjects: myActiveProjects,
-        itemsOnLoan: itemsOnLoan,
         reimbursements: pendingReimbursements,
     },
-    inventoryItems: inventoryItems,
+    myInventory: {
+      items: itemsOnLoan,
+      inventoryItemDetails: inventoryItems,
+      projectDetails: projects
+    }
   }));
 }
 
@@ -272,6 +288,31 @@ export async function transferKey(keyName: string, fromUserId: string, toUserId:
     });
 
     revalidatePath("/dashboard");
+}
+
+export async function initiateReturn(requestId: string, userId: string) {
+    if (!userId) {
+        throw new Error("User is not authenticated.");
+    }
+
+    const batch = writeBatch(db);
+    
+    const requestRef = doc(db, "inventory_requests", requestId);
+    batch.update(requestRef, { status: "pending_return" });
+
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+    if(userDoc.exists()) {
+        const checkoutItems = userDoc.data().checkout_items || [];
+        const updatedItems = checkoutItems.map((item: any) => 
+            item.requestId === requestId ? { ...item, status: 'pending_return' } : item
+        );
+        batch.update(userRef, { checkout_items: updatedItems });
+    }
+
+    await batch.commit();
+
+    revalidatePath('/dashboard');
 }
 
     

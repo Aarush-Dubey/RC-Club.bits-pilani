@@ -14,16 +14,20 @@ import { ArrowRight, PackageCheck } from 'lucide-react'
 import { ActionItems } from '@/components/dashboard/action-items'
 import { RoomStatus } from '@/components/dashboard/room-status'
 import { KeyStatus } from '@/components/dashboard/key-status'
+import { MyInventory } from '@/components/dashboard/my-inventory'
 
 type DashboardData = {
     approvalRequests: Project[],
     users: Record<string, User>,
     actionItems: {
         myActiveProjects: Project[],
-        itemsOnLoan: any[],
         reimbursements: any[]
     },
-    inventoryItems: Record<string, any>
+    myInventory: {
+      items: any[],
+      inventoryItemDetails: Record<string, any>,
+      projectDetails: Record<string, any>
+    }
 }
 
 type SystemStatusData = {
@@ -144,7 +148,12 @@ export default function DashboardPage() {
                         <Skeleton className='h-12 w-full' />
                     </CardContent>
                 </Card>
-            ) : data && <ActionItems data={data.actionItems} inventoryItems={data.inventoryItems} />}
+            ) : (
+              <>
+                {data && <ActionItems data={data.actionItems} />}
+                {data && <MyInventory data={data.myInventory} onReturn={fetchData} />}
+              </>
+            )}
         </div>
         <div className="flex flex-col gap-8">
             {canApproveProjects && (
@@ -191,5 +200,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
-    

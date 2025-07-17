@@ -21,17 +21,14 @@ import { Button } from '../ui/button'
 type ActionItemsProps = {
   data: {
     myActiveProjects: any[]
-    itemsOnLoan: any[]
     reimbursements: any[]
   }
-  inventoryItems: Record<string, any>
 }
 
-export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
-  const hasActiveProjects = data.myActiveProjects.length > 0;
-  const hasItemsOnLoan = data.itemsOnLoan.length > 0
+export function ActionItems({ data }: ActionItemsProps) {
+  const hasActiveProjects = data.myActiveProjects.length > 0
   const hasPendingReimbursements = data.reimbursements.length > 0
-  const hasActions = hasActiveProjects || hasItemsOnLoan || hasPendingReimbursements
+  const hasActions = hasActiveProjects || hasPendingReimbursements
 
   return (
     <Card>
@@ -67,39 +64,6 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
                   <Link href={`/dashboard/projects/${project.id}`}>
                     <Button variant="outline" size="sm">
                       View Project <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </li>
-              )
-            })}
-            {data.itemsOnLoan.map((item) => {
-              const inventoryItem = inventoryItems[item.itemId]
-              if (!inventoryItem || inventoryItem.isPerishable) return null
-
-              const isPendingReturn = item.status === 'pending_return'
-              const Icon = isPendingReturn ? Undo2 : PackageOpen
-              const iconColor = isPendingReturn ? 'text-orange-500' : 'text-blue-500'
-
-              return (
-                <li
-                  key={item.requestId}
-                  className="flex items-center justify-between gap-4 rounded-md border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`h-5 w-5 ${iconColor}`} />
-                    <div>
-                      <p className="font-medium">
-                        {isPendingReturn ? 'Return: ' : 'On Loan: '}
-                        {inventoryItem.name} (x{item.quantity})
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Project: {item.projectName || 'General Use'}
-                      </p>
-                    </div>
-                  </div>
-                  <Link href="/dashboard/inventory">
-                    <Button variant="outline" size="sm">
-                      Go to Inventory <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                 </li>
@@ -141,5 +105,3 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
     </Card>
   )
 }
-
-    
