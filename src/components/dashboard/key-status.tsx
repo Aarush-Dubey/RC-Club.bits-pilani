@@ -139,7 +139,7 @@ export function KeyStatus({ keys, recentTransfers, onStatusChange }: KeyStatusPr
                             </div>
                             <div className="text-right">
                                 {key.holderId === currentUser?.uid ? (
-                                    <Dialog key={key.keyName} open={openDialogKey === key.keyName} onOpenChange={(isOpen) => !isOpen && setOpenDialogKey(null)}>
+                                    <Dialog open={openDialogKey === key.keyName} onOpenChange={(isOpen) => !isOpen && setOpenDialogKey(null)}>
                                         <DialogTrigger asChild>
                                             <Button variant="outline" size="sm" onClick={() => handleOpenDialog(key.keyName)}>
                                                 <Send className="mr-2 h-3 w-3"/>
