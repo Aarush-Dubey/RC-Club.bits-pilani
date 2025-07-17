@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle } from "lucide-react";
+import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle, ArrowLeft } from "lucide-react";
 import { joinProject, leaveProject, initiateProjectCompletion } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -23,6 +23,7 @@ import { RequestInventoryForm } from "./request-inventory-form";
 import { NewUpdateForm } from "./new-update-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 
 function getProjectStatusConfig(status: string) {
@@ -183,6 +184,9 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
             <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
+                         <Link href="/dashboard/projects" className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+                           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
+                        </Link>
                         <div className="flex items-center gap-4">
                             <h2 className="text-3xl font-bold tracking-tight font-headline">{project.title}</h2>
                             <StatusCircle status={project.status} type="project" />
