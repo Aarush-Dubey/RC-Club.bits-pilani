@@ -98,21 +98,21 @@ function TransferKeyForm({
 
 export function KeyStatus({ keys, recentTransfers, onStatusChange }: KeyStatusProps) {
     const { user: currentUser } = useAuth();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [openDialogKey, setOpenDialogKey] = useState<string | null>(null);
     const [eligibleUsers, setEligibleUsers] = useState<AppUser[]>([]);
 
-    const handleOpenDialog = async () => {
+    const handleOpenDialog = async (keyName: string) => {
         try {
             const users = await getEligibleKeyHolders();
             setEligibleUsers(users as AppUser[]);
-            setIsDialogOpen(true);
+            setOpenDialogKey(keyName);
         } catch (error) {
             console.error("Failed to fetch eligible users:", error);
         }
     };
     
     const handleDialogClose = () => {
-        setIsDialogOpen(false);
+        setOpenDialogKey(null);
         onStatusChange(); // Refresh the dashboard data
     }
     
@@ -139,9 +139,9 @@ export function KeyStatus({ keys, recentTransfers, onStatusChange }: KeyStatusPr
                             </div>
                             <div className="text-right">
                                 {key.holderId === currentUser?.uid ? (
-                                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                                    <Dialog key={key.keyName} open={openDialogKey === key.keyName} onOpenChange={(isOpen) => !isOpen && setOpenDialogKey(null)}>
                                         <DialogTrigger asChild>
-                                            <Button variant="outline" size="sm" onClick={handleOpenDialog}>
+                                            <Button variant="outline" size="sm" onClick={() => handleOpenDialog(key.keyName)}>
                                                 <Send className="mr-2 h-3 w-3"/>
                                                 Transfer
                                             </Button>
