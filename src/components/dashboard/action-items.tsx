@@ -20,7 +20,7 @@ import { Button } from '../ui/button'
 
 type ActionItemsProps = {
   data: {
-    myLeadProjects: any[]
+    myActiveProjects: any[]
     itemsOnLoan: any[]
     reimbursements: any[]
   }
@@ -28,10 +28,10 @@ type ActionItemsProps = {
 }
 
 export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
-  const hasLeadProjects = data.myLeadProjects.length > 0;
+  const hasActiveProjects = data.myActiveProjects.length > 0;
   const hasItemsOnLoan = data.itemsOnLoan.length > 0
   const hasPendingReimbursements = data.reimbursements.length > 0
-  const hasActions = hasLeadProjects || hasItemsOnLoan || hasPendingReimbursements
+  const hasActions = hasActiveProjects || hasItemsOnLoan || hasPendingReimbursements
 
   return (
     <Card>
@@ -44,9 +44,10 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
       <CardContent>
         {hasActions ? (
           <ul className="space-y-4">
-            {data.myLeadProjects.map((project) => {
+            {data.myActiveProjects.map((project) => {
               const isPendingStart = project.status === 'approved';
-              const iconColor = isPendingStart ? 'text-blue-500' : 'text-sky-500';
+              const isPendingApproval = project.status === 'pending_approval';
+              const iconColor = isPendingApproval ? 'text-yellow-500' : isPendingStart ? 'text-blue-500' : 'text-sky-500';
               return (
                 <li
                   key={project.id}
@@ -56,7 +57,6 @@ export function ActionItems({ data, inventoryItems }: ActionItemsProps) {
                     <ToyBrick className={`h-5 w-5 ${iconColor}`} />
                     <div>
                       <p className="font-medium">
-                        {isPendingStart ? 'Start Project: ' : 'Active Project: '}
                         {project.title}
                       </p>
                       <p className="text-xs text-muted-foreground capitalize">

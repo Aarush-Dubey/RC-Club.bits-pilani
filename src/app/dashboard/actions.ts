@@ -41,7 +41,7 @@ const serializeData = (doc: any): any => {
 
 
 export async function getPendingProjectApprovals(currentUserId: string) {
-  // Fetch pending project approvals
+  // Fetch pending project approvals (for admins/coordinators)
   const approvalRequestsQuery = query(
     collection(db, "projects"),
     where("status", "==", "pending_approval")
@@ -49,19 +49,19 @@ export async function getPendingProjectApprovals(currentUserId: string) {
   const approvalRequestsSnapshot = await getDocs(approvalRequestsQuery);
   const approvalRequests = approvalRequestsSnapshot.docs.map(serializeData) as Project[];
 
-  // Fetch projects where the current user is the lead and status is 'active' or 'approved'
-  const myLeadProjectsQuery = query(
+  // Fetch projects where the current user is a member and the project is not yet completed/closed
+  const myActiveProjectsQuery = query(
     collection(db, "projects"),
-    where("leadId", "==", currentUserId),
-    where("status", "in", ["active", "approved"])
+    where("memberIds", "array-contains", currentUserId),
+    where("status", "in", ["pending_approval", "active", "approved", "pending_return"])
   );
-  const myLeadProjectsSnapshot = await getDocs(myLeadProjectsQuery);
-  const myLeadProjects = myLeadProjectsSnapshot.docs.map(serializeData) as Project[];
+  const myActiveProjectsSnapshot = await getDocs(myActiveProjectsQuery);
+  const myActiveProjects = myActiveProjectsSnapshot.docs.map(serializeData) as Project[];
 
 
   const userIds = [...new Set([
       ...approvalRequests.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean)),
-      ...myLeadProjects.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean))
+      ...myActiveProjects.flatMap(p => [p.leadId, ...p.memberIds].filter(Boolean))
   ])];
 
   const users: Record<string, User> = {};
@@ -113,7 +113,7 @@ export async function getPendingProjectApprovals(currentUserId: string) {
     approvalRequests, 
     users, 
     actionItems: {
-        myLeadProjects: myLeadProjects,
+        myActiveProjects: myActiveProjects,
         itemsOnLoan: itemsOnLoan,
         reimbursements: pendingReimbursements,
     },

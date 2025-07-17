@@ -19,7 +19,7 @@ type DashboardData = {
     approvalRequests: Project[],
     users: Record<string, User>,
     actionItems: {
-        myLeadProjects: Project[],
+        myActiveProjects: Project[],
         itemsOnLoan: any[],
         reimbursements: any[]
     },
