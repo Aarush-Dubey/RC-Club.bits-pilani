@@ -49,11 +49,11 @@ export function TransferKeyForm({
                 <SelectTrigger>
                     <SelectValue placeholder="Select a member to transfer to..." />
                 </SelectTrigger>
-                <SelectContent forceMount key={`select-${keyName}`}>
+                <SelectContent>
                     {eligibleUsers
                         .filter(u => u.uid !== currentUser?.uid)
                         .map(user => (
-                            <SelectItem key={`user-${user.uid}`} value={user.uid}>{user.name}</SelectItem>
+                            <SelectItem key={user.uid} value={user.uid}>{user.name}</SelectItem>
                         ))}
                 </SelectContent>
             </Select>
