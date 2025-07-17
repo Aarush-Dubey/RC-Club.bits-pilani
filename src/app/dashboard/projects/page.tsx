@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { PlusCircle } from "lucide-react"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth, type AppUser } from "@/context/auth-context"
 
@@ -22,16 +22,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProjectCard, type Project, type User, type InventoryItem } from "./project-card"
 
-async function getData(currentUser: AppUser | null) {
-  if (!currentUser) return { myProjects: [], allUsers: [], inventory: [] };
+async function getData() {
+  // Fetch all projects
+  const projectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+  const projectsSnapshot = await getDocs(projectsQuery);
+  const allProjects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
 
-  // Fetch projects the current user is a member of
-  const myProjectsQuery = query(
-    collection(db, "projects"),
-    where("memberIds", "array-contains", currentUser.uid)
-  );
-  const myProjectsSnapshot = await getDocs(myProjectsQuery);
-  const myProjects = myProjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
+  // Define the sort order for statuses
+  const statusOrder = {
+      'active': 1,
+      'approved': 1,
+      'pending_return': 1,
+      'pending_approval': 2,
+      'completed': 3,
+      'closed': 4,
+      'rejected': 5,
+  };
+
+  // Sort projects based on status, then by creation date
+  allProjects.sort((a, b) => {
+    const orderA = statusOrder[a.status as keyof typeof statusOrder] || 99;
+    const orderB = statusOrder[b.status as keyof typeof statusOrder] || 99;
+    if (orderA !== orderB) {
+        return orderA - orderB;
+    }
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : 0;
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : 0;
+    // @ts-ignore
+    return dateB - dateA;
+  });
 
   // Fetch ALL users so they can be added to new projects
   const allUsersSnapshot = await getDocs(collection(db, "users"));
@@ -41,7 +60,7 @@ async function getData(currentUser: AppUser | null) {
   const inventorySnapshot = await getDocs(collection(db, "inventory_items"));
   const inventory = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as InventoryItem[];
 
-  return { myProjects, allUsers, inventory };
+  return { allProjects, allUsers, inventory };
 }
 
 
@@ -60,7 +79,7 @@ const ProjectListSkeleton = () => (
 
 
 export default function ProjectsPage() {
-  const [myProjects, setMyProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -71,8 +90,8 @@ export default function ProjectsPage() {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const { myProjects, allUsers, inventory } = await getData(currentUser);
-      setMyProjects(myProjects);
+      const { allProjects, allUsers, inventory } = await getData();
+      setProjects(allProjects);
       setAllUsers(allUsers);
       setInventory(inventory);
     } catch(err) {
@@ -98,9 +117,9 @@ export default function ProjectsPage() {
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">My Projects</h2>
+            <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
             <p className="text-muted-foreground">
-              Track and manage all RC projects you are a part of.
+              Browse and manage all projects in the club.
             </p>
           </div>
           <div className="flex gap-2">
@@ -121,9 +140,9 @@ export default function ProjectsPage() {
           <ProjectListSkeleton />
         ) : (
           <div className="space-y-6">
-              {myProjects.length > 0 ? (
+              {projects.length > 0 ? (
                 <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-                  {myProjects.map((project) => (
+                  {projects.map((project) => (
                     <ProjectCard key={project.id} project={project} users={allUsers} currentUser={currentUser}/>
                   ))}
                 </div>
@@ -133,9 +152,9 @@ export default function ProjectsPage() {
                     <CardTitle>No Projects Yet</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground mb-4">You haven't joined or created any projects.</p>
+                    <p className="text-muted-foreground mb-4">There are no projects in the club yet. Be the first to create one!</p>
                      <Button variant="outline" onClick={() => setIsFormOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Propose Your First Project
+                        <PlusCircle className="mr-2 h-4 w-4" /> Propose a Project
                      </Button>
                   </CardContent>
                 </Card>
@@ -153,5 +172,3 @@ export default function ProjectsPage() {
     </Dialog>
   )
 }
-
-    
