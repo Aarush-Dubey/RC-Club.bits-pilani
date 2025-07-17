@@ -98,7 +98,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2 p-2">
+          <Link href="/dashboard" className="flex items-center gap-2 p-2">
             <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={28} height={28} className="size-7" />
             <h2 className="text-lg font-bold tracking-tighter text-sidebar-foreground font-headline">
               RC Club Manager
