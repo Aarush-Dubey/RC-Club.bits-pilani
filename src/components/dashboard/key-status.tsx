@@ -113,7 +113,7 @@ export function KeyStatus({ keys, recentTransfers, onStatusChange }: KeyStatusPr
     
     const handleDialogClose = () => {
         setOpenDialogKey(null);
-        onStatusChange(); // Refresh the dashboard data
+        onStatusChange();
     }
     
     const transfersForKey = (keyName: string) => recentTransfers.filter(t => t.keyName === keyName).slice(0, 5);
