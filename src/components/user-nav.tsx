@@ -73,12 +73,6 @@ export function UserNav() {
         <DropdownMenuGroup>
           <Link href="/dashboard/settings" passHref>
             <DropdownMenuItem>
-                <UserIcon />
-                Profile
-            </DropdownMenuItem>
-          </Link>
-          <Link href="/dashboard/settings" passHref>
-            <DropdownMenuItem>
               <Settings />
               Settings
             </DropdownMenuItem>
