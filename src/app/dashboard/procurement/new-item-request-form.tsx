@@ -102,7 +102,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
     setIsSubmitting(true);
     try {
       await addRequestToBucket(bucketId, {
-        requests: [data], // Submit as an array with a single item
+        request: data,
         requestedById: currentUser.uid,
       });
 
@@ -131,7 +131,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <div className="flex-grow space-y-4 pr-1 overflow-y-auto">
+        <div className="flex-grow space-y-4 pr-1 overflow-y-auto p-1">
             <FormField
             control={form.control}
             name="itemName"
@@ -216,7 +216,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
             )}
             />
         </div>
-        <div className="pt-6 border-t mt-6 flex-shrink-0">
+        <div className="pt-6 border-t mt-auto flex-shrink-0">
           <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitButtonText}
