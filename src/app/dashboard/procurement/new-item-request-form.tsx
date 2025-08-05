@@ -131,94 +131,92 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <ScrollArea className="flex-grow pr-4 -mr-4">
-            <div className="space-y-4">
-                <FormField
+        <div className="flex-grow space-y-4 pr-1 overflow-y-auto">
+            <FormField
+            control={form.control}
+            name="itemName"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Item Name</FormLabel>
+                <FormControl>
+                    <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+            <FormField
                 control={form.control}
-                name="itemName"
+                name="quantity"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Item Name</FormLabel>
+                <FormItem>
+                    <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                        <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                    <Input type="number" {...field} min={1} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                </FormItem>
                 )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Quantity</FormLabel>
-                        <FormControl>
-                        <Input type="number" {...field} min={1} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="estimatedCost"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Estimated cost / piece</FormLabel>
-                        <FormControl>
-                        <Input type="number" step="0.01" placeholder="1500.00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                </div>
-                <FormField
+            />
+            <FormField
                 control={form.control}
-                name="justification"
+                name="estimatedCost"
                 render={({ field }) => (
-                    <FormItem>
-                    <div className="flex justify-between items-center">
-                        <FormLabel>Justification</FormLabel>
-                        <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceJustification} disabled={isEnhancing || isSubmitting}>
-                            {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Enhance
-                        </Button>
-                    </div>
+                <FormItem>
+                    <FormLabel>Cost / piece (₹)</FormLabel>
                     <FormControl>
-                        <Textarea
-                        placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
-                        {...field}
-                        rows={3}
-                        />
+                    <Input type="number" step="0.01" placeholder="1500.00" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                </FormItem>
                 )}
-                />
-                <FormField
-                control={form.control}
-                name="isPerishable"
-                render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                        <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                        <FormLabel>
-                        This item is perishable/consumable
-                        </FormLabel>
-                    </div>
-                    </FormItem>
-                )}
-                />
+            />
             </div>
-        </ScrollArea>
-        <div className="pt-4 border-t flex-shrink-0 mt-4">
+            <FormField
+            control={form.control}
+            name="justification"
+            render={({ field }) => (
+                <FormItem>
+                <div className="flex justify-between items-center">
+                    <FormLabel>Justification</FormLabel>
+                    <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceJustification} disabled={isEnhancing || isSubmitting}>
+                        {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Enhance
+                    </Button>
+                </div>
+                <FormControl>
+                    <Textarea
+                    placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
+                    {...field}
+                    rows={3}
+                    />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="isPerishable"
+            render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                    <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                    <FormLabel>
+                    This item is perishable/consumable
+                    </FormLabel>
+                </div>
+                </FormItem>
+            )}
+            />
+        </div>
+        <div className="pt-6 border-t mt-6 flex-shrink-0">
           <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitButtonText}
