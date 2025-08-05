@@ -25,13 +25,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface Account {
     id: string;
     name: string;
-    group: 'currentAssets' | 'fixedAssets' | 'ownersEquity';
+    group: 'currentAssets' | 'fixedAssets' | 'ownersEquity' | 'currentLiabilities';
     balance: number;
 }
 
 interface AssetGroup {
     group: string;
-    accounts: Account[];
+    accounts: (Account | Liability)[];
     total: number;
 }
 
@@ -70,7 +70,7 @@ async function getUnpaidReimbursements() {
 
     const liabilities: Record<string, number> = {};
     reimbursements.forEach(r => {
-        const userName = users[r.submittedById] || 'Unknown User';
+        const userName = `Reimbursement: ${users[r.submittedById] || 'Unknown User'}`;
         if (liabilities[userName]) {
             liabilities[userName] += r.amount;
         } else {
@@ -83,7 +83,7 @@ async function getUnpaidReimbursements() {
 
 const accountFormSchema = z.object({
   name: z.string().min(3, "Account name is required."),
-  group: z.enum(['currentAssets', 'fixedAssets', 'ownersEquity'], { required_error: "Please select an asset group." }),
+  group: z.enum(['currentAssets', 'fixedAssets', 'ownersEquity', 'currentLiabilities'], { required_error: "Please select an asset group." }),
   balance: z.coerce.number().min(0, "Balance must be a positive number."),
 });
 type AccountFormValues = z.infer<typeof accountFormSchema>;
@@ -136,6 +136,7 @@ const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog
                                 <SelectItem value="currentAssets">Current Assets</SelectItem>
                                 <SelectItem value="fixedAssets">Fixed Assets</SelectItem>
                                 <SelectItem value="ownersEquity">Owner's Equity</SelectItem>
+                                <SelectItem value="currentLiabilities">Current Liabilities</SelectItem>
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -391,8 +392,13 @@ export default function BalanceSheet() {
         const currentAssets = accounts.filter(a => a.group === 'currentAssets');
         const fixedAssets = accounts.filter(a => a.group === 'fixedAssets');
         const ownersEquity = accounts.filter(a => a.group === 'ownersEquity');
+        const manualLiabilities = accounts.filter(a => a.group === 'currentLiabilities');
+
+        const manualLiabilitiesTotal = manualLiabilities.reduce((sum, item) => sum + item.balance, 0);
+        const unpaidReimbursementsTotal = unpaidLiabilities.reduce((sum, item) => sum + item.balance, 0);
+        const allLiabilities = [...manualLiabilities, ...unpaidLiabilities];
+        const liabilitiesTotal = manualLiabilitiesTotal + unpaidReimbursementsTotal;
         
-        const liabilitiesTotal = unpaidLiabilities.reduce((sum, item) => sum + item.balance, 0);
         const currentAssetsTotal = currentAssets.reduce((sum, item) => sum + item.balance, 0);
         const fixedAssetsTotal = fixedAssets.reduce((sum, item) => sum + item.balance, 0);
         const ownersEquityTotal = ownersEquity.reduce((sum, item) => sum + item.balance, 0);
@@ -401,7 +407,7 @@ export default function BalanceSheet() {
             currentAssets: { group: "Current Assets", accounts: currentAssets, total: currentAssetsTotal },
             currentLiabilities: { 
                 group: "Current Liabilities",
-                accounts: unpaidLiabilities,
+                accounts: allLiabilities,
                 total: liabilitiesTotal
             },
             fixedAssets: { group: "Fixed Assets", accounts: fixedAssets, total: fixedAssetsTotal },
