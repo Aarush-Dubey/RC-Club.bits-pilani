@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
-import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc, getDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch, updateDoc, arrayUnion, setDoc, getDoc, query, where, getDocs, runTransaction } from "firebase/firestore";
 
 export async function createProcurementBucket({ description, createdById }: { description: string; createdById: string }) {
     if (!createdById) {
@@ -41,46 +41,57 @@ export async function addRequestToBucket(bucketId: string | null, { requestedByI
         throw new Error("User is not authenticated.");
     }
 
-    const batch = writeBatch(db);
     const userRef = doc(db, "users", requestedById);
 
-    for (const request of requests) {
-        const requestRef = doc(collection(db, "new_item_requests"));
-        const requestData: any = {
-            id: requestRef.id,
-            requestedById,
-            itemName: request.itemName,
-            justification: request.justification,
-            quantity: request.quantity,
-            estimatedCost: request.estimatedCost,
-            isPerishable: request.isPerishable,
-            status: "pending",
-            createdAt: serverTimestamp(),
-            linkedBucketId: bucketId,
-        };
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("User not found.");
+        }
 
-        batch.set(requestRef, requestData);
-        
-        // Denormalize by adding a reference to the user's procurement list
-        batch.update(userRef, {
-            procurement: arrayUnion({
+        const existingProcurement = userDoc.data().procurement || [];
+        const newProcurementEntries = [];
+
+        for (const request of requests) {
+            const requestRef = doc(collection(db, "new_item_requests"));
+            const requestData: any = {
+                id: requestRef.id,
+                requestedById,
+                itemName: request.itemName,
+                justification: request.justification,
+                quantity: request.quantity,
+                estimatedCost: request.estimatedCost,
+                isPerishable: request.isPerishable,
+                status: "pending",
+                createdAt: serverTimestamp(),
+                linkedBucketId: bucketId,
+            };
+
+            transaction.set(requestRef, requestData);
+            
+            newProcurementEntries.push({
                 itemName: request.itemName,
                 status: "pending",
                 bucketId: bucketId || null
-            })
+            });
+        }
+        
+        transaction.update(userRef, {
+            procurement: [...existingProcurement, ...newProcurementEntries]
         });
-    }
+
+        if (bucketId) {
+            const bucketRef = doc(db, "procurement_buckets", bucketId);
+            transaction.update(bucketRef, {
+                members: arrayUnion(requestedById)
+            });
+        }
+    });
     
-    if (bucketId) {
-        const bucketRef = doc(db, "procurement_buckets", bucketId);
-        batch.update(bucketRef, {
-            members: arrayUnion(requestedById)
-        });
-    } else {
+    if (!bucketId) {
         revalidatePath(`/dashboard/procurement/approvals`);
     }
 
-    await batch.commit();
 }
 
 export async function updateBucketStatus(bucketId: string, status: "open" | "closed" | "ordered" | "received") {
