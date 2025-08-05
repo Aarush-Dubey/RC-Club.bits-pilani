@@ -191,7 +191,7 @@ export default function NewProcurementPage() {
         </Dialog>
 
       </div>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">New Single Item Request</DialogTitle>
           <DialogDescriptionComponent>
