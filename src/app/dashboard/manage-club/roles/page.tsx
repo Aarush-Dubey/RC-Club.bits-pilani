@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewRoleForm } from './new-role-form';
+import { cn } from '@/lib/utils';
 
 // Helper to format permission keys into readable text
 const formatPermissionName = (name: string) => {
@@ -33,12 +34,13 @@ const PermissionToggleButton = ({ permission, isEnabled: initialIsEnabled }: { p
     };
 
     return (
-        <button onClick={handleClick} className="flex items-center gap-2 text-sm">
-            {isEnabled ? (
-                <Check className="h-4 w-4 text-green-500" />
-            ) : (
-                <X className="h-4 w-4 text-red-500" />
-            )}
+        <button onClick={handleClick} className="flex items-center gap-2 text-sm group">
+             <div className={cn(
+                "h-4 w-4 rounded-sm border flex items-center justify-center shrink-0",
+                isEnabled ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground group-hover:border-primary"
+             )}>
+                {isEnabled && <Check className="h-3 w-3" />}
+             </div>
             <span>{formatPermissionName(permission)}</span>
         </button>
     );
