@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type SubmitHandler, useFieldArray } from "react-hook-form";
+import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, PlusCircle, Trash2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,13 +26,11 @@ import { enhanceJustification } from "@/ai/flows/enhance-justification";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
-  requests: z.array(z.object({
-    itemName: z.string().min(3, "Item name must be at least 3 characters."),
-    justification: z.string().min(10, "Please provide a brief justification."),
-    quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-    estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
-    isPerishable: z.boolean().default(false),
-  })).min(1, "At least one item is required.")
+  itemName: z.string().min(3, "Item name must be at least 3 characters."),
+  justification: z.string().min(10, "Please provide a brief justification."),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
+  estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
+  isPerishable: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -46,29 +44,22 @@ interface NewItemRequestFormProps {
 
 export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFormSubmit }: NewItemRequestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      requests: [{
-        itemName: "",
-        justification: "",
-        quantity: 1,
-        estimatedCost: 0,
-        isPerishable: false,
-      }],
+      itemName: "",
+      justification: "",
+      quantity: 1,
+      estimatedCost: 0,
+      isPerishable: false,
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "requests"
-  });
-
-  const handleEnhanceJustification = async (index: number) => {
-    const { itemName, justification } = form.getValues(`requests.${index}`);
+  const handleEnhanceJustification = async () => {
+    const { itemName, justification } = form.getValues();
     if (!justification) {
       toast({
         variant: "destructive",
@@ -77,10 +68,10 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
       });
       return;
     }
-    setEnhancingIndex(index);
+    setIsEnhancing(true);
     try {
       const result = await enhanceJustification({ itemName, justification });
-      form.setValue(`requests.${index}.justification`, result.enhancedJustification, {
+      form.setValue(`justification`, result.enhancedJustification, {
         shouldValidate: true,
       });
       toast({
@@ -95,7 +86,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
         description: "Could not enhance the justification. Please try again.",
       });
     } finally {
-      setEnhancingIndex(null);
+      setIsEnhancing(false);
     }
   };
 
@@ -111,7 +102,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
     setIsSubmitting(true);
     try {
       await addRequestToBucket(bucketId, {
-        requests: data.requests,
+        requests: [data], // Submit as an array with a single item
         requestedById: currentUser.uid,
       });
 
@@ -140,126 +131,95 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <div className="flex-grow overflow-hidden">
-            <ScrollArea className="h-full">
-            <div className="space-y-4 pr-4">
-                {fields.map((field, index) => (
-                <div key={field.id} className="space-y-4 rounded-md border p-4 relative">
-                    {fields.length > 1 && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={() => remove(index)}
-                    >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                    )}
-                    <FormField
+        <ScrollArea className="flex-grow pr-4 -mr-4">
+            <div className="space-y-4">
+                <FormField
+                control={form.control}
+                name="itemName"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Item Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                <FormField
                     control={form.control}
-                    name={`requests.${index}.itemName`}
+                    name="quantity"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Item Name</FormLabel>
+                    <FormItem>
+                        <FormLabel>Quantity</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                        <Input type="number" {...field} min={1} />
                         </FormControl>
                         <FormMessage />
-                        </FormItem>
+                    </FormItem>
                     )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name={`requests.${index}.quantity`}
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Quantity</FormLabel>
-                            <FormControl>
-                            <Input type="number" {...field} min={1} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name={`requests.${index}.estimatedCost`}
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Estimated cost / piece</FormLabel>
-                            <FormControl>
-                            <Input type="number" step="0.01" placeholder="1500.00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    </div>
-                    <FormField
+                />
+                <FormField
                     control={form.control}
-                    name={`requests.${index}.justification`}
+                    name="estimatedCost"
                     render={({ field }) => (
-                        <FormItem>
-                        <div className="flex justify-between items-center">
-                            <FormLabel>Justification</FormLabel>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => handleEnhanceJustification(index)} disabled={enhancingIndex === index || isSubmitting}>
-                                {enhancingIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                Enhance
-                            </Button>
-                        </div>
+                    <FormItem>
+                        <FormLabel>Estimated cost / piece</FormLabel>
                         <FormControl>
-                            <Textarea
-                            placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
-                            {...field}
-                            rows={3}
-                            />
+                        <Input type="number" step="0.01" placeholder="1500.00" {...field} />
                         </FormControl>
                         <FormMessage />
-                        </FormItem>
+                    </FormItem>
                     )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name={`requests.${index}.isPerishable`}
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                        <FormControl>
-                            <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                            <FormLabel>
-                            This item is perishable/consumable
-                            </FormLabel>
-                        </div>
-                        </FormItem>
-                    )}
-                    />
+                />
                 </div>
-                ))}
+                <FormField
+                control={form.control}
+                name="justification"
+                render={({ field }) => (
+                    <FormItem>
+                    <div className="flex justify-between items-center">
+                        <FormLabel>Justification</FormLabel>
+                        <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceJustification} disabled={isEnhancing || isSubmitting}>
+                            {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Enhance
+                        </Button>
+                    </div>
+                    <FormControl>
+                        <Textarea
+                        placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
+                        {...field}
+                        rows={3}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="isPerishable"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                        This item is perishable/consumable
+                        </FormLabel>
+                    </div>
+                    </FormItem>
+                )}
+                />
             </div>
-            </ScrollArea>
-        </div>
-
-        <div className="py-2 flex-shrink-0">
-            <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => append({ itemName: "", justification: "", quantity: 1, estimatedCost: 0, isPerishable: false })}
-                >
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
-            </Button>
-        </div>
-
-
-        <div className="pt-4 border-t flex-shrink-0">
-          <Button type="submit" disabled={isSubmitting || enhancingIndex !== null} className="w-full">
+        </ScrollArea>
+        <div className="pt-4 border-t flex-shrink-0 mt-4">
+          <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitButtonText}
           </Button>
