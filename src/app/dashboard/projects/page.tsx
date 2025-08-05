@@ -21,6 +21,7 @@ import { NewProjectForm } from "./new-project-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProjectCard, type Project, type User, type InventoryItem } from "./project-card"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 async function getData() {
   // Fetch all projects
@@ -114,54 +115,56 @@ export default function ProjectsPage() {
   
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
-            <p className="text-muted-foreground">
-              Browse and manage all projects in the club.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {currentUser?.permissions?.canApproveProjects && (
-              <Link href="/dashboard/projects/approvals">
-                <Button variant="outline">Manage Approvals</Button>
-              </Link>
-            )}
-            <DialogTrigger asChild>
-              <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" /> New Project
-              </Button>
-            </DialogTrigger>
-          </div>
-        </div>
-
-        {loading ? (
-          <ProjectListSkeleton />
-        ) : (
-          <div className="space-y-6">
-              {projects.length > 0 ? (
-                <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-                  {projects.map((project) => (
-                    <ProjectCard key={project.id} project={project} users={allUsers} currentUser={currentUser}/>
-                  ))}
-                </div>
-              ) : (
-                <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
-                  <CardHeader>
-                    <CardTitle>No Projects Yet</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">There are no projects in the club yet. Be the first to create one!</p>
-                     <Button variant="outline" onClick={() => setIsFormOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Propose a Project
-                     </Button>
-                  </CardContent>
-                </Card>
+      <TooltipProvider>
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
+              <p className="text-muted-foreground">
+                Browse and manage all projects in the club.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {currentUser?.permissions?.canApproveProjects && (
+                <Link href="/dashboard/projects/approvals">
+                  <Button variant="outline">Manage Approvals</Button>
+                </Link>
               )}
+              <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" /> New Project
+                </Button>
+              </DialogTrigger>
+            </div>
           </div>
-        )}
-      </div>
+
+          {loading ? (
+            <ProjectListSkeleton />
+          ) : (
+            <div className="space-y-6">
+                {projects.length > 0 ? (
+                  <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                    {projects.map((project) => (
+                      <ProjectCard key={project.id} project={project} users={allUsers} currentUser={currentUser}/>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
+                    <CardHeader>
+                      <CardTitle>No Projects Yet</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">There are no projects in the club yet. Be the first to create one!</p>
+                      <Button variant="outline" onClick={() => setIsFormOpen(true)}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Propose a Project
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
