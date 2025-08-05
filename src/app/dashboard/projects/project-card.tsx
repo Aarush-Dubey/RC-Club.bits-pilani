@@ -50,14 +50,16 @@ const StatusCircle = ({ status }: { status: string }) => {
   const config = getStatusConfig(status);
 
   return (
-    <Tooltip>
-        <TooltipTrigger>
-            <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
-        </TooltipTrigger>
-        <TooltipContent>
-            <p>{config.tooltip}</p>
-        </TooltipContent>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+          <TooltipTrigger>
+              <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+          </TooltipTrigger>
+          <TooltipContent>
+              <p>{config.tooltip}</p>
+          </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
