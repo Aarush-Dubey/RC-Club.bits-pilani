@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -43,6 +44,7 @@ interface Transaction {
     reimbursementId?: string;
     createdAt: any;
     createdBy: string;
+    isDeleted?: boolean;
 }
 
 const formatCurrency = (amount: number | undefined) => {
@@ -473,7 +475,6 @@ export default function Logbook() {
         // Listen to both collections for backward compatibility
         const transactionsQuery = query(
             collection(db, "transactions"), 
-            where("isDeleted", "!=", true),
             orderBy("date", "desc")
         );
         
@@ -486,7 +487,7 @@ export default function Logbook() {
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
                 ...doc.data() 
-            } as Transaction));
+            } as Transaction)).filter(t => t.isDeleted !== true);
             
             setTransactions(newTransactions);
             setLoading(false);
