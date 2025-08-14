@@ -1,3 +1,4 @@
+
 "use server"
 
 import { db } from "@/lib/firebase";
@@ -236,13 +237,13 @@ export async function getTransactionsForExport(startDate: string, endDate: strin
     collection(db, "transactions"),
     where("date", ">=", startDate),
     where("date", "<=", endDate),
-    where("isDeleted", "!=", true),
     orderBy("date", "desc")
   );
   
   const snapshot = await getDocs(transactionsQuery);
+  // Filter for 'isDeleted' on the client-side to avoid needing a composite index
   return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
-  }));
+  })).filter(t => t.isDeleted !== true);
 }
