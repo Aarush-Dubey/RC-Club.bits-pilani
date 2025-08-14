@@ -28,6 +28,7 @@ import { upload } from "@imagekit/next"
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Transaction {
     id: string;
@@ -478,7 +479,7 @@ const TransactionLogbook = ({
                                             {transaction.reimbursementId && (
                                                 <Link href="/dashboard/reimbursements" className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                     <LinkIcon className="h-3 w-3" />
-                                                    View Reimbursement
+                                                    View Details
                                                 </Link>
                                             )}
                                         </div>
@@ -658,4 +659,3 @@ export default function Logbook() {
     );
 }
 
-    
