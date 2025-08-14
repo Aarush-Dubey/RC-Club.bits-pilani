@@ -3,89 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to check user roles from the 'users' collection
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isRole(role) {
-      let userRole = getUserData(request.auth.uid).role;
-      return isSignedIn() && userRole == role;
-    }
-    
-    function isOneOfRoles(roles) {
-      let userRole = getUserData(request.auth.uid).role;
-      return isSignedIn() && userRole in roles;
-    }
-
-    // USERS
-    match /users/{userId} {
-      // Any authenticated user can read public user profiles
-      allow read: if isSignedIn();
-      // Only the user themselves or an admin can update their own document
-      allow write: if isSignedIn() && (request.auth.uid == userId || isRole('admin'));
-    }
-    
-    // PROJECTS
-    match /projects/{projectId} {
-      allow read, write: if isSignedIn();
-      
-      // Updates subcollection
-      match /updates/{updateId} {
-        allow read, write: if isSignedIn();
-      }
-    }
-
-    // INVENTORY & PROCUREMENT
-    match /inventory_items/{itemId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /inventory_requests/{requestId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /new_item_requests/{requestId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /procurement_buckets/{bucketId} {
-       allow read, write: if isSignedIn();
-    }
-
-    // FINANCE
-    match /reimbursements/{reimbursementId} {
-       allow read, write: if isSignedIn();
-    }
-    
-    match /transactions/{transactionId} {
-       allow read, write: if isSignedIn();
-    }
-    
-    match /accounts/{accountId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /budgets/{budgetId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    // SYSTEM & PERMISSIONS
-    match /system/{docId} {
-      allow read, write: if isSignedIn();
-    }
-
-    match /permissions/{role} {
-       allow read, write: if isSignedIn();
-    }
-    
-    // Fallback for any other collection
+    // Default open access: Allows all reads and writes.
+    // Security should be handled in application logic.
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }
