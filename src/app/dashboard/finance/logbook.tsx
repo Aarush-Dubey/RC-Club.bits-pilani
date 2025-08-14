@@ -5,15 +5,12 @@ import React, { useState, useEffect } from 'react';
 import Image from "next/image"
 import { collection, getDocs, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
-import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown, Upload } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown, Upload, Link as LinkIcon } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +25,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { upload } from "@imagekit/next"
+import Link from 'next/link';
 
 interface Transaction {
     id: string;
@@ -472,7 +470,17 @@ const TransactionLogbook = ({
                                     <TableCell>
                                         <Badge variant="outline">{transaction.category}</Badge>
                                     </TableCell>
-                                    <TableCell className="max-w-xs truncate">{transaction.description}</TableCell>
+                                    <TableCell className="max-w-xs truncate">
+                                        <div className="flex flex-col">
+                                            <span>{transaction.description}</span>
+                                            {transaction.category === 'Reimbursements' && transaction.reimbursementId && (
+                                                <Link href="/dashboard/reimbursements" className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                    <LinkIcon className="h-3 w-3" />
+                                                    View Reimbursement
+                                                </Link>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell className={cn(
                                         "text-right font-mono",
                                         transaction.type === 'income' ? "text-green-600" : "text-red-600"
@@ -602,9 +610,9 @@ export default function Logbook() {
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
                 ...doc.data() 
-            } as Transaction)).filter(t => !t.isDeleted);
+            } as Transaction));
             
-            setTransactions(newTransactions);
+            setTransactions(newTransactions.filter(t => !t.isDeleted));
             setLoading(false);
         }, (error) => {
             console.error("Error fetching transactions: ", error);
