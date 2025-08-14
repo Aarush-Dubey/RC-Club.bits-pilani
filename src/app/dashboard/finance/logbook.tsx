@@ -88,6 +88,7 @@ const TransactionForm = ({
     onCancel: () => void
 }) => {
     const { toast } = useToast();
+    const { user: currentUser } = useAuth();
     const [preview, setPreview] = useState<string | null>(null);
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionFormSchema),
@@ -135,6 +136,11 @@ const TransactionForm = ({
     };
 
     const onSubmit: SubmitHandler<TransactionFormValues> = async (values) => {
+        if (!currentUser) {
+            toast({ variant: "destructive", title: "Error", description: "Not authenticated" });
+            return;
+        }
+
         try {
             if (transaction) {
                 toast({ 
@@ -156,7 +162,7 @@ const TransactionForm = ({
                     proofUrl = uploadResponse.url;
                 }
                 
-                await addTransaction({ ...values, proofUrl });
+                await addTransaction({ ...values, proofUrl, createdBy: currentUser.uid });
                 toast({ title: "Success", description: "Transaction added to ledger." });
             }
             onSuccess();
@@ -370,10 +376,12 @@ const ReverseTransactionDialog = ({
 };
 
 const TransactionLogbook = ({ 
-    transactions, 
+    transactions,
+    allUsers,
     onUpdate 
 }: { 
     transactions: Transaction[], 
+    allUsers: any[],
     onUpdate: () => void 
 }) => {
     const [isAddingOpen, setIsAddingOpen] = useState(false);
@@ -382,7 +390,7 @@ const TransactionLogbook = ({
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
     
     const { user: currentUser } = useAuth();
-    const isTreasurer = currentUser?.role === 'treasurer';
+    const isTreasurer = currentUser?.role === 'treasurer' || currentUser?.role === 'admin' || currentUser?.role === 'coordinator';
 
     const filteredTransactions = transactions
         .filter(t => filterType === 'all' || t.type === filterType)
@@ -443,11 +451,11 @@ const TransactionLogbook = ({
                                 <TableRow 
                                     key={transaction.id}
                                     className={cn(
-                                        transaction.reimbursementId && "cursor-pointer hover:bg-muted/50",
+                                        "cursor-pointer hover:bg-muted/50",
                                         transaction.isReversed && "opacity-60",
                                         transaction.isReversal && "bg-yellow-50 dark:bg-yellow-900/10"
                                     )}
-                                    onClick={() => transaction.reimbursementId && setSelectedTransaction(transaction)}
+                                    onClick={() => isTreasurer && setSelectedTransaction(transaction)}
                                 >
                                     <TableCell className="whitespace-nowrap">{transaction.date}</TableCell>
                                     <TableCell>
@@ -520,6 +528,45 @@ const TransactionLogbook = ({
                     />
                 </DialogContent>
             </Dialog>
+
+            {/* Transaction Details Dialog */}
+            <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+                <DialogContent className="sm:max-w-md">
+                    {selectedTransaction && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Transaction Details</DialogTitle>
+                                <DialogDescription>{selectedTransaction.description}</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="flex justify-between"><span>Amount</span><span className="font-mono">₹{formatCurrency(selectedTransaction.amount)}</span></div>
+                                <div className="flex justify-between"><span>Date</span><span>{selectedTransaction.date}</span></div>
+                                <div className="flex justify-between"><span>Payee/Source</span><span>{selectedTransaction.payee || 'N/A'}</span></div>
+                                <div className="flex justify-between"><span>Category</span><Badge variant="outline">{selectedTransaction.category}</Badge></div>
+                                <div className="flex justify-between"><span>Created By</span><span>{allUsers.find(u => u.id === selectedTransaction.createdBy)?.name || 'Unknown'}</span></div>
+                                <div className="space-y-1">
+                                    <Label>Notes</Label>
+                                    <p className="text-sm text-muted-foreground">{selectedTransaction.notes || 'No notes provided.'}</p>
+                                </div>
+                                {selectedTransaction.proofUrl && (
+                                    <div className="space-y-2">
+                                        <Label>Proof</Label>
+                                        <a href={selectedTransaction.proofUrl} target="_blank" rel="noopener noreferrer">
+                                            <Image 
+                                                src={selectedTransaction.proofUrl} 
+                                                alt="Proof of transaction" 
+                                                width={400} 
+                                                height={400} 
+                                                className="rounded-md border object-contain w-full h-auto"
+                                            />
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
@@ -529,7 +576,6 @@ export default function Logbook() {
     const [allReimbursements, setAllReimbursements] = useState<any[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [allItems, setAllItems] = useState<any[]>([]);
-    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = () => {
@@ -555,7 +601,7 @@ export default function Logbook() {
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
                 ...doc.data() 
-            } as Transaction));
+            } as Transaction)).filter(t => !t.isDeleted);
             
             setTransactions(newTransactions);
             setLoading(false);
@@ -569,22 +615,6 @@ export default function Logbook() {
             unsubscribeTransactions();
         };
     }, []);
-
-    const selectedReimbursement = selectedTransaction?.reimbursementId
-        ? allReimbursements.find(r => r.id === selectedTransaction.reimbursementId)
-        : null;
-
-    const selectedProcurementItem = selectedReimbursement?.newItemRequestId
-        ? allItems.find(item => item.id === selectedReimbursement.newItemRequestId)
-        : null;
-    
-    const procurementRequester = selectedProcurementItem
-        ? allUsers.find(u => u.id === selectedProcurementItem.requestedById)
-        : null;
-
-    const procurementApprover = selectedProcurementItem
-        ? allUsers.find(u => u.id === selectedProcurementItem.approvedById)
-        : null;
 
     if (loading) {
         return (
@@ -606,71 +636,13 @@ export default function Logbook() {
                 <CardHeader>
                     <CardTitle>Transaction Ledger</CardTitle>
                     <CardDescription>
-                        Immutable record of all financial transactions. Click on reimbursement entries for details.
+                        Immutable record of all financial transactions. Click on an entry for details.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TransactionLogbook transactions={transactions} onUpdate={fetchData} />
+                    <TransactionLogbook transactions={transactions} allUsers={allUsers} onUpdate={fetchData} />
                 </CardContent>
             </Card>
-
-            {/* Reimbursement Details Dialog */}
-            <Dialog open={!!selectedReimbursement} onOpenChange={(isOpen) => !isOpen && setSelectedTransaction(null)}>
-                {selectedReimbursement && (
-                    <DialogContent className="sm:max-w-sm">
-                         <DialogHeader>
-                            <DialogTitle>Reimbursement Details</DialogTitle>
-                            <p className="text-2xl font-bold font-mono pt-2">₹{selectedReimbursement.amount.toFixed(2)}</p>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-[60vh] -mx-6">
-                            <div className="px-6 space-y-4">
-                                <div className="text-sm">
-                                    <span className="text-muted-foreground">Submitted by: </span>
-                                    <span className="font-medium">{allUsers.find((u: any) => u.id === selectedReimbursement.submittedById)?.name}</span>
-                                </div>
-
-                                {selectedProcurementItem && (
-                                    <Card className="bg-muted/50">
-                                    <CardHeader className="p-4">
-                                        <CardTitle className="text-base">Associated Procurement Request</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-4 pt-0 text-sm space-y-2">
-                                        <p><span className="font-medium text-muted-foreground">Item:</span> {selectedProcurementItem.itemName} (x{selectedProcurementItem.quantity})</p>
-                                        <p><span className="font-medium text-muted-foreground">Justification:</span> {selectedProcurementItem.justification}</p>
-                                        <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
-                                        <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
-                                    </CardContent>
-                                    </Card>
-                                )}
-                                
-                                {!selectedProcurementItem && (
-                                    <div>
-                                        <h4 className="font-medium mb-1 text-sm text-muted-foreground">Notes/Reason</h4>
-                                        <p className="text-sm">{selectedReimbursement.notes || 'No notes provided.'}</p>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
-                                    {selectedReimbursement.proofImageUrls?.[0] ? (
-                                    <a href={selectedReimbursement.proofImageUrls[0]} target="_blank" rel="noopener noreferrer">
-                                        <Image 
-                                        src={selectedReimbursement.proofImageUrls[0]}
-                                        alt="Receipt"
-                                        width={400}
-                                        height={400}
-                                        className="w-full h-auto rounded-md border object-contain"
-                                        />
-                                    </a>
-                                    ) : (
-                                    <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
-                                    )}
-                                </div>
-                            </div>
-                        </ScrollArea>
-                    </DialogContent>
-                )}
-            </Dialog>
         </div>
     );
 }
