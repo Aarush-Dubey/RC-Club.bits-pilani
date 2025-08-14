@@ -26,6 +26,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { upload } from "@imagekit/next"
 import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Transaction {
     id: string;
@@ -473,7 +475,7 @@ const TransactionLogbook = ({
                                     <TableCell className="max-w-xs truncate">
                                         <div className="flex flex-col">
                                             <span>{transaction.description}</span>
-                                            {transaction.category === 'Reimbursements' && transaction.reimbursementId && (
+                                            {transaction.reimbursementId && (
                                                 <Link href="/dashboard/reimbursements" className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                     <LinkIcon className="h-3 w-3" />
                                                     View Reimbursement
@@ -655,3 +657,5 @@ export default function Logbook() {
         </div>
     );
 }
+
+    
