@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -22,6 +23,8 @@ interface Transaction {
     date: string;
     balance: number;
     isReversed: boolean;
+    isDeleted?: boolean;
+    payee?: string;
 }
 
 interface MonthlyChartData {
@@ -160,12 +163,11 @@ export default function FinanceCharts() {
                     collection(db, "transactions"),
                     where("date", ">=", startDate),
                     where("date", "<=", endDate),
-                    where("isDeleted", "!=", true),
                     orderBy("date", "asc")
                 );
                 const snapshot = await getDocs(transactionsQuery);
                 const fetchedTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[];
-                setTransactions(fetchedTransactions);
+                setTransactions(fetchedTransactions.filter(t => t.isDeleted !== true));
             } catch (error) {
                 console.error("Error fetching transactions:", error);
                 toast({ variant: "destructive", title: "Error", description: "Failed to load financial data." });
@@ -293,3 +295,5 @@ export default function FinanceCharts() {
         </div>
     );
 }
+
+    

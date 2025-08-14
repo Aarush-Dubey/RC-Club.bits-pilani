@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from "react";
@@ -39,6 +40,7 @@ interface Transaction {
     date: string;
     balance: number;
     isReversed: boolean;
+    isDeleted?: boolean;
 }
 
 interface AssetGroup {
@@ -106,12 +108,11 @@ async function getMonthlyFinancialSummary() {
     const transactionsQuery = query(
         collection(db, "transactions"),
         where("date", ">=", monthStart),
-        where("date", "<=", monthEnd),
-        where("isDeleted", "!=", true)
+        where("date", "<=", monthEnd)
     );
     
     const snapshot = await getDocs(transactionsQuery);
-    const transactions = snapshot.docs.map(doc => doc.data()) as Transaction[];
+    const transactions = snapshot.docs.map(doc => doc.data()).filter(t => t.isDeleted !== true) as Transaction[];
     
     const income = transactions
         .filter(t => t.type === 'income' && !t.isReversed)
@@ -124,9 +125,9 @@ async function getMonthlyFinancialSummary() {
     // Get current balance from latest transaction
     const latestTransactionQuery = query(
         collection(db, "transactions"),
-        where("isDeleted", "!=", true),
         orderBy("date", "desc"),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
+        limit(1)
     );
     
     const latestSnapshot = await getDocs(latestTransactionQuery);
@@ -627,3 +628,5 @@ export default function BalanceSheet() {
 
     return <BalanceSheetTable data={data} accounts={accounts} onUpdate={fetchData} />;
 }
+
+    
