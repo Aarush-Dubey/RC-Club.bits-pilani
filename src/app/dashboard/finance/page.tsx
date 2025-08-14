@@ -1,28 +1,42 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BalanceSheet from "./balance-sheet";
 import Logbook from "./logbook";
+import BudgetManager from "./budget-manager";
+import FinanceCharts from "./finance-charts";
 
 export default function FinancePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Financial Reports</h2>
+          <h2 className="text-3xl font-bold tracking-tight font-headline">Financial Management</h2>
           <p className="text-muted-foreground">
-            View financial statements and reports for the club.
+            Manage all financial aspects of the club including transactions, budgets, and reporting.
           </p>
         </div>
       </div>
-      <Tabs defaultValue="balance-sheet">
-        <TabsList>
+      <Tabs defaultValue="balance-sheet" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
-          <TabsTrigger value="logbook">Logbook</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="budgets">Budgets</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
-        <TabsContent value="balance-sheet" className="mt-4">
-            <BalanceSheet />
+        
+        <TabsContent value="balance-sheet" className="space-y-4">
+          <BalanceSheet />
         </TabsContent>
-        <TabsContent value="logbook" className="mt-4">
-            <Logbook />
+        
+        <TabsContent value="transactions" className="space-y-4">
+          <Logbook />
+        </TabsContent>
+        
+        <TabsContent value="budgets" className="space-y-4">
+          <BudgetManager />
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-4">
+          <FinanceCharts />
         </TabsContent>
       </Tabs>
     </div>

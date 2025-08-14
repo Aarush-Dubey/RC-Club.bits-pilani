@@ -1,8 +1,7 @@
-
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc, writeBatch, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc, writeBatch, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // ----- Balance Sheet Actions -----
@@ -32,40 +31,220 @@ export async function deleteAccount(accountId: string) {
   revalidatePath("/dashboard/finance");
 }
 
+// ----- Enhanced Transaction Actions -----
 
-// ----- Logbook Actions -----
-
-// NOTE: This simple add does not recalculate subsequent balances. 
-// A more robust implementation would require a transaction to update all logs after this date.
-export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; }) {
-    const logbookCollection = collection(db, "logbook");
+export async function addTransaction(data: {
+  type: 'income' | 'expense';
+  category: string;
+  description: string;
+  amount: number;
+  date: string;
+  payee?: string;
+  proofUrl?: string;
+  notes?: string;
+  reimbursementId?: string;
+}) {
+  return await runTransaction(db, async (transaction) => {
+    // Get the last transaction to calculate new balance
+    const lastTransactionQuery = query(
+      collection(db, "transactions"), 
+      orderBy("date", "desc"), 
+      orderBy("createdAt", "desc"), 
+      limit(1)
+    );
+    const lastTransactionSnap = await getDocs(lastTransactionQuery);
+    const lastBalance = lastTransactionSnap.empty ? 0 : lastTransactionSnap.docs[0].data().balance;
     
-    // Fetch last balance to calculate the new one
-    const lastLogQuery = query(collection(db, "logbook"), orderBy("date", "desc"), limit(1));
-    const lastLogSnap = await getDocs(lastLogQuery);
-    const lastBalance = lastLogSnap.empty ? 0 : lastLogSnap.docs[0].data().balance;
-    const newBalance = lastBalance + (data.debit || 0) - (data.credit || 0);
+    // Calculate new balance
+    const balanceChange = data.type === 'income' ? data.amount : -data.amount;
+    const newBalance = lastBalance + balanceChange;
 
-    await addDoc(logbookCollection, {
-        ...data,
-        balance: newBalance,
-        createdAt: serverTimestamp()
+    // Create transaction record
+    const transactionRef = doc(collection(db, "transactions"));
+    transaction.set(transactionRef, {
+      ...data,
+      balance: newBalance,
+      isReversed: false,
+      createdAt: serverTimestamp(),
+      createdBy: "current-user" // You'll need to pass this from the client
     });
 
-    revalidatePath("/dashboard/finance");
+    return transactionRef.id;
+  });
+}
+
+export async function reverseTransaction(originalTransactionId: string, reason: string) {
+  return await runTransaction(db, async (transaction) => {
+    // Get original transaction
+    const originalRef = doc(db, "transactions", originalTransactionId);
+    const originalSnap = await transaction.get(originalRef);
+    
+    if (!originalSnap.exists()) {
+      throw new Error("Original transaction not found");
+    }
+    
+    const originalData = originalSnap.data();
+    
+    if (originalData.isReversed) {
+      throw new Error("Transaction already reversed");
+    }
+
+    // Mark original as reversed
+    transaction.update(originalRef, { 
+      isReversed: true,
+      reversedAt: serverTimestamp(),
+      reversalReason: reason
+    });
+
+    // Get current balance
+    const lastTransactionQuery = query(
+      collection(db, "transactions"), 
+      orderBy("date", "desc"), 
+      orderBy("createdAt", "desc"), 
+      limit(1)
+    );
+    const lastTransactionSnap = await getDocs(lastTransactionQuery);
+    const currentBalance = lastTransactionSnap.empty ? 0 : lastTransactionSnap.docs[0].data().balance;
+
+    // Create reversing entry
+    const reversingRef = doc(collection(db, "transactions"));
+    const balanceChange = originalData.type === 'income' ? -originalData.amount : originalData.amount;
+    
+    transaction.set(reversingRef, {
+      type: originalData.type === 'income' ? 'expense' : 'income',
+      category: originalData.category,
+      description: `REVERSAL: ${originalData.description}`,
+      amount: originalData.amount,
+      date: new Date().toISOString().split('T')[0],
+      payee: originalData.payee,
+      notes: `Reversing transaction: ${reason}`,
+      balance: currentBalance + balanceChange,
+      isReversed: false,
+      isReversal: true,
+      originalTransactionId: originalTransactionId,
+      createdAt: serverTimestamp(),
+      createdBy: "current-user"
+    });
+  });
+}
+
+// ----- Budget Actions -----
+
+export async function createBudget(data: {
+  name: string;
+  category: string;
+  amount: number;
+  period: 'monthly' | 'semester' | 'annual';
+  startDate: string;
+  endDate: string;
+}) {
+  const budgetCollection = collection(db, "budgets");
+  await addDoc(budgetCollection, {
+    ...data,
+    spent: 0,
+    remaining: data.amount,
+    isActive: true,
+    createdAt: serverTimestamp(),
+  });
+  revalidatePath("/dashboard/finance");
+}
+
+export async function updateBudget(budgetId: string, data: any) {
+  const budgetRef = doc(db, "budgets", budgetId);
+  await updateDoc(budgetRef, {
+    ...data,
+    updatedAt: serverTimestamp()
+  });
+  revalidatePath("/dashboard/finance");
+}
+
+export async function deleteBudget(budgetId: string) {
+  const budgetRef = doc(db, "budgets", budgetId);
+  await deleteDoc(budgetRef);
+  revalidatePath("/dashboard/finance");
+}
+
+export async function updateBudgetSpent(category: string, amount: number) {
+  // This will be called when new expenses are added
+  const budgetsQuery = query(
+    collection(db, "budgets"),
+    where("category", "==", category),
+    where("isActive", "==", true)
+  );
+  
+  const budgetsSnap = await getDocs(budgetsQuery);
+  const batch = writeBatch(db);
+  
+  budgetsSnap.docs.forEach(doc => {
+    const budget = doc.data();
+    const newSpent = budget.spent + amount;
+    const newRemaining = budget.amount - newSpent;
+    
+    batch.update(doc.ref, {
+      spent: newSpent,
+      remaining: newRemaining,
+      updatedAt: serverTimestamp()
+    });
+  });
+  
+  await batch.commit();
+}
+
+// ----- Legacy Logbook Actions (for backward compatibility) -----
+
+export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; reimbursementId?: string; }) {
+  // Convert to new transaction format
+  const transactionData = {
+    type: data.debit ? 'income' as const : 'expense' as const,
+    category: data.assetGroup,
+    description: data.description,
+    amount: data.debit || data.credit || 0,
+    date: data.date,
+    payee: data.account,
+    notes: `Legacy entry from ${data.assetGroup}/${data.account}`,
+    reimbursementId: data.reimbursementId
+  };
+  
+  await addTransaction(transactionData);
 }
 
 export async function updateLogbookEntry(logId: string, data: any) {
-    const logRef = doc(db, "logbook", logId);
-    // Note: Updating balance for one entry would require re-calculating all subsequent entries.
-    // For simplicity, we are not allowing balance editing directly here.
-    await updateDoc(logRef, data);
-    revalidatePath("/dashboard/finance");
+  // For legacy compatibility, we'll allow updates but note they should use reversal
+  const logRef = doc(db, "transactions", logId);
+  await updateDoc(logRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+    isLegacyUpdate: true
+  });
+  revalidatePath("/dashboard/finance");
 }
 
 export async function deleteLogbookEntry(logId: string) {
-    const logRef = doc(db, "logbook", logId);
-    // Note: Deleting an entry would require re-calculating all subsequent balances.
-    await deleteDoc(logRef);
-    revalidatePath("/dashboard/finance");
+  // For legacy compatibility, mark as deleted instead of actually deleting
+  const logRef = doc(db, "transactions", logId);
+  await updateDoc(logRef, {
+    isDeleted: true,
+    deletedAt: serverTimestamp()
+  });
+  revalidatePath("/dashboard/finance");
 }
+
+// ----- Export Actions -----
+
+export async function getTransactionsForExport(startDate: string, endDate: string) {
+  const transactionsQuery = query(
+    collection(db, "transactions"),
+    where("date", ">=", startDate),
+    where("date", "<=", endDate),
+    where("isDeleted", "!=", true),
+    orderBy("date", "desc")
+  );
+  
+  const snapshot = await getDocs(transactionsQuery);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
+
+revalidatePath("/dashboard/finance");

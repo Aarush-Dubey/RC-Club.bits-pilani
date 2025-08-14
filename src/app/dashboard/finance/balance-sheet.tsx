@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect } from "react";
@@ -9,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Download, TrendingUp, TrendingDown } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -18,15 +17,28 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { addAccount, deleteAccount, updateAccountsBatch } from "./actions";
+import { addAccount, deleteAccount, updateAccountsBatch, getTransactionsForExport } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 interface Account {
     id: string;
     name: string;
     group: 'currentAssets' | 'fixedAssets' | 'ownersEquity' | 'currentLiabilities';
     balance: number;
+}
+
+interface Transaction {
+    id: string;
+    type: 'income' | 'expense';
+    category: string;
+    description: string;
+    amount: number;
+    date: string;
+    balance: number;
+    isReversed: boolean;
 }
 
 interface AssetGroup {
@@ -41,6 +53,10 @@ interface BalanceSheetData {
     fixedAssets: AssetGroup;
     ownersEquity: AssetGroup;
     grandTotal: number;
+    monthlyIncome: number;
+    monthlyExpenses: number;
+    netIncome: number;
+    currentBalance: number;
 }
 
 interface Liability {
@@ -81,13 +97,55 @@ async function getUnpaidReimbursements() {
     return Object.entries(liabilities).map(([name, balance]) => ({ name, balance }));
 }
 
+// Get monthly financial summary
+async function getMonthlyFinancialSummary() {
+    const currentDate = new Date();
+    const monthStart = startOfMonth(currentDate).toISOString().split('T')[0];
+    const monthEnd = endOfMonth(currentDate).toISOString().split('T')[0];
+    
+    const transactionsQuery = query(
+        collection(db, "transactions"),
+        where("date", ">=", monthStart),
+        where("date", "<=", monthEnd),
+        where("isDeleted", "!=", true)
+    );
+    
+    const snapshot = await getDocs(transactionsQuery);
+    const transactions = snapshot.docs.map(doc => doc.data()) as Transaction[];
+    
+    const income = transactions
+        .filter(t => t.type === 'income' && !t.isReversed)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const expenses = transactions
+        .filter(t => t.type === 'expense' && !t.isReversed)
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    // Get current balance from latest transaction
+    const latestTransactionQuery = query(
+        collection(db, "transactions"),
+        where("isDeleted", "!=", true),
+        orderBy("date", "desc"),
+        orderBy("createdAt", "desc")
+    );
+    
+    const latestSnapshot = await getDocs(latestTransactionQuery);
+    const currentBalance = latestSnapshot.empty ? 0 : latestSnapshot.docs[0].data().balance;
+    
+    return {
+        monthlyIncome: income,
+        monthlyExpenses: expenses,
+        netIncome: income - expenses,
+        currentBalance
+    };
+}
+
 const accountFormSchema = z.object({
   name: z.string().min(3, "Account name is required."),
   group: z.enum(['currentAssets', 'fixedAssets', 'ownersEquity', 'currentLiabilities'], { required_error: "Please select an asset group." }),
   balance: z.coerce.number().min(0, "Balance must be a positive number."),
 });
 type AccountFormValues = z.infer<typeof accountFormSchema>;
-
 
 const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog: () => void }) => {
     const { toast } = useToast();
@@ -284,6 +342,50 @@ const BalanceSheetEditor = ({ accounts, onUpdate, closeDialog }: { accounts: Acc
     );
 };
 
+const ExportDialog = ({ onExport }: { onExport: (startDate: string, endDate: string) => void }) => {
+    const [startDate, setStartDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Export Financial Data</DialogTitle>
+                    <DialogDescription>Select date range for export</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-medium">Start Date</label>
+                        <Input 
+                            type="date" 
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium">End Date</label>
+                        <Input 
+                            type="date" 
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => onExport(startDate, endDate)}>
+                        Export CSV
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
 const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetData, accounts: Account[], onUpdate: () => void }) => {
     const sections = [
@@ -295,72 +397,174 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
     const { user: currentUser } = useAuth();
     const isTreasurer = currentUser?.role === 'treasurer';
     const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const { toast } = useToast();
+
+    const handleExport = async (startDate: string, endDate: string) => {
+        try {
+            const transactions = await getTransactionsForExport(startDate, endDate);
+            
+            // Create CSV content
+            const csvHeaders = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Balance', 'Payee', 'Status'];
+            const csvRows = transactions.map(t => [
+                t.date,
+                t.type,
+                t.category,
+                t.description,
+                t.amount,
+                t.balance,
+                t.payee || '',
+                t.isReversed ? 'Reversed' : 'Active'
+            ]);
+            
+            const csvContent = [csvHeaders, ...csvRows]
+                .map(row => row.map(field => `"${field}"`).join(','))
+                .join('\n');
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `financial-data-${startDate}-to-${endDate}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            toast({ title: "Success", description: "Financial data exported successfully." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to export data." });
+        }
+    };
 
     return (
-        <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Balance Sheet</CardTitle>
-                     {isTreasurer && (
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                            </Button>
-                        </DialogTrigger>
-                    )}
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="font-bold">Asset Group</TableHead>
-                                <TableHead className="font-bold">Accounts</TableHead>
-                                <TableHead className="text-right font-bold">Balance</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sections.map(section => (
-                                <React.Fragment key={section.title}>
-                                    <TableRow>
-                                        <TableCell rowSpan={(section.data.accounts as any[]).length + 2} className="align-top font-semibold">{section.title}</TableCell>
-                                    </TableRow>
-                                    {(section.data.accounts as any[]).map((account, index) => (
-                                        <TableRow key={account.name}>
-                                            <TableCell>{account.name}</TableCell>
-                                            <TableCell className="text-right font-mono">{formatCurrency(account.balance)}</TableCell>
+        <div className="space-y-6">
+            {/* Financial Summary Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
+                        <div className="h-4 w-4 text-blue-600">₹</div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹{formatCurrency(data.currentBalance)}</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Monthly Income</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">₹{formatCurrency(data.monthlyIncome)}</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">₹{formatCurrency(data.monthlyExpenses)}</div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Net Income</CardTitle>
+                        <div className={`h-4 w-4 ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {data.netIncome >= 0 ? <TrendingUp /> : <TrendingDown />}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={`text-2xl font-bold ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            ₹{formatCurrency(Math.abs(data.netIncome))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Balance Sheet Table */}
+            <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Balance Sheet</CardTitle>
+                        <div className="flex gap-2">
+                            <ExportDialog onExport={handleExport} />
+                            {isTreasurer && (
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Edit
+                                    </Button>
+                                </DialogTrigger>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="font-bold">Asset Group</TableHead>
+                                    <TableHead className="font-bold">Accounts</TableHead>
+                                    <TableHead className="text-right font-bold">Balance</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sections.map(section => (
+                                    <React.Fragment key={section.title}>
+                                        <TableRow>
+                                            <TableCell rowSpan={(section.data.accounts as any[]).length + 2} className="align-top font-semibold">{section.title}</TableCell>
                                         </TableRow>
-                                    ))}
-                                    <TableRow className="bg-muted/50 font-bold">
-                                         <TableCell>Total {section.title}</TableCell>
-                                         <TableCell className="text-right font-mono">{formatCurrency(section.data.total)}</TableCell>
-                                    </TableRow>
-                                </React.Fragment>
-                            ))}
-                             <TableRow className="bg-primary/10 font-bold text-lg">
-                                 <TableCell colSpan={2}>Grand Total</TableCell>
-                                 <TableCell className="text-right font-mono">{formatCurrency(data.grandTotal)}</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            <DialogContent className="h-[90vh] flex flex-col">
-                <BalanceSheetEditor accounts={accounts} onUpdate={onUpdate} closeDialog={() => setIsEditorOpen(false)} />
-            </DialogContent>
-        </Dialog>
+                                        {(section.data.accounts as any[]).map((account, index) => (
+                                            <TableRow key={account.name}>
+                                                <TableCell>{account.name}</TableCell>
+                                                <TableCell className="text-right font-mono">{formatCurrency(account.balance)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        <TableRow className="bg-muted/50 font-bold">
+                                             <TableCell>Total {section.title}</TableCell>
+                                             <TableCell className="text-right font-mono">{formatCurrency(section.data.total)}</TableCell>
+                                        </TableRow>
+                                    </React.Fragment>
+                                ))}
+                                 <TableRow className="bg-primary/10 font-bold text-lg">
+                                     <TableCell colSpan={2}>Grand Total</TableCell>
+                                     <TableCell className="text-right font-mono">{formatCurrency(data.grandTotal)}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+                <DialogContent className="h-[90vh] flex flex-col">
+                    <BalanceSheetEditor accounts={accounts} onUpdate={onUpdate} closeDialog={() => setIsEditorOpen(false)} />
+                </DialogContent>
+            </Dialog>
+        </div>
     )
 }
-
 
 export default function BalanceSheet() {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [unpaidLiabilities, setUnpaidLiabilities] = useState<Liability[]>([]);
+    const [financialSummary, setFinancialSummary] = useState({
+        monthlyIncome: 0,
+        monthlyExpenses: 0,
+        netIncome: 0,
+        currentBalance: 0
+    });
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
-        const reimbursements = await getUnpaidReimbursements();
-        setUnpaidLiabilities(reimbursements);
+        try {
+            const reimbursements = await getUnpaidReimbursements();
+            setUnpaidLiabilities(reimbursements);
+            
+            const summary = await getMonthlyFinancialSummary();
+            setFinancialSummary(summary);
+        } catch (error) {
+            console.error("Error fetching financial data:", error);
+        }
     };
 
     useEffect(() => {
@@ -412,10 +616,10 @@ export default function BalanceSheet() {
             },
             fixedAssets: { group: "Fixed Assets", accounts: fixedAssets, total: fixedAssetsTotal },
             ownersEquity: { group: "Owner's Equity", accounts: ownersEquity, total: ownersEquityTotal },
-            grandTotal: currentAssetsTotal + fixedAssetsTotal - liabilitiesTotal + ownersEquityTotal
+            grandTotal: currentAssetsTotal + fixedAssetsTotal - liabilitiesTotal + ownersEquityTotal,
+            ...financialSummary
         };
     })();
-
 
     if (!data) {
         return <p>No data available to display balance sheet.</p>
