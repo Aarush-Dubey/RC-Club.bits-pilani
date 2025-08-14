@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
 import { upload } from "@imagekit/next"
+import Image from 'next/image';
 
 import { db } from '@/lib/firebase'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -213,9 +214,11 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
                 className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
               >
                 {preview ? (
-                  <img
+                  <Image
                     src={preview}
                     alt="Receipt Preview"
+                    width={200}
+                    height={160}
                     className="h-full w-full object-contain rounded-md p-1"
                   />
                 ) : (

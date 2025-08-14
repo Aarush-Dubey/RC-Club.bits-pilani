@@ -50,7 +50,6 @@ export async function addTransaction(data: {
     const lastTransactionQuery = query(
       collection(db, "transactions"), 
       orderBy("date", "desc"), 
-      orderBy("createdAt", "desc"), 
       limit(1)
     );
     const lastTransactionSnap = await getDocs(lastTransactionQuery);
@@ -101,7 +100,6 @@ export async function reverseTransaction(originalTransactionId: string, reason: 
     const lastTransactionQuery = query(
       collection(db, "transactions"), 
       orderBy("date", "desc"), 
-      orderBy("createdAt", "desc"), 
       limit(1)
     );
     const lastTransactionSnap = await getDocs(lastTransactionQuery);
@@ -207,6 +205,7 @@ export async function addLogbookEntry(data: { date: string; assetGroup: string; 
   };
   
   await addTransaction(transactionData);
+  revalidatePath("/dashboard/finance");
 }
 
 export async function updateLogbookEntry(logId: string, data: any) {

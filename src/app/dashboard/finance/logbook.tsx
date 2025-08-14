@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
-import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown, Upload } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { upload } from "@imagekit/next"
 
 interface Transaction {
     id: string;
@@ -73,7 +74,7 @@ const transactionFormSchema = z.object({
     date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date format." }),
     payee: z.string().optional(),
     notes: z.string().optional(),
-    proofUrl: z.string().url().optional().or(z.literal('')),
+    proofImage: z.instanceof(File).optional(),
 });
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 
@@ -87,6 +88,7 @@ const TransactionForm = ({
     onCancel: () => void
 }) => {
     const { toast } = useToast();
+    const [preview, setPreview] = useState<string | null>(null);
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionFormSchema),
         defaultValues: transaction ? {
@@ -97,7 +99,6 @@ const TransactionForm = ({
             date: transaction.date,
             payee: transaction.payee || '',
             notes: transaction.notes || '',
-            proofUrl: transaction.proofUrl || '',
         } : {
             type: 'expense',
             category: '',
@@ -106,9 +107,32 @@ const TransactionForm = ({
             date: format(new Date(), 'yyyy-MM-dd'),
             payee: '',
             notes: '',
-            proofUrl: '',
         }
     });
+    
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            if (file.type.startsWith('image/')) {
+                form.setValue('proofImage', file);
+                setPreview(URL.createObjectURL(file))
+            } else {
+                toast({ variant: "destructive", title: "Invalid File", description: "Please select a valid image file." });
+                setPreview(null)
+            }
+        }
+    }
+    
+    const authenticator = async () => {
+        try {
+          const response = await fetch('/api/upload-auth');
+          if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+          const data = await response.json();
+          return { signature: data.signature, expire: data.expire, token: data.token };
+        } catch (error) {
+          throw new Error("Authentication request failed. Check your server logs.");
+        }
+    };
 
     const onSubmit: SubmitHandler<TransactionFormValues> = async (values) => {
         try {
@@ -120,7 +144,19 @@ const TransactionForm = ({
                 });
                 return;
             } else {
-                await addTransaction(values);
+                let proofUrl: string | undefined = undefined;
+                if (values.proofImage) {
+                    const authParams = await authenticator();
+                    const uploadResponse = await upload({
+                        publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
+                        ...authParams,
+                        file: values.proofImage,
+                        fileName: values.proofImage.name,
+                    });
+                    proofUrl = uploadResponse.url;
+                }
+                
+                await addTransaction({ ...values, proofUrl });
                 toast({ title: "Success", description: "Transaction added to ledger." });
             }
             onSuccess();
@@ -204,13 +240,46 @@ const TransactionForm = ({
                     </FormItem>
                 )} />
 
-                <FormField control={form.control} name="proofUrl" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Proof URL (Optional)</FormLabel>
-                        <FormControl><Input {...field} placeholder="Link to receipt or proof" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
+                 <FormField
+                    control={form.control}
+                    name="proofImage"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Proof of Purchase (Optional)</FormLabel>
+                            <FormControl>
+                                <div className="mt-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileSelect}
+                                        className="hidden"
+                                        id="proof-upload"
+                                    />
+                                    <label
+                                        htmlFor="proof-upload"
+                                        className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+                                    >
+                                        {preview ? (
+                                        <Image
+                                            src={preview}
+                                            alt="Proof Preview"
+                                            width={200}
+                                            height={160}
+                                            className="h-full w-full object-contain rounded-md p-1"
+                                        />
+                                        ) : (
+                                        <div className="text-center text-muted-foreground">
+                                            <Upload className="mx-auto h-8 w-8" />
+                                            <p className="mt-2 text-sm">Click to select a receipt</p>
+                                        </div>
+                                        )}
+                                    </label>
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <FormField control={form.control} name="notes" render={({ field }) => (
                     <FormItem>
@@ -472,17 +541,12 @@ export default function Logbook() {
     useEffect(() => {
         fetchData();
 
-        // Listen to both collections for backward compatibility
+        // Listen to transactions collection
         const transactionsQuery = query(
             collection(db, "transactions"), 
-            orderBy("date", "desc")
+            orderBy("date", "desc"),
         );
         
-        const legacyLogbookQuery = query(
-            collection(db, "logbook"), 
-            orderBy("date", "desc")
-        );
-
         const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
@@ -492,37 +556,10 @@ export default function Logbook() {
             setTransactions(newTransactions);
             setLoading(false);
         });
-
-        // Also listen to legacy logbook for backward compatibility
-        const unsubscribeLegacy = onSnapshot(legacyLogbookQuery, (snapshot) => {
-            const legacyTransactions = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    type: data.debit ? 'income' as const : 'expense' as const,
-                    category: data.assetGroup || 'Legacy',
-                    description: data.description,
-                    amount: data.debit || data.credit || 0,
-                    date: data.date,
-                    balance: data.balance,
-                    payee: data.account,
-                    isReversed: false,
-                    createdBy: 'legacy',
-                    reimbursementId: data.reimbursementId
-                } as Transaction;
-            });
-            
-            // Merge with new transactions (avoid duplicates)
-            setTransactions(prev => {
-                const existingIds = new Set(prev.map(t => t.id));
-                const newLegacy = legacyTransactions.filter(t => !existingIds.has(t.id));
-                return [...prev, ...newLegacy].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            });
-        });
+        
 
         return () => {
             unsubscribeTransactions();
-            unsubscribeLegacy();
         };
     }, []);
 
