@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, doc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 
@@ -228,77 +229,45 @@ const accounts = [
     { id: 'acc-11', name: "Stockholders' Equity", group: "ownersEquity", balance: -980404.12 },
 ];
 
+const transactionsData = [
+  { id: 'log-1', type: 'income', category: "Owner's Equity", payee: "Stockholders' Equity", description: 'Opening Balance', amount: 121517.38, balance: 121517.38, date: '2024-06-23' },
+  { id: 'log-2', type: 'income', category: 'Current Assets', payee: 'Cash', description: 'Bank Interest', amount: 833.00, balance: 122350.38, date: '2024-06-24' },
+  { id: 'log-3', type: 'income', category: 'Current Assets', payee: 'Cash', description: 'Received Cash', amount: 68295.95, balance: 190646.33, date: '2024-09-10' },
+  { id: 'log-4', type: 'expense', category: 'Current Liabilities', payee: 'Manoj Soni', description: 'Received Cash', amount: 68295.95, balance: 122350.38, date: '2024-09-10' },
+  { id: 'log-5', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'ESP32/ESP8266/ESP-07', amount: 649.00, balance: 121701.38, date: '2024-09-10' },
+  { id: 'log-7', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'Wifi Dongle x2', amount: 1798.00, balance: 119903.38, date: '2024-09-10' },
+  { id: 'log-9', type: 'expense', category: 'Current Assets', payee: 'Perishables', description: 'Fibreglass Tape x6', amount: 1550.00, balance: 118353.38, date: '2024-09-10' },
+  { id: 'log-11', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'ESP32 DevkitC x2', amount: 1217.00, balance: 117136.38, date: '2024-09-10' },
+  { id: 'log-13', type: 'expense', category: 'Fixed Assets', payee: 'BOSM24 Equipment', description: 'Pixhawk 2.4.8 with GPS', amount: 14231.00, balance: 102905.38, date: '2024-09-11' },
+  { id: 'log-15', type: 'expense', category: 'Fixed Assets', payee: 'BOSM24 Equipment', description: 'Sandisk SD Card 8GB', amount: 319.00, balance: 102586.38, date: '2024-09-11' },
+  { id: 'log-17', type: 'expense', category: 'Fixed Assets', payee: 'BOSM24 Equipment', description: 'WS2812 neopixel matrix 4*4', amount: 1216.00, balance: 101370.38, date: '2024-09-11' },
+  { id: 'log-19', type: 'expense', category: 'Fixed Assets', payee: 'BOSM24 Equipment', description: '40A ESC', amount: 1900.00, balance: 99470.38, date: '2024-09-11' },
+  { id: 'log-21', type: 'expense', category: 'Current Assets', payee: 'BOSM24 Equipment', description: 'Shipping for the 4 orders above', amount: 152.60, balance: 99317.78, date: '2024-09-11' },
+  { id: 'log-23', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'Pixhawk 2.4.8 with GPS', amount: 14231.00, balance: 85086.78, date: '2024-09-11' },
+  { id: 'log-25', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'Sandisk SD Card 8GB', amount: 319.00, balance: 84767.78, date: '2024-09-11' },
+  { id: 'log-27', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: '40A ESC', amount: 3800.00, balance: 80967.78, date: '2024-09-11' },
+  { id: 'log-29', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'USB-UART TTL', amount: 158.00, balance: 80809.78, date: '2024-09-11' },
+  { id: 'log-31', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'EMAX MT2213 BLDC Motor 935kv', amount: 5715.00, balance: 75094.78, date: '2024-09-11' },
+  { id: 'log-33', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'F450 F550 Frame Landing Gear', amount: 1359.00, balance: 73735.78, date: '2024-09-11' },
+  { id: 'log-35', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'HollyBro M9N GPS', amount: 9320.00, balance: 64415.78, date: '2024-09-11' },
+  { id: 'log-37', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'EasyMech M2.5 x 8mm 12pcs Nuts and Bolts', amount: 398.00, balance: 64017.78, date: '2024-09-11' },
+  { id: 'log-39', type: 'expense', category: 'Fixed Assets', payee: 'Robofest24 Equipment', description: 'Shipping for the 8 orders above', amount: 267.40, balance: 63750.38, date: '2024-09-11' },
+  { id: 'log-41', type: 'income', category: "Owner's Equity", payee: "Stockholders' Equity", description: 'Robofest Money', amount: 50000.00, balance: 113750.38, date: '2024-09-11' },
+  { id: 'log-43', type: 'income', category: 'Current Assets', payee: 'Cash', description: 'Bank Interest', amount: 2686.00, balance: 116436.38, date: '2024-11-20' },
+  { id: 'log-45', type: 'expense', category: 'Current Assets', payee: 'Cash', description: 'Paid to Manoj Soni', amount: 68295.95, balance: 48140.43, date: '2024-12-07' },
+  { id: 'log-47', type: 'income', category: 'Current Assets', payee: 'Cash', description: 'Received Cash', amount: 18000.00, balance: 66140.43, date: '2025-01-20' },
+  { id: 'log-49', type: 'income', category: 'Current Assets', payee: 'Cash', description: 'Received Cash', amount: 20000.00, balance: 86140.43, date: '2025-01-28' },
+  { id: 'log-51', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x25 Hex Socket Head', amount: 110.00, balance: 86030.43, date: '2025-02-12' },
+  { id: 'log-53', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x30 Hex Socket Head', amount: 140.00, balance: 85890.43, date: '2025-02-12' },
+  { id: 'log-55', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x25 CSK Allen Socket', amount: 110.00, balance: 85780.43, date: '2025-02-12' },
+  { id: 'log-57', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4 T-Nut 4-Pronged', amount: 200.00, balance: 85580.43, date: '2025-02-12' },
+  { id: 'log-59', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M5 T-Nut 4-Pronged', amount: 220.00, balance: 85360.43, date: '2025-02-12' },
+  { id: 'log-61', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x40 Hex Socket Head', amount: 160.00, balance: 85200.43, date: '2025-02-12' },
+  { id: 'log-63', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x35 Hex Socket Head', amount: 150.00, balance: 85050.43, date: '2025-02-12' },
+  { id: 'log-65', type: 'expense', category: 'Fixed Assets', payee: 'Apogee 2025', description: 'EasyMech M4x15 Hex Socket Head', amount: 90.00, balance: 84960.43, date: '2025-02-12' },
+  { id: 'log-67', type: 'expense', category: 'Current Assets', payee: 'Apogee 2025', description: 'Shipping', amount: 79.00, balance: 84881.43, date: '2025-02-12' },
+].map(t => ({ ...t, isReversed: false, isReversal: false, createdAt: serverTimestamp() }));
 
-const logbookData = [
-    { id: 'log-1', date: '2024-06-23', assetGroup: "Owner's Equity", account: "Stockholders' Equity", description: 'Opening Balance', credit: 121517.38, balance: 121517.38 },
-    { id: 'log-2', date: '2024-06-24', assetGroup: 'Current Assets', account: 'Cash', description: 'Bank Interest', debit: 833.00, balance: 122350.38 },
-    { id: 'log-3', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Cash', description: 'Received Cash', debit: 68295.95, balance: 190646.33 },
-    { id: 'log-4', date: '2024-09-10', assetGroup: 'Current Liabilities', account: 'Manoj Soni', description: 'Received Cash', credit: 68295.95, balance: 122350.38 },
-    { id: 'log-5', date: '2024-09-10', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'ESP32/ESP8266/ESP-07', debit: 649.00, balance: 122999.38 },
-    { id: 'log-6', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Cash', description: 'ESP32/ESP8266/ESP-07', credit: 649.00, balance: 122350.38 },
-    { id: 'log-7', date: '2024-09-10', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'Wifi Dongle x2', debit: 1798.00, balance: 124148.38 },
-    { id: 'log-8', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Cash', description: 'Wifi Dongle x2', credit: 1798.00, balance: 122350.38 },
-    { id: 'log-9', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Perishables', description: 'Fibreglass Tape x6', debit: 1550.00, balance: 123900.38 },
-    { id: 'log-10', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Cash', description: 'Fibreglass Tape x6', credit: 1550.00, balance: 122350.38 },
-    { id: 'log-11', date: '2024-09-10', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'ESP32 DevkitC x2', debit: 1217.00, balance: 123567.38 },
-    { id: 'log-12', date: '2024-09-10', assetGroup: 'Current Assets', account: 'Cash', description: 'ESP32 DevkitC x2', credit: 1217.00, balance: 122350.38 },
-    { id: 'log-13', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'BOSM24 Equipment', description: 'Pixhawk 2.4.8 with GPS', debit: 14231.00, balance: 136581.38 },
-    { id: 'log-14', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Pixhawk 2.4.8 with GPS', credit: 14231.00, balance: 122350.38 },
-    { id: 'log-15', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'BOSM24 Equipment', description: 'Sandisk SD Card 8GB', debit: 319.00, balance: 122669.38 },
-    { id: 'log-16', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Sandisk SD Card 8GB', credit: 319.00, balance: 122350.38 },
-    { id: 'log-17', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'BOSM24 Equipment', description: 'WS2812 neopixel matrix 4*4', debit: 1216.00, balance: 123566.38 },
-    { id: 'log-18', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'WS2812 neopixel matrix 4*4', credit: 1216.00, balance: 122350.38 },
-    { id: 'log-19', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'BOSM24 Equipment', description: '40A ESC', debit: 1900.00, balance: 124250.38 },
-    { id: 'log-20', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: '40A ESC', credit: 1900.00, balance: 122350.38 },
-    { id: 'log-21', date: '2024-09-11', assetGroup: 'Current Assets', account: 'BOSM24 Equipment', description: 'Shipping for the 4 orders above', debit: 152.60, balance: 122502.98 },
-    { id: 'log-22', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Shipping for the 4 orders above', credit: 152.60, balance: 122350.38 },
-    { id: 'log-23', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'Pixhawk 2.4.8 with GPS', debit: 14231.00, balance: 136581.38 },
-    { id: 'log-24', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Pixhawk 2.4.8 with GPS', credit: 14231.00, balance: 122350.38 },
-    { id: 'log-25', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'Sandisk SD Card 8GB', debit: 319.00, balance: 122669.38 },
-    { id: 'log-26', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Sandisk SD Card 8GB', credit: 319.00, balance: 122350.38 },
-    { id: 'log-27', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: '40A ESC', debit: 3800.00, balance: 126150.38 },
-    { id: 'log-28', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: '40A ESC', credit: 3800.00, balance: 122350.38 },
-    { id: 'log-29', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'USB-UART TTL', debit: 158.00, balance: 122508.38 },
-    { id: 'log-30', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'USB-UART TTL', credit: 158.00, balance: 122350.38 },
-    { id: 'log-31', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'EMAX MT2213 BLDC Motor 935kv', debit: 5715.00, balance: 128065.38 },
-    { id: 'log-32', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'EMAX MT2213 BLDC Motor 935kv', credit: 5715.00, balance: 122350.38 },
-    { id: 'log-33', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'F450 F550 Frame Landing Gear', debit: 1359.00, balance: 123709.38 },
-    { id: 'log-34', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'F450 F550 Frame Landing Gear', credit: 1359.00, balance: 122350.38 },
-    { id: 'log-35', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'HollyBro M9N GPS', debit: 9320.00, balance: 131670.38 },
-    { id: 'log-36', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'HollyBro M9N GPS', credit: 9320.00, balance: 122350.38 },
-    { id: 'log-37', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'EasyMech M2.5 x 8mm 12pcs Nuts and Bolts', debit: 398.00, balance: 122748.38 },
-    { id: 'log-38', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M2.5 x 8mm 12pcs Nuts and Bolts', credit: 398.00, balance: 122350.38 },
-    { id: 'log-39', date: '2024-09-11', assetGroup: 'Fixed Assets', account: 'Robofest24 Equipment', description: 'Shipping for the 8 orders above', debit: 267.40, balance: 122617.78 },
-    { id: 'log-40', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Shipping for the 8 orders above', credit: 267.40, balance: 122350.38 },
-    { id: 'log-41', date: '2024-09-11', assetGroup: "Owner's Equity", account: "Stockholders' Equity", description: 'Robofest Money', credit: 50000.00, balance: 72350.38 },
-    { id: 'log-42', date: '2024-09-11', assetGroup: 'Current Assets', account: 'Cash', description: 'Robofest Money', debit: 50000.00, balance: 122350.38 },
-    { id: 'log-43', date: '2024-11-20', assetGroup: 'Current Assets', account: 'Cash', description: 'Bank Interest', debit: 2686.00, balance: 125036.38},
-    { id: 'log-44', date: '2024-11-20', assetGroup: "Owner's Equity", account: "Stockholders' Equity", description: 'Bank Interest', credit: 2686.00, balance: 122350.38},
-    { id: 'log-45', date: '2024-12-07', assetGroup: 'Current Assets', account: 'Cash', description: 'Paid to Manoj Soni', credit: 68295.95, balance: 54054.43},
-    { id: 'log-46', date: '2024-12-07', assetGroup: 'Current Liabilities', account: 'Manoj Soni', description: 'Paid to Manoj Soni', debit: 68295.95, balance: 122350.38},
-    { id: 'log-47', date: '2025-01-20', assetGroup: 'Current Assets', account: 'Cash', description: 'Received Cash', debit: 18000.00, balance: 72054.43},
-    { id: 'log-48', date: '2025-01-20', assetGroup: "Owner's Equity", account: "Stockholders' Equity", description: 'Received Cash from DVM', credit: 18000.00, balance: 140350.38},
-    { id: 'log-49', date: '2025-01-28', assetGroup: 'Current Assets', account: 'Cash', description: 'Received Cash', debit: 20000.00, balance: 92054.43},
-    { id: 'log-50', date: '2025-01-28', assetGroup: 'Current Assets', account: 'BOSM Receivable', description: 'Received Cash', credit: 20000.00, balance: 72054.43},
-    { id: 'log-51', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x25 Hex Socket Head', debit: 110.00, balance: 72164.43},
-    { id: 'log-52', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x25 Hex Socket Head', credit: 110.00, balance: 72054.43},
-    { id: 'log-53', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x30 Hex Socket Head', debit: 140.00, balance: 72194.43},
-    { id: 'log-54', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x30 Hex Socket Head', credit: 140.00, balance: 72054.43},
-    { id: 'log-55', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x25 CSK Allen Socket', debit: 110.00, balance: 72164.43},
-    { id: 'log-56', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x25 CSK Allen Socket', credit: 110.00, balance: 72054.43},
-    { id: 'log-57', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4 T-Nut 4-Pronged', debit: 200.00, balance: 72254.43},
-    { id: 'log-58', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4 T-Nut 4-Pronged', credit: 200.00, balance: 72054.43},
-    { id: 'log-59', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M5 T-Nut 4-Pronged', debit: 220.00, balance: 72274.43},
-    { id: 'log-60', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M5 T-Nut 4-Pronged', credit: 220.00, balance: 72054.43},
-    { id: 'log-61', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x40 Hex Socket Head', debit: 160.00, balance: 72214.43},
-    { id: 'log-62', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x40 Hex Socket Head', credit: 160.00, balance: 72054.43},
-    { id: 'log-63', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x35 Hex Socket Head', debit: 150.00, balance: 72204.43},
-    { id: 'log-64', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x35 Hex Socket Head', credit: 150.00, balance: 72054.43},
-    { id: 'log-65', date: '2025-02-12', assetGroup: 'Fixed Assets', account: 'Apogee 2025', description: 'EasyMech M4x15 Hex Socket Head', debit: 90.00, balance: 72144.43},
-    { id: 'log-66', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'EasyMech M4x15 Hex Socket Head', credit: 90.00, balance: 72054.43},
-    { id: 'log-67', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Apogee 2025', description: 'Shipping', debit: 79.00, balance: 72133.43},
-    { id: 'log-68', date: '2025-02-12', assetGroup: 'Current Assets', account: 'Cash', description: 'Shipping', credit: 79.00, balance: 72054.43},
-];
 
 
 const permissionsByRole = {
@@ -521,7 +490,7 @@ const seedDatabase = async () => {
     await seedCollection('procurement_buckets', procurementBuckets);
     await seedCollection('reimbursements', reimbursements);
     await seedCollection('accounts', accounts);
-    await seedCollection('logbook', logbookData);
+    await seedCollection('transactions', transactionsData);
     await seedPermissions();
     await seedSystemDocs();
     
