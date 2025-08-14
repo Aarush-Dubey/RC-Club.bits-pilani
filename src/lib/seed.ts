@@ -433,10 +433,13 @@ const seedCollection = async (collectionName: string, data: any[], subcollection
   const promises = data.map(async (item) => {
     const docId = item.id || item.name; // Use id or name for doc reference
     const docRef = doc(db, collectionName, docId);
-    const dataWithTimestamp = {
-        ...item,
-        createdAt: item.createdAt || serverTimestamp(),
-    };
+    
+    // Check if item has createdAt, if not use serverTimestamp but only if it's not already a server timestamp object
+    const dataWithTimestamp = { ...item };
+    if (!item.createdAt) {
+        dataWithTimestamp.createdAt = serverTimestamp();
+    }
+    
     await setDoc(docRef, dataWithTimestamp);
 
     if (subcollection) {
@@ -506,3 +509,5 @@ seedDatabase().then(() => {
         process.exit(0);
     }
 });
+
+    

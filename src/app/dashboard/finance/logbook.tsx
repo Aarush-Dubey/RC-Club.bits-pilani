@@ -167,129 +167,133 @@ const TransactionForm = ({
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="type" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Transaction Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="income">
-                                        <div className="flex items-center gap-2">
-                                            <ArrowUp className="h-4 w-4 text-green-600" />
-                                            Income
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex flex-col h-full">
+                <ScrollArea className="flex-grow pr-6 -mr-6">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Transaction Type</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="income">
+                                                <div className="flex items-center gap-2">
+                                                    <ArrowUp className="h-4 w-4 text-green-600" />
+                                                    Income
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="expense">
+                                                <div className="flex items-center gap-2">
+                                                    <ArrowDown className="h-4 w-4 text-red-600" />
+                                                    Expense
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            
+                            <FormField control={form.control} name="date" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Date</FormLabel>
+                                    <FormControl><Input type="date" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl><Input {...field} placeholder="Brief description of transaction" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="category" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Category</FormLabel>
+                                    <FormControl><Input {...field} placeholder="e.g., Events, Equipment, Sponsorship" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            
+                            <FormField control={form.control} name="amount" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Amount (₹)</FormLabel>
+                                    <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        <FormField control={form.control} name="payee" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Payee/Source</FormLabel>
+                                <FormControl><Input {...field} placeholder="Who paid or received money" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        <FormField
+                            control={form.control}
+                            name="proofImage"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Proof of Purchase (Optional)</FormLabel>
+                                    <FormControl>
+                                        <div className="mt-1">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileSelect}
+                                                className="hidden"
+                                                id="proof-upload"
+                                            />
+                                            <label
+                                                htmlFor="proof-upload"
+                                                className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+                                            >
+                                                {preview ? (
+                                                <Image
+                                                    src={preview}
+                                                    alt="Proof Preview"
+                                                    width={200}
+                                                    height={160}
+                                                    className="h-full w-full object-contain rounded-md p-1"
+                                                />
+                                                ) : (
+                                                <div className="text-center text-muted-foreground">
+                                                    <Upload className="mx-auto h-8 w-8" />
+                                                    <p className="mt-2 text-sm">Click to select a receipt</p>
+                                                </div>
+                                                )}
+                                            </label>
                                         </div>
-                                    </SelectItem>
-                                    <SelectItem value="expense">
-                                        <div className="flex items-center gap-2">
-                                            <ArrowDown className="h-4 w-4 text-red-600" />
-                                            Expense
-                                        </div>
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    
-                    <FormField control={form.control} name="date" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Date</FormLabel>
-                            <FormControl><Input type="date" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl><Input {...field} placeholder="Brief description of transaction" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
+                        <FormField control={form.control} name="notes" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Notes (Optional)</FormLabel>
+                                <FormControl><Textarea {...field} placeholder="Additional details" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                </ScrollArea>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="category" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <FormControl><Input {...field} placeholder="e.g., Events, Equipment, Sponsorship" /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    
-                    <FormField control={form.control} name="amount" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Amount (₹)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-
-                <FormField control={form.control} name="payee" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Payee/Source</FormLabel>
-                        <FormControl><Input {...field} placeholder="Who paid or received money" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-
-                 <FormField
-                    control={form.control}
-                    name="proofImage"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Proof of Purchase (Optional)</FormLabel>
-                            <FormControl>
-                                <div className="mt-1">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleFileSelect}
-                                        className="hidden"
-                                        id="proof-upload"
-                                    />
-                                    <label
-                                        htmlFor="proof-upload"
-                                        className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
-                                    >
-                                        {preview ? (
-                                        <Image
-                                            src={preview}
-                                            alt="Proof Preview"
-                                            width={200}
-                                            height={160}
-                                            className="h-full w-full object-contain rounded-md p-1"
-                                        />
-                                        ) : (
-                                        <div className="text-center text-muted-foreground">
-                                            <Upload className="mx-auto h-8 w-8" />
-                                            <p className="mt-2 text-sm">Click to select a receipt</p>
-                                        </div>
-                                        )}
-                                    </label>
-                                </div>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField control={form.control} name="notes" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Notes (Optional)</FormLabel>
-                        <FormControl><Textarea {...field} placeholder="Additional details" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-
-                <DialogFooter className="pt-4 border-t gap-2 sm:justify-between">
+                <DialogFooter className="pt-4 border-t gap-2 sm:justify-between flex-shrink-0">
                     <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
                     <Button type="submit" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -500,7 +504,7 @@ const TransactionLogbook = ({
 
             {/* Add Transaction Dialog */}
             <Dialog open={isAddingOpen} onOpenChange={setIsAddingOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Add New Transaction</DialogTitle>
                         <DialogDescription>
@@ -551,9 +555,12 @@ export default function Logbook() {
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
                 ...doc.data() 
-            } as Transaction)).filter(t => t.isDeleted !== true);
+            } as Transaction));
             
             setTransactions(newTransactions);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching transactions: ", error);
             setLoading(false);
         });
         
@@ -667,3 +674,5 @@ export default function Logbook() {
         </div>
     );
 }
+
+    
