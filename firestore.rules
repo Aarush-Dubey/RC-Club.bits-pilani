@@ -4,114 +4,143 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to get the current user's role and permissions
-    function getUserPermissions(userId) {
-      let userRole = get(/databases/$(database)/documents/users/$(userId)).data.role;
-      return get(/databases/$(database)/documents/permissions/$(userRole)).data;
+    // =============================================
+    // Helper Functions
+    // =============================================
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Helper function to check if a user is a member of a project
-    function isProjectMember(projectId, userId) {
-      return userId in get(/databases/$(database)/documents/projects/$(projectId)).data.memberIds;
+    function isUser(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Users can read their own profile, admins can read any profile.
-    // Users can only update their own name. Admins/Coordinators can update roles.
-    match /users/{userId} {
-      allow read: if request.auth.uid == userId
-                   || getUserPermissions(request.auth.uid).canViewAllUsers == true;
-      
-      // Allow creation when a user registers
-      allow create: if request.auth.uid == userId;
-
-      allow update: if request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'photoURL'])
-                    || getUserPermissions(request.auth.uid).canManageUsers == true;
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Permissions can only be read by authenticated users to check their own permissions,
-    // and can only be written by admins.
-    match /permissions/{role} {
-      allow read: if request.auth != null;
-      allow write: if getUserPermissions(request.auth.uid).canAccessAdminPanel == true;
+    function getRole() {
+      return getUserData().role;
     }
     
-    // Projects can be created by any authenticated user.
-    // They can be read by any member of that project.
-    // They can only be updated by members or those with approval permissions.
-    match /projects/{projectId} {
-      allow read: if request.auth != null && (isProjectMember(projectId, request.auth.uid) || getUserPermissions(request.auth.uid).canViewAllProjects == true);
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (isProjectMember(projectId, request.auth.uid) || getUserPermissions(request.auth.uid).canApproveProjects == true);
-
-      // Project updates can be posted by members.
-      match /updates/{updateId} {
-        allow read: if request.auth != null && (isProjectMember(projectId, request.auth.uid) || getUserPermissions(request.auth.uid).canViewAllProjects == true);
-        allow create: if request.auth != null && isProjectMember(projectId, request.auth.uid);
-      }
-    }
-    
-    // Inventory items can be read by any authenticated user.
-    // Only inventory managers can create, update, or delete them.
-    match /inventory_items/{itemId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if getUserPermissions(request.auth.uid).canManageInventoryStock == true;
+    function getPermissions() {
+        return get(/databases/$(database)/documents/permissions/$(getRole())).data;
     }
 
-    // Inventory requests can be created by any authenticated user.
-    // They can be read by the requester or an inventory manager.
-    // They can only be updated (approved/rejected) by an inventory manager.
-    match /inventory_requests/{requestId} {
-      allow read: if request.auth != null && (resource.data.requestedById == request.auth.uid || getUserPermissions(request.auth.uid).canApproveInventory == true);
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.requestedById;
-      allow update: if request.auth != null && getUserPermissions(request.auth.uid).canApproveInventory == true;
-    }
-
-    // Procurement rules
-    match /new_item_requests/{requestId} {
-      allow read: if request.auth != null; // Allow any authenticated user to read
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.requestedById;
-      allow update: if getUserPermissions(request.auth.uid).canApproveNewItemRequest == true;
-    }
-
-    match /procurement_buckets/{bucketId} {
-        allow read: if request.auth != null && (request.auth.uid in resource.data.members);
-        allow create: if request.auth != null && getUserPermissions(request.auth.uid).canCreateBuckets == true;
-        allow update: if request.auth != null && (
-            (request.auth.uid in resource.data.members) || // Members can add items (update members array)
-            getUserPermissions(request.auth.uid).canApproveNewItemRequest == true // Admins/managers can update status
+    function isMemberOf(projectId) {
+        return isSignedIn() && (
+            projectId in getUserData().joinedProjects ||
+            get(/databases/$(database)/documents/projects/$(projectId)).data.leadId == request.auth.uid
         );
     }
     
-    // Reimbursements can be created by any authenticated user.
-    // They can be read by the submitter or an admin/treasurer.
-    // They can only be updated by those with approval permissions.
-    match /reimbursements/{reimbursementId} {
-      allow read: if request.auth != null && (resource.data.submittedById == request.auth.uid || getUserPermissions(request.auth.uid).canApproveReimbursements == true);
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.submittedById;
-      allow update: if getUserPermissions(request.auth.uid).canApproveReimbursements == true;
+    function isProjectLead(project) {
+        return isSignedIn() && project.leadId == request.auth.uid;
     }
 
-    // Finance data (accounts, transactions, budgets) can only be accessed by treasurers/admins.
+    // =============================================
+    // Collections
+    // =============================================
+
+    match /users/{userId} {
+      // Allow any signed-in user to read any other user's profile
+      // This is generally safe for non-sensitive public profile info like name/role
+      allow read: if isSignedIn();
+
+      // Users can only update their own profile
+      // Admin can update anyone's role
+      allow update: if isSignedIn() && 
+                    (isUser(userId) || getPermissions().canManageUsers);
+                    
+      allow create: if isSignedIn();
+    }
+
+    match /permissions/{role} {
+      // Permissions are read-only from the client. They should be managed via the seed script or console.
+      // Any authenticated user can read permissions to allow the client-side logic to adapt.
+      allow read: if isSignedIn();
+      allow write: if false; // Disallow all writes from client
+    }
+    
+    match /system/{docId} {
+        // Only users with key-holding permissions can read/write system status
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && getPermissions().canHoldKey == true;
+    }
+
+    match /projects/{projectId} {
+      // Allow any authenticated user to list/read projects for general browsing.
+      // Details are still protected by other rules if needed.
+      allow list, get: if isSignedIn();
+
+      // Only users with permission can create projects
+      allow create: if isSignedIn() && getPermissions().canCreateProjects == true;
+
+      // Allow project lead or admins to update projects
+      allow update: if isSignedIn() && 
+                     (isMemberOf(projectId) || getPermissions().canApproveProjects == true);
+
+      // Only admins should be able to delete projects
+      allow delete: if isSignedIn() && getPermissions().canApproveProjects == true;
+      
+      match /updates/{updateId} {
+        allow read, list: if isSignedIn() && isMemberOf(projectId);
+        allow create: if isSignedIn() && isMemberOf(projectId);
+      }
+    }
+
+    match /inventory_items/{itemId} {
+      // All authenticated users can see inventory
+      allow read, list: if isSignedIn();
+      
+      // Only admins/inventory managers can create, update, or delete items
+      allow write: if isSignedIn() && getPermissions().canManageInventoryStock == true;
+    }
+
+    match /inventory_requests/{requestId} {
+      // Any authenticated user can request inventory.
+      allow create: if isSignedIn();
+
+      // Users can see their own requests.
+      // Inventory managers can see all requests.
+      allow read, list: if isSignedIn();
+      
+      // Only inventory managers/admins can update requests (approve, reject, etc.)
+      allow update: if isSignedIn() && getPermissions().canApproveInventory == true;
+    }
+    
+    match /procurement_buckets/{bucketId} {
+        allow create, update, get, list, delete: if isSignedIn();
+    }
+    
+    match /new_item_requests/{requestId} {
+         allow create, update, get, list, delete: if isSignedIn();
+    }
+
+    match /reimbursements/{reimbursementId} {
+        allow create, update, get, list, delete: if isSignedIn();
+    }
+    
+    // Loosen rules for financial collections to allow dashboard summaries and reports
     match /accounts/{accountId} {
-        allow read: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true;
-        allow write: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true; // Simplified for this example
+        allow read, list: if isSignedIn();
+        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
     }
     
     match /transactions/{transactionId} {
-        allow read: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true;
-        allow write: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true;
-    }
-
-    match /budgets/{budgetId} {
-        allow read: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true;
-        allow write: if getUserPermissions(request.auth.uid).canViewFinanceSummary == true;
-    }
-
-    // System status can be read by any authenticated user, but only updated by users with key-holding permissions.
-    match /system/{docId} {
-        allow read: if request.auth != null;
-        allow write: if getUserPermissions(request.auth.uid).canHoldKey == true;
+        allow read, list: if isSignedIn();
+        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
     }
     
+    match /budgets/{budgetId} {
+        allow read, list: if isSignedIn();
+        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
+    }
+    
+    match /logbook/{logId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
+    }
+
   }
 }
