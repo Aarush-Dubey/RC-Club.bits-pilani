@@ -3,144 +3,130 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // =============================================
+  
+    // =================================
     // Helper Functions
-    // =============================================
+    // =================================
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isUser(userId) {
+    
+    function isOwner(userId) {
       return request.auth.uid == userId;
     }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    
+    function getUserData(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    function getRole() {
-      return getUserData().role;
+    function isUserRole(role) {
+        return isSignedIn() && getUserData(request.auth.uid).role == role;
     }
     
-    function getPermissions() {
-        return get(/databases/$(database)/documents/permissions/$(getRole())).data;
-    }
-
-    function isMemberOf(projectId) {
-        return isSignedIn() && (
-            projectId in getUserData().joinedProjects ||
-            get(/databases/$(database)/documents/projects/$(projectId)).data.leadId == request.auth.uid
-        );
+    function isOneOfRoles(roles) {
+        return isSignedIn() && getUserData(request.auth.uid).role in roles;
     }
     
-    function isProjectLead(project) {
-        return isSignedIn() && project.leadId == request.auth.uid;
+    function isProjectMember(projectId) {
+      let projectData = get(/databases/$(database)/documents/projects/$(projectId)).data;
+      return request.auth.uid == projectData.leadId || request.auth.uid in projectData.memberIds;
+    }
+    
+    function getRolePermission(permission) {
+        let role = getUserData(request.auth.uid).role;
+        return get(/databases/$(database)/documents/permissions/$(role)).data[permission] == true;
     }
 
-    // =============================================
-    // Collections
-    // =============================================
+    // =================================
+    // Collection Rules
+    // =================================
 
+    // --- USERS ---
     match /users/{userId} {
-      // Allow any signed-in user to read any other user's profile
-      // This is generally safe for non-sensitive public profile info like name/role
       allow read: if isSignedIn();
-
-      // Users can only update their own profile
-      // Admin can update anyone's role
-      allow update: if isSignedIn() && 
-                    (isUser(userId) || getPermissions().canManageUsers);
-                    
-      allow create: if isSignedIn();
-    }
-
-    match /permissions/{role} {
-      // Permissions are read-only from the client. They should be managed via the seed script or console.
-      // Any authenticated user can read permissions to allow the client-side logic to adapt.
-      allow read: if isSignedIn();
-      allow write: if false; // Disallow all writes from client
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || getRolePermission('canManageUsers');
     }
     
-    match /system/{docId} {
-        // Only users with key-holding permissions can read/write system status
-        allow read: if isSignedIn();
-        allow write: if isSignedIn() && getPermissions().canHoldKey == true;
-    }
-
+    // --- PROJECTS ---
     match /projects/{projectId} {
-      // Allow any authenticated user to list/read projects for general browsing.
-      // Details are still protected by other rules if needed.
-      allow list, get: if isSignedIn();
-
-      // Only users with permission can create projects
-      allow create: if isSignedIn() && getPermissions().canCreateProjects == true;
-
-      // Allow project lead or admins to update projects
-      allow update: if isSignedIn() && 
-                     (isMemberOf(projectId) || getPermissions().canApproveProjects == true);
-
-      // Only admins should be able to delete projects
-      allow delete: if isSignedIn() && getPermissions().canApproveProjects == true;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if getRolePermission('canApproveProjects') || isProjectMember(projectId);
       
+      // Updates subcollection
       match /updates/{updateId} {
-        allow read, list: if isSignedIn() && isMemberOf(projectId);
-        allow create: if isSignedIn() && isMemberOf(projectId);
+        allow read: if isProjectMember(projectId);
+        allow create: if isProjectMember(projectId);
+        allow update, delete: if false; // Updates should be immutable
       }
     }
-
+    
+    // --- INVENTORY ---
     match /inventory_items/{itemId} {
-      // All authenticated users can see inventory
-      allow read, list: if isSignedIn();
-      
-      // Only admins/inventory managers can create, update, or delete items
-      allow write: if isSignedIn() && getPermissions().canManageInventoryStock == true;
+      allow read: if isSignedIn();
+      allow create, update: if getRolePermission('canManageInventoryStock');
+      allow delete: if getRolePermission('canManageInventoryStock');
     }
 
     match /inventory_requests/{requestId} {
-      // Any authenticated user can request inventory.
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
-
-      // Users can see their own requests.
-      // Inventory managers can see all requests.
-      allow read, list: if isSignedIn();
-      
-      // Only inventory managers/admins can update requests (approve, reject, etc.)
-      allow update: if isSignedIn() && getPermissions().canApproveInventory == true;
+      allow update: if getRolePermission('canApproveInventory');
+    }
+    
+    // --- PROCUREMENT ---
+    match /new_item_requests/{requestId} {
+        allow read: if isSignedIn();
+        allow create: if getRolePermission('canRequestNewItem');
+        allow update: if getRolePermission('canApproveNewItemRequest');
     }
     
     match /procurement_buckets/{bucketId} {
-        allow create, update, get, list, delete: if isSignedIn();
+        allow read: if isSignedIn(); // All members can see buckets to join them
+        allow create: if getRolePermission('canCreateBuckets');
+        allow update: if getRolePermission('canApproveNewItemRequest'); // Only managers/admins can change status
     }
     
-    match /new_item_requests/{requestId} {
-         allow create, update, get, list, delete: if isSignedIn();
-    }
-
+    // --- REIMBURSEMENTS ---
     match /reimbursements/{reimbursementId} {
-        allow create, update, get, list, delete: if isSignedIn();
+        allow read: if isSignedIn();
+        allow create: if getRolePermission('canSubmitReimbursements');
+        allow update: if getRolePermission('canApproveReimbursements') || isUserRole('treasurer');
     }
     
-    // Loosen rules for financial collections to allow dashboard summaries and reports
+    // --- FINANCE ---
     match /accounts/{accountId} {
-        allow read, list: if isSignedIn();
-        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
-    }
-    
-    match /transactions/{transactionId} {
-        allow read, list: if isSignedIn();
-        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
+      allow read: if isSignedIn();
+      allow create, update, delete: if isUserRole('treasurer');
     }
     
     match /budgets/{budgetId} {
-        allow read, list: if isSignedIn();
-        allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
+      allow read: if isSignedIn();
+      allow create, update, delete: if isUserRole('treasurer');
     }
     
-    match /logbook/{logId} {
-      allow read, list: if isSignedIn();
-      allow write: if isSignedIn() && getPermissions().canViewFinanceSummary == true;
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isUserRole('treasurer'); // only treasurer can add/reverse transactions
+      allow delete: if false; // Transactions should be reversed, not deleted
     }
 
+    match /logbook/{logId} {
+      allow read, write: if isUserRole('treasurer');
+    }
+    
+    // --- SYSTEM & PERMISSIONS ---
+    match /system/{docId} {
+        allow read: if isSignedIn();
+        allow write: if getRolePermission('canHoldKey'); // Only users who can hold keys can update status
+    }
+    
+    match /permissions/{role} {
+      allow read: if isSignedIn();
+      allow write: if isUserRole('admin');
+    }
   }
 }
+
+    
