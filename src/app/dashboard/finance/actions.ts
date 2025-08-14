@@ -246,5 +246,3 @@ export async function getTransactionsForExport(startDate: string, endDate: strin
     ...doc.data()
   }));
 }
-
-revalidatePath("/dashboard/finance");
