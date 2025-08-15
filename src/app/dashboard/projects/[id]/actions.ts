@@ -246,12 +246,15 @@ export async function initiateProjectCompletion(projectId: string) {
     revalidatePath('/dashboard/inventory');
 }
 
-export async function closeProject(projectId: string) {
+export async function closeProject(projectId: string, closedById: string) {
+    if (!closedById) {
+        throw new Error("User is not authenticated.");
+    }
     const projectRef = doc(db, "projects", projectId);
     await updateDoc(projectRef, {
         status: 'closed',
         closedAt: serverTimestamp(),
-        closedById: 'system-admin'
+        closedById,
     });
     revalidatePath(`/dashboard/projects/${projectId}`);
     revalidatePath('/dashboard/projects');

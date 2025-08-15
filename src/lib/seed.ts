@@ -277,6 +277,7 @@ const permissionsByRole = {
     canViewAllUsers: true,
     canCreateProjects: true,
     canApproveProjects: true,
+    canCloseProjects: true,
     canViewAllProjects: true,
     canRequestInventory: true,
     canApproveInventory: true,
@@ -299,6 +300,7 @@ const permissionsByRole = {
     canViewAllUsers: true,
     canCreateProjects: true,
     canApproveProjects: true,
+    canCloseProjects: true,
     canViewAllProjects: true,
     canRequestInventory: true,
     canApproveInventory: true,
@@ -321,6 +323,7 @@ const permissionsByRole = {
     canViewAllUsers: true,
     canCreateProjects: true,
     canApproveProjects: false,
+    canCloseProjects: false,
     canViewAllProjects: true,
     canRequestInventory: true,
     canApproveInventory: true,
@@ -343,6 +346,7 @@ const permissionsByRole = {
     canViewAllUsers: false,
     canCreateProjects: true,
     canApproveProjects: false,
+    canCloseProjects: false,
     canViewAllProjects: true,
     canRequestInventory: true,
     canApproveInventory: true,
@@ -365,6 +369,7 @@ const permissionsByRole = {
     canViewAllUsers: false,
     canCreateProjects: true,
     canApproveProjects: true, // Specific to drone projects
+    canCloseProjects: true,
     canViewAllProjects: false,
     canRequestInventory: true,
     canApproveInventory: false,
@@ -387,6 +392,7 @@ const permissionsByRole = {
     canViewAllUsers: false,
     canCreateProjects: true,
     canApproveProjects: true, // Specific to plane projects
+    canCloseProjects: true,
     canViewAllProjects: false,
     canRequestInventory: true,
     canApproveInventory: false,
@@ -409,6 +415,7 @@ const permissionsByRole = {
     canViewAllUsers: false,
     canCreateProjects: true,
     canApproveProjects: false,
+    canCloseProjects: false,
     canViewAllProjects: false,
     canRequestInventory: true,
     canApproveInventory: false,
@@ -509,5 +516,3 @@ seedDatabase().then(() => {
         process.exit(0);
     }
 });
-
-    

@@ -39,7 +39,7 @@ function getStatusConfig(status: string) {
         case 'active': return { color: 'bg-sky-500', tooltip: 'Active' };
         case 'pending_return': return { color: 'bg-orange-500', tooltip: 'Pending Return' };
         case 'completed': return { color: 'bg-green-500', tooltip: 'Completed' };
-        case 'closed': return { color: 'bg-gray-500', tooltip: 'Closed' };
+        case 'closed': return { color: 'bg-gray-800', tooltip: 'Closed' };
         case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
         default: return { color: 'bg-gray-400', tooltip: status ? status.replace(/_/g, ' ') : 'Unknown' };
     }

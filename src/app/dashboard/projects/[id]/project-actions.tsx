@@ -48,10 +48,11 @@ export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
   const onApprove = () => handleAction(() => approveProject(project.id), "Project Approved", "Inventory has been checked out to the project lead.", "Approval Failed");
   const onReject = () => handleAction(() => rejectProject(project.id), "Project Rejected", "The project has been marked as rejected.", "Rejection Failed");
   const onStart = () => handleAction(() => startProject(project.id), "Project Started", "The project is now active.", "Failed to Start Project");
-  const onClose = () => handleAction(() => closeProject(project.id), "Project Closed", "The project has been archived.", "Failed to Close Project");
+  const onClose = () => handleAction(() => closeProject(project.id, currentUser!.uid), "Project Closed", "The project has been archived.", "Failed to Close Project");
   
   const canApprove = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
   const canManage = currentUser?.role && ['admin', 'coordinator'].includes(currentUser.role);
+  const canClose = currentUser?.permissions?.canCloseProjects && !['closed', 'rejected'].includes(project.status);
   const isProjectLead = currentUser?.uid === project.leadId;
 
   if (canApprove) {
@@ -133,11 +134,27 @@ export function ProjectActions({ project, currentUser }: ProjectActionsProps) {
                 </AlertDialogContent>
             </AlertDialog>
           )}
-          {project.status === 'completed' && canManage && (
-              <Button onClick={onClose} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}
-                  Close Project
-              </Button>
+          {canClose && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                     <Button variant="destructive" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2"/>}
+                        Close Project
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to close this project?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently close the project and archive it. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={onClose}>Confirm Close</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           )}
       </div>
   );
