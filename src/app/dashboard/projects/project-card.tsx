@@ -1,17 +1,24 @@
 
+"use client"
+
 import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import type { AppUser } from "@/context/auth-context"
 
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { User } from "lucide-react"
+import { User, Archive, Loader2 } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { closeProject } from "./[id]/actions"
+import { useToast } from "@/hooks/use-toast"
 
 export type Project = {
   id: string
   title: string
   description: string
-  status: 'pending_approval' | 'approved' | 'active' | 'completed' | 'closed' | 'rejected'
+  status: 'pending_approval' | 'approved' | 'active' | 'completed' | 'closed' | 'rejected' | 'pending_return'
   leadId: string
   memberIds: string[]
   [key: string]: any
@@ -64,6 +71,27 @@ const StatusCircle = ({ status }: { status: string }) => {
 export const ProjectCard = ({ project, users, currentUser }: { project: Project; users: User[]; currentUser: AppUser | null }) => {
   const projectLead = users.find((u: any) => u.id === project.leadId)
   const canManage = currentUser?.permissions?.canApproveProjects && project.status === 'pending_approval';
+  const canClose = currentUser?.permissions?.canCloseProjects && !['closed', 'rejected'].includes(project.status);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
+
+
+  const handleCloseProject = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent link navigation
+    if (!currentUser) return;
+    setIsLoading(true);
+     try {
+      await closeProject(project.id, currentUser!.uid);
+      toast({ title: "Project Closed", description: "The project has been archived." });
+      router.refresh();
+    } catch (error) {
+      console.error(`Failed to close project:`, error);
+      toast({ variant: "destructive", title: "Failed to Close Project", description: (error as Error).message });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
       <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full relative">
@@ -99,6 +127,29 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
                  <Link href={`/dashboard/projects/${project.id}`}>
                     <Button className="w-full">Manage</Button>
                 </Link>
+            )}
+             {canClose && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" disabled={isLoading} onClick={(e) => e.stopPropagation()}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure you want to close this project?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently close the project and archive it. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleCloseProject}>
+                                Confirm Close
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             )}
           </div>
       </div>
