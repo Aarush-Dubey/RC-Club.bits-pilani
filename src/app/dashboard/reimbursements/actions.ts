@@ -57,7 +57,7 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
             description: `Paid reimbursement to ${userName}`,
             amount: reimbursementData.amount,
             date: new Date().toISOString().split('T')[0],
-            payee: userName,
+            payee: reimbursementData.submittedById, // Use the ID of the person being paid
             reimbursementId: reimbursementId, // Link to the reimbursement
             createdBy: paidById, // The user who marks it as paid is the creator of the transaction
         });

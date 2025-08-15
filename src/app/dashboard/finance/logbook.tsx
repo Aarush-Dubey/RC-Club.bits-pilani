@@ -16,7 +16,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { addTransaction, reverseTransaction } from './actions';
@@ -28,6 +27,7 @@ import { upload } from "@imagekit/next"
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Transaction {
@@ -530,7 +530,7 @@ const TransactionLogbook = ({
                             <div className="space-y-4 py-4">
                                 <div className="flex justify-between"><span>Amount</span><span className="font-mono">₹{formatCurrency(selectedTransaction.amount)}</span></div>
                                 <div className="flex justify-between"><span>Date</span><span>{selectedTransaction.date}</span></div>
-                                <div className="flex justify-between"><span>Payee/Source</span><span>{selectedTransaction.payee || 'N/A'}</span></div>
+                                <div className="flex justify-between"><span>Payee/Source</span><span>{allUsers.find(u => u.id === selectedTransaction.payee)?.name || selectedTransaction.payee || 'N/A'}</span></div>
                                 <div className="flex justify-between"><span>Category</span><Badge variant="outline">{selectedTransaction.category}</Badge></div>
                                 <div className="flex justify-between"><span>Created By</span><span>{allUsers.find(u => u.id === selectedTransaction.createdBy)?.name || 'Unknown'}</span></div>
                                  {selectedTransaction.reimbursementId && (
