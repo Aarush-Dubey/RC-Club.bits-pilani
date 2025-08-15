@@ -1,7 +1,7 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BalanceSheet from "./balance-sheet";
 import Logbook from "./logbook";
-import FinanceCharts from "./finance-charts";
 
 export default function FinancePage() {
   return (
@@ -15,10 +15,9 @@ export default function FinancePage() {
         </div>
       </div>
       <Tabs defaultValue="balance-sheet" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="balance-sheet" className="space-y-4">
@@ -27,10 +26,6 @@ export default function FinancePage() {
         
         <TabsContent value="transactions" className="space-y-4">
           <Logbook />
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="space-y-4">
-          <FinanceCharts />
         </TabsContent>
       </Tabs>
     </div>
