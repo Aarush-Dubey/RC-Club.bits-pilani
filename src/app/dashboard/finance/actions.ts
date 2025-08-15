@@ -44,6 +44,7 @@ export async function addTransaction(data: {
   proofUrl?: string;
   notes?: string;
   reimbursementId?: string;
+  createdBy: string;
 }) {
   return await runTransaction(db, async (transaction) => {
     // Get the last transaction to calculate new balance
@@ -66,7 +67,6 @@ export async function addTransaction(data: {
       balance: newBalance,
       isReversed: false,
       createdAt: serverTimestamp(),
-      createdBy: "current-user" // You'll need to pass this from the client
     });
 
     return transactionRef.id;
@@ -122,7 +122,7 @@ export async function reverseTransaction(originalTransactionId: string, reason: 
       isReversal: true,
       originalTransactionId: originalTransactionId,
       createdAt: serverTimestamp(),
-      createdBy: "current-user"
+      createdBy: originalData.createdBy // The original creator
     });
   });
 }
@@ -191,7 +191,7 @@ export async function updateBudgetSpent(category: string, amount: number) {
 
 // ----- Legacy Logbook Actions (for backward compatibility) -----
 
-export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; reimbursementId?: string; }) {
+export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; reimbursementId?: string; createdBy: string }) {
   // Convert to new transaction format
   const transactionData = {
     type: data.debit ? 'income' as const : 'expense' as const,
@@ -201,7 +201,8 @@ export async function addLogbookEntry(data: { date: string; assetGroup: string; 
     date: data.date,
     payee: data.account,
     notes: `Legacy entry from ${data.assetGroup}/${data.account}`,
-    reimbursementId: data.reimbursementId
+    reimbursementId: data.reimbursementId,
+    createdBy: data.createdBy
   };
   
   await addTransaction(transactionData);
