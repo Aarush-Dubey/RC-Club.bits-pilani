@@ -93,7 +93,7 @@ export default function DashboardLayout({
   ]
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <Sidebar>
         <SidebarHeader>
           <Link href="/" className="flex items-center gap-2 p-2">
