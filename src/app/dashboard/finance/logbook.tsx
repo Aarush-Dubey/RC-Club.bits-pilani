@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
-import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown, Upload, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, ArrowUpDown, RotateCcw, Eye, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Download } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,9 +18,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { addTransaction, reverseTransaction } from './actions';
+import { addTransaction, getTransactionsForExport, reverseTransaction } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogDescription } from '@/components/ui/alert-dialog';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { upload } from "@imagekit/next"
@@ -29,6 +29,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import * as XLSX from 'xlsx';
+
 
 interface Transaction {
     id: string;
@@ -364,6 +367,48 @@ const ReverseTransactionDialog = ({
     );
 };
 
+const ExportTransactionsDialog = ({ onExport }: { onExport: (startDate: string, endDate: string) => void }) => {
+    const [dateRange, setDateRange] = React.useState<{ from: Date; to: Date; }>({
+        from: subMonths(new Date(), 1),
+        to: new Date()
+    });
+
+    const handleExportClick = () => {
+        onExport(format(dateRange.from, 'yyyy-MM-dd'), format(dateRange.to, 'yyyy-MM-dd'));
+    }
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Export Transactions</DialogTitle>
+                    <DialogDescription>
+                        Select a date range to export as an XLSX file.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                     <DateRangePicker 
+                        onUpdate={(values) => setDateRange(values.range)}
+                        initialDateFrom={dateRange.from}
+                        initialDateTo={dateRange.to}
+                        align="center"
+                        showCompare={false}
+                     />
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleExportClick}>Export XLSX</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 const TransactionLogbook = ({ 
     transactions,
     allUsers,
@@ -379,6 +424,7 @@ const TransactionLogbook = ({
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
     
     const { user: currentUser } = useAuth();
+    const { toast } = useToast();
     const isTreasurer = currentUser?.role === 'treasurer' || currentUser?.role === 'admin' || currentUser?.role === 'coordinator';
 
     const filteredTransactions = transactions
@@ -388,6 +434,32 @@ const TransactionLogbook = ({
             const dateB = new Date(b.date).getTime();
             return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
         });
+
+    const handleExport = async (startDate: string, endDate: string) => {
+        toast({ title: "Generating Export...", description: "Please wait while we prepare your file." });
+        try {
+            const dataToExport = await getTransactionsForExport(startDate, endDate);
+            const formattedData = dataToExport.map((t: any) => ({
+                Date: t.date,
+                Type: t.type,
+                Category: t.category,
+                Description: t.description,
+                Amount: t.amount,
+                Balance: t.balance,
+                Payee: allUsers.find(u => u.id === t.payee)?.name || t.payee || 'N/A',
+                'Created By': allUsers.find(u => u.id === t.createdBy)?.name || 'Unknown',
+                Status: t.isReversed ? 'Reversed' : t.isReversal ? 'Reversal' : 'Normal',
+                Notes: t.notes
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+            XLSX.writeFile(workbook, `rc-club-transactions-${startDate}-to-${endDate}.xlsx`);
+            toast({ title: "Export Successful!", description: "Your file has been downloaded." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Export Failed", description: (error as Error).message });
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -411,12 +483,15 @@ const TransactionLogbook = ({
                     </Button>
                 </div>
                 
-                {isTreasurer && (
-                    <Button onClick={() => setIsAddingOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Transaction
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                     <ExportTransactionsDialog onExport={handleExport} />
+                    {isTreasurer && (
+                        <Button onClick={() => setIsAddingOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Transaction
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Transactions Table */}
