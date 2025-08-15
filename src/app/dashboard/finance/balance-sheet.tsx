@@ -18,12 +18,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { addAccount, deleteAccount, updateAccountsBatch } from "./actions";
+import { addAccount, deleteAccount, updateAccountsBatch, getTransactionsForExport } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { format } from "date-fns";
+import { format, subMonths } from "date-fns";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import * as XLSX from 'xlsx';
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 interface Account {
     id: string;
@@ -145,7 +147,7 @@ const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog
                         <FormLabel>Group</FormLabel>
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Select group" /></SelectValue>
                             </FormControl>
                             <SelectContent>
                                 <SelectItem value="currentAssets">Current Assets</SelectItem>
@@ -299,23 +301,123 @@ const BalanceSheetEditor = ({ accounts, onUpdate, closeDialog }: { accounts: Acc
     );
 };
 
-const ExportDialog = ({ onExport }: { onExport: () => void }) => {
+const ExportDialog = ({ balanceSheetData, allUsers, onExportPDF }: { balanceSheetData: BalanceSheetData, allUsers: any[], onExportPDF: () => void }) => {
+    const { toast } = useToast();
+    const [exportType, setExportType] = useState<'bs-pdf' | 'bs-xlsx' | 'tx-xlsx'>('bs-pdf');
+    const [dateRange, setDateRange] = React.useState<{ from: Date; to: Date; }>({
+        from: subMonths(new Date(), 1),
+        to: new Date()
+    });
+
+    const handleTransactionExport = async () => {
+        toast({ title: "Generating Export...", description: "Please wait while we prepare your file." });
+        try {
+            const startDate = format(dateRange.from, 'yyyy-MM-dd');
+            const endDate = format(dateRange.to, 'yyyy-MM-dd');
+            const dataToExport = await getTransactionsForExport(startDate, endDate);
+            
+            const formattedData = dataToExport.map((t: any) => ({
+                Date: t.date,
+                Type: t.type,
+                Category: t.category,
+                Description: t.description,
+                Amount: t.amount,
+                Balance: t.balance,
+                Payee: allUsers.find(u => u.id === t.payee)?.name || t.payee || 'N/A',
+                'Created By': allUsers.find(u => u.id === t.createdBy)?.name || 'Unknown',
+                Status: t.isReversed ? 'Reversed' : t.isReversal ? 'Reversal' : 'Normal',
+                Notes: t.notes
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+            XLSX.writeFile(workbook, `rc-club-transactions-${startDate}-to-${endDate}.xlsx`);
+            toast({ title: "Export Successful!", description: "Your file has been downloaded." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Export Failed", description: (error as Error).message });
+        }
+    };
+    
+    const handleBalanceSheetXLSXExport = () => {
+        const worksheetData = [];
+        worksheetData.push(['Balance Sheet']);
+        worksheetData.push([`Generated on: ${format(new Date(), 'PPP')}`]);
+        worksheetData.push([]); // Spacer row
+        worksheetData.push(['Account', 'Balance (₹)']);
+
+        const sections = [
+            { title: "Current Assets", data: balanceSheetData.currentAssets },
+            { title: "Fixed Assets", data: balanceSheetData.fixedAssets },
+            { title: "Current Liabilities", data: balanceSheetData.currentLiabilities },
+            { title: "Owner's Equity", data: balanceSheetData.ownersEquity },
+        ];
+
+        sections.forEach(section => {
+            worksheetData.push([section.title]);
+            (section.data.accounts as any[]).forEach(account => {
+                worksheetData.push([account.name, account.balance]);
+            });
+            worksheetData.push([`Total ${section.title}`, section.data.total]);
+            worksheetData.push([]); // Spacer row
+        });
+
+        worksheetData.push(['Grand Total', balanceSheetData.grandTotal]);
+        
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Balance Sheet");
+        XLSX.writeFile(workbook, `balance-sheet-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+        toast({ title: "Success", description: "Balance sheet exported as XLSX." });
+    };
+
+    const handleExport = () => {
+        if (exportType === 'bs-pdf') {
+            onExportPDF();
+        } else if (exportType === 'bs-xlsx') {
+            handleBalanceSheetXLSXExport();
+        } else if (exportType === 'tx-xlsx') {
+            handleTransactionExport();
+        }
+    };
+
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                     <Download className="mr-2 h-4 w-4" />
-                    Export PDF
+                    Export
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Export Balance Sheet</DialogTitle>
-                    <DialogDescription>This will generate a PDF of the current balance sheet view.</DialogDescription>
+                    <DialogTitle>Export Financial Data</DialogTitle>
+                    <DialogDescription>Select the report and format you want to download.</DialogDescription>
                 </DialogHeader>
+                <div className="py-4 space-y-4">
+                     <Select value={exportType} onValueChange={(value: any) => setExportType(value)}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="bs-pdf">Balance Sheet (PDF)</SelectItem>
+                            <SelectItem value="bs-xlsx">Balance Sheet (XLSX)</SelectItem>
+                            <SelectItem value="tx-xlsx">Transactions (XLSX)</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {exportType === 'tx-xlsx' && (
+                        <DateRangePicker 
+                            onUpdate={(values) => setDateRange(values.range)}
+                            initialDateFrom={dateRange.from}
+                            initialDateTo={dateRange.to}
+                            align="center"
+                            showCompare={false}
+                        />
+                    )}
+                </div>
                 <DialogFooter>
-                    <Button onClick={onExport}>
-                        Export PDF
+                    <Button onClick={handleExport}>
+                        Export Now
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -323,7 +425,7 @@ const ExportDialog = ({ onExport }: { onExport: () => void }) => {
     );
 };
 
-const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetData, accounts: Account[], onUpdate: () => void }) => {
+const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: BalanceSheetData, accounts: Account[], allUsers: any[], onUpdate: () => void }) => {
     const sections = [
         { title: "Current Assets", data: data.currentAssets },
         { title: "Fixed Assets", data: data.fixedAssets },
@@ -335,7 +437,7 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const { toast } = useToast();
 
-    const handleExport = () => {
+    const handleExportPDF = () => {
         const doc = new jsPDF();
         
         doc.setFontSize(18);
@@ -387,7 +489,7 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Balance Sheet</CardTitle>
                         <div className="flex gap-2">
-                            <ExportDialog onExport={handleExport} />
+                            <ExportDialog balanceSheetData={data} allUsers={allUsers} onExportPDF={handleExportPDF} />
                             {isTreasurer && (
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">
@@ -444,12 +546,17 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
 export default function BalanceSheet() {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [unpaidLiabilities, setUnpaidLiabilities] = useState<Liability[]>([]);
+    const [allUsers, setAllUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         try {
-            const reimbursements = await getUnpaidReimbursements();
+            const [reimbursements, usersSnap] = await Promise.all([
+                getUnpaidReimbursements(),
+                getDocs(collection(db, "users"))
+            ]);
             setUnpaidLiabilities(reimbursements);
+            setAllUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (error) {
             console.error("Error fetching financial data:", error);
         }
@@ -512,5 +619,5 @@ export default function BalanceSheet() {
         return <p>No data available to display balance sheet.</p>
     }
 
-    return <BalanceSheetTable data={data} accounts={accounts} onUpdate={fetchData} />;
+    return <BalanceSheetTable data={data} accounts={accounts} allUsers={allUsers} onUpdate={fetchData} />;
 }
