@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -332,7 +331,7 @@ const ReverseTransactionDialog = ({
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" disabled={transaction.isReversed}>
+                <Button variant="ghost" size="icon" disabled={transaction.isReversed || !!transaction.reimbursementId}>
                     <RotateCcw className="h-4 w-4" />
                 </Button>
             </AlertDialogTrigger>
@@ -588,6 +587,7 @@ export default function Logbook() {
         const transactionsQuery = query(
             collection(db, "transactions"), 
             orderBy("date", "desc"),
+            orderBy("createdAt", "desc")
         );
         
         const unsubscribeTransactions = onSnapshot(transactionsQuery, async (snapshot) => {
