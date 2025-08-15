@@ -95,11 +95,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={false}>
       <Sidebar>
-        <SidebarHeader>
-          <Link href="/" className="flex items-center justify-center p-2">
-            <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={28} height={28} className="size-7" />
-          </Link>
-        </SidebarHeader>
+        <SidebarHeader />
         <SidebarContent className="flex-grow">
           <SidebarMenu>
             {menuItems.map((item) => (
