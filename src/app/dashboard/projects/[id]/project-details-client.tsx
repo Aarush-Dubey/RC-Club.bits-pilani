@@ -11,8 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle, ArrowLeft, User as UserIcon } from "lucide-react";
-import { joinProject, leaveProject, initiateProjectCompletion } from "./actions";
+import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle, ArrowLeft, User as UserIcon, Archive } from "lucide-react";
+import { joinProject, leaveProject, initiateProjectCompletion, closeProject } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -120,6 +120,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     
     const isMember = currentUser && project.memberIds.includes(currentUser.uid);
     const isLead = currentUser && currentUser.uid === project.leadId;
+    const canClose = currentUser?.permissions?.canCloseProjects && !['closed', 'rejected'].includes(project.status);
 
     const handleJoin = async () => {
         if (!currentUser) {
@@ -152,6 +153,23 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
             toast({ variant: "destructive", title: "Failed to Leave", description: (error as Error).message });
         } finally {
             setIsLeaving(false);
+        }
+    };
+
+    const handleCloseProject = async () => {
+        if (!currentUser) {
+            toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to close a project." });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await closeProject(project.id, currentUser.uid);
+            toast({ title: "Project Closed", description: "The project has been archived." });
+            router.refresh();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Failed to Close Project", description: (error as Error).message });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -214,6 +232,28 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                 <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleLeave}>Confirm</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                               )}
+                               {canClose && !isLead && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" disabled={isSubmitting}>
+                                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
+                                                Close Project
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently close the project and archive it. This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleCloseProject}>Confirm</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
