@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Plus, Trash2, Download, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -21,8 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addAccount, deleteAccount, updateAccountsBatch, getTransactionsForExport } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, subMonths } from "date-fns";
 
 interface Account {
     id: string;
@@ -55,10 +54,6 @@ interface BalanceSheetData {
     fixedAssets: AssetGroup;
     ownersEquity: AssetGroup;
     grandTotal: number;
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    netIncome: number;
-    currentBalance: number;
 }
 
 interface Liability {
@@ -99,47 +94,6 @@ async function getUnpaidReimbursements() {
     return Object.entries(liabilities).map(([name, balance]) => ({ name, balance }));
 }
 
-// Get monthly financial summary
-async function getMonthlyFinancialSummary() {
-    const currentDate = new Date();
-    const monthStart = startOfMonth(currentDate).toISOString().split('T')[0];
-    const monthEnd = endOfMonth(currentDate).toISOString().split('T')[0];
-    
-    const transactionsQuery = query(
-        collection(db, "transactions"),
-        where("date", ">=", monthStart),
-        where("date", "<=", monthEnd)
-    );
-    
-    const snapshot = await getDocs(transactionsQuery);
-    const transactions = snapshot.docs.map(doc => doc.data()).filter(t => t.isDeleted !== true) as Transaction[];
-    
-    const income = transactions
-        .filter(t => t.type === 'income' && !t.isReversed)
-        .reduce((sum, t) => sum + t.amount, 0);
-    
-    const expenses = transactions
-        .filter(t => t.type === 'expense' && !t.isReversed)
-        .reduce((sum, t) => sum + t.amount, 0);
-    
-    // Get current balance from latest transaction
-    const latestTransactionQuery = query(
-        collection(db, "transactions"),
-        orderBy("date", "desc"),
-        orderBy("createdAt", "desc"),
-        limit(1)
-    );
-    
-    const latestSnapshot = await getDocs(latestTransactionQuery);
-    const currentBalance = latestSnapshot.empty ? 0 : latestSnapshot.docs[0].data().balance;
-    
-    return {
-        monthlyIncome: income,
-        monthlyExpenses: expenses,
-        netIncome: income - expenses,
-        currentBalance
-    };
-}
 
 const accountFormSchema = z.object({
   name: z.string().min(3, "Account name is required."),
@@ -406,11 +360,11 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
             
             // Create CSV content
             const csvHeaders = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Balance', 'Payee', 'Status'];
-            const csvRows = transactions.map(t => [
+            const csvRows = transactions.map((t: any) => [
                 t.date,
                 t.type,
                 t.category,
-                t.description,
+                `"${t.description}"`,
                 t.amount,
                 t.balance,
                 t.payee || '',
@@ -418,11 +372,11 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
             ]);
             
             const csvContent = [csvHeaders, ...csvRows]
-                .map(row => row.map(field => `"${field}"`).join(','))
+                .map(row => row.join(','))
                 .join('\n');
             
             // Download CSV
-            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -438,54 +392,6 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
 
     return (
         <div className="space-y-6">
-            {/* Financial Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
-                        <div className="h-4 w-4 text-blue-600">₹</div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{formatCurrency(data.currentBalance)}</div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Monthly Income</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">₹{formatCurrency(data.monthlyIncome)}</div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">₹{formatCurrency(data.monthlyExpenses)}</div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Net Income</CardTitle>
-                        <div className={`h-4 w-4 ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {data.netIncome >= 0 ? <TrendingUp /> : <TrendingDown />}
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold ${data.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ₹{formatCurrency(Math.abs(data.netIncome))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Balance Sheet Table */}
             <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -548,21 +454,12 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
 export default function BalanceSheet() {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [unpaidLiabilities, setUnpaidLiabilities] = useState<Liability[]>([]);
-    const [financialSummary, setFinancialSummary] = useState({
-        monthlyIncome: 0,
-        monthlyExpenses: 0,
-        netIncome: 0,
-        currentBalance: 0
-    });
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         try {
             const reimbursements = await getUnpaidReimbursements();
             setUnpaidLiabilities(reimbursements);
-            
-            const summary = await getMonthlyFinancialSummary();
-            setFinancialSummary(summary);
         } catch (error) {
             console.error("Error fetching financial data:", error);
         }
@@ -618,7 +515,6 @@ export default function BalanceSheet() {
             fixedAssets: { group: "Fixed Assets", accounts: fixedAssets, total: fixedAssetsTotal },
             ownersEquity: { group: "Owner's Equity", accounts: ownersEquity, total: ownersEquityTotal },
             grandTotal: currentAssetsTotal + fixedAssetsTotal - liabilitiesTotal + ownersEquityTotal,
-            ...financialSummary
         };
     })();
 
@@ -628,5 +524,3 @@ export default function BalanceSheet() {
 
     return <BalanceSheetTable data={data} accounts={accounts} onUpdate={fetchData} />;
 }
-
-    

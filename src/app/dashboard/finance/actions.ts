@@ -68,7 +68,8 @@ export async function addTransaction(data: {
     // Get the last transaction to calculate new balance
     const lastTransactionQuery = query(
       collection(db, "transactions"), 
-      orderBy("date", "desc"), 
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"), 
       limit(1)
     );
     const lastTransactionSnap = await getDocs(lastTransactionQuery);
@@ -118,6 +119,7 @@ export async function reverseTransaction(originalTransactionId: string, reason: 
     const lastTransactionQuery = query(
       collection(db, "transactions"), 
       orderBy("date", "desc"), 
+      orderBy("createdAt", "desc"), 
       limit(1)
     );
     const lastTransactionSnap = await getDocs(lastTransactionQuery);
@@ -198,8 +200,12 @@ export async function getTransactionsForExport(startDate: string, endDate: strin
   
   const snapshot = await getDocs(transactionsQuery);
   // Filter for 'isDeleted' on the client-side to avoid needing a composite index
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...serializeData(doc.data())
-  })).filter((t: any) => t.isDeleted !== true);
+  const transactions = snapshot.docs
+    .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }))
+    .filter((t: any) => t.isDeleted !== true);
+
+  return transactions.map(t => serializeData(t));
 }
