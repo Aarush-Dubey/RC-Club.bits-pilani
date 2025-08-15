@@ -9,7 +9,7 @@ import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
 import Image from "next/image"
-import { format } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -72,7 +72,8 @@ async function getData() {
     const userIds = [
       ...new Set([
         ...reimbursements.map((req: any) => req.submittedById),
-        ...reimbursements.map((req: any) => req.approvedById),
+        ...reimbursements.map((req: any) => req.reviewedById),
+        ...reimbursements.map((req: any) => req.paidById),
         ...newItems.map((item: any) => item.requestedById),
         ...newItems.map((item: any) => item.approvedById)
       ].filter(Boolean))
@@ -179,6 +180,9 @@ function ReimbursementsPageContent() {
     ? data.users.find(u => u.id === selectedProcurementItem.approvedById)
     : null;
     
+  const reviewer = selectedRequest?.reviewedById ? data.users.find(u => u.id === selectedRequest.reviewedById) : null;
+  const payer = selectedRequest?.paidById ? data.users.find(u => u.id === selectedRequest.paidById) : null;
+
   const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
 
   const renderFormContent = () => {
@@ -287,6 +291,28 @@ function ReimbursementsPageContent() {
                             <span className="text-muted-foreground">Submitted by: </span>
                             <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
                         </div>
+                        
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Status</span>
+                          <div className="flex items-center gap-2">
+                            <StatusCircle status={selectedRequest.status} />
+                            <span className="font-medium capitalize">{selectedRequest.status.replace(/_/g, ' ')}</span>
+                          </div>
+                        </div>
+
+                        {selectedRequest.status !== 'pending' && (
+                           <div className="text-xs text-muted-foreground">
+                              {selectedRequest.status === 'approved' && reviewer && (
+                                  <p>Approved by {reviewer.name} {formatDistanceToNow(selectedRequest.reviewedAt.toDate(), { addSuffix: true })}</p>
+                              )}
+                              {selectedRequest.status === 'rejected' && reviewer && (
+                                  <p>Rejected by {reviewer.name} {formatDistanceToNow(selectedRequest.reviewedAt.toDate(), { addSuffix: true })}</p>
+                              )}
+                              {selectedRequest.status === 'paid' && payer && (
+                                   <p>Paid by {payer.name} {formatDistanceToNow(selectedRequest.paidAt.toDate(), { addSuffix: true })}</p>
+                              )}
+                          </div>
+                        )}
 
                          {selectedProcurementItem && (
                           <Card className="bg-muted/50">
