@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus, Search } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus, Search, Filter } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
@@ -42,6 +42,7 @@ import { enhanceJustification } from "@/ai/flows/enhance-justification"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -604,7 +605,8 @@ function RequestsView({ data, fetchData }: { data: any, fetchData: () => void })
 function ManageView({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) {
     const isMobile = useIsMobile();
     const [activeManageTab, setActiveManageTab] = useState("checkouts");
-    const [searchQuery, setSearchQuery] = useState("");
+    const [filters, setFilters] = useState<{ userId: string | null; projectId: string | null }>({ userId: null, projectId: null });
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const manageTabs = [
         { value: "checkouts", label: "Current Checkouts", icon: SlidersHorizontal },
@@ -636,7 +638,7 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
                                 ))}
                             </SelectContent>
                         </Select>
-                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} searchQuery={searchQuery} />}
+                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} />}
                          {activeManageTab === "logs" && <ManageLogsView data={data} />}
                          {activeManageTab === "stock" && <ManageStockView data={data} fetchData={fetchData} />}
                     </div>
@@ -651,19 +653,59 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
-                             <div className="relative w-full max-w-xs">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search checkouts..."
-                                    className="pl-8"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
+                             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Filter
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80" align="end">
+                                    <div className="grid gap-4">
+                                        <div className="space-y-2">
+                                            <h4 className="font-medium leading-none">Filters</h4>
+                                            <p className="text-sm text-muted-foreground">
+                                                Filter checked out items.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <div className="grid grid-cols-3 items-center gap-4">
+                                                <Label htmlFor="user-filter">User</Label>
+                                                <Select value={filters.userId || ''} onValueChange={(value) => setFilters(f => ({ ...f, userId: value === 'all' ? null : value }))}>
+                                                    <SelectTrigger id="user-filter" className="col-span-2 h-8">
+                                                        <SelectValue placeholder="Select a user" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Users</SelectItem>
+                                                        {data.users.map((user: any) => (
+                                                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                             <div className="grid grid-cols-3 items-center gap-4">
+                                                <Label htmlFor="project-filter">Project</Label>
+                                                <Select value={filters.projectId || ''} onValueChange={(value) => setFilters(f => ({ ...f, projectId: value === 'all' ? null : value }))}>
+                                                    <SelectTrigger id="project-filter" className="col-span-2 h-8">
+                                                        <SelectValue placeholder="Select a project" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Projects</SelectItem>
+                                                         <SelectItem value="personal">Personal Use</SelectItem>
+                                                        {data.projects.map((project: any) => (
+                                                            <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                         <Button variant="ghost" onClick={() => setFilters({ userId: null, projectId: null })}>Clear Filters</Button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <TabsContent value="checkouts" className="mt-4">
-                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} searchQuery={searchQuery} />
+                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} />
                         </TabsContent>
                         <TabsContent value="logs" className="mt-4">
                            <ManageLogsView data={data} />
@@ -678,7 +720,7 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
     )
 }
 
-const ManageCheckoutsView = ({ data, canManageInventory, fetchData, searchQuery }: { data: any, canManageInventory: boolean, fetchData: () => void, searchQuery: string }) => {
+const ManageCheckoutsView = ({ data, canManageInventory, fetchData, filters }: { data: any, canManageInventory: boolean, fetchData: () => void, filters: { userId: string | null, projectId: string | null } }) => {
     
     const filteredRequests = data.inventoryRequests
         .filter((req: any) => {
@@ -686,17 +728,20 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData, searchQuery 
             return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
         })
         .filter((req: any) => {
-            if (!searchQuery) return true;
-            const item = data.inventory.find((i: any) => i.id === req.itemId);
-            const user = data.users.find((u: any) => u.id === req.checkedOutToId);
-            const project = data.projects.find((p: any) => p.id === req.projectId);
-            const lowerCaseQuery = searchQuery.toLowerCase();
+            if (!filters.userId && !filters.projectId) return true;
             
-            return (
-                item?.name.toLowerCase().includes(lowerCaseQuery) ||
-                user?.name.toLowerCase().includes(lowerCaseQuery) ||
-                (project && project.title.toLowerCase().includes(lowerCaseQuery))
-            );
+            const userMatch = !filters.userId || req.checkedOutToId === filters.userId;
+            
+            let projectMatch = true;
+            if (filters.projectId) {
+                if (filters.projectId === 'personal') {
+                    projectMatch = !req.projectId;
+                } else {
+                    projectMatch = req.projectId === filters.projectId;
+                }
+            }
+            
+            return userMatch && projectMatch;
         });
 
     return (
