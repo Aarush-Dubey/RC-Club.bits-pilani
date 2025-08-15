@@ -464,7 +464,7 @@ const TransactionLogbook = ({
                                         <div className="flex flex-col">
                                             <span>{transaction.description}</span>
                                             {transaction.reimbursementId && (
-                                                <Link href="/dashboard/reimbursements" className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                <Link href={`/dashboard/reimbursements?id=${transaction.reimbursementId}`} className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                     <LinkIcon className="h-3 w-3" />
                                                     View Details
                                                 </Link>

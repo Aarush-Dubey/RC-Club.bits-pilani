@@ -2,8 +2,8 @@
 
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -98,14 +98,14 @@ async function getData() {
     return { reimbursements, users, newItems, buckets };
 }
 
-
-export default function ReimbursementsPage() {
+function ReimbursementsPageContent() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], newItems: any[], buckets: any[] }>({ reimbursements: [], users: [], newItems: [], buckets: [] });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'selection' | 'procurement' | 'manual' | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user: currentUser } = useAuth();
   
   const fetchData = useCallback(async () => {
@@ -126,7 +126,16 @@ export default function ReimbursementsPage() {
 
     setData(fetchedData);
     setLoading(false);
-  }, []);
+
+    // Check for reimbursement ID in URL and open dialog
+    const reimbursementId = searchParams.get('id');
+    if (reimbursementId) {
+        const request = fetchedData.reimbursements.find(r => r.id === reimbursementId);
+        if (request) {
+            setSelectedRequest(request);
+        }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchData();
@@ -149,6 +158,12 @@ export default function ReimbursementsPage() {
     fetchData();
     setSelectedRequest(null);
   }, [fetchData]);
+  
+  const handleDialogClose = () => {
+    setSelectedRequest(null);
+    // Remove the query param from URL without reloading
+    router.replace('/dashboard/reimbursements', {scroll: false});
+  }
 
   const canApprove = currentUser?.permissions?.canApproveReimbursements;
   
@@ -221,7 +236,7 @@ export default function ReimbursementsPage() {
             </Button>
         </DialogTrigger>
         
-        <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
+        <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
           <Card>
             <CardHeader>
               <CardTitle>Reimbursement Requests</CardTitle>
@@ -328,3 +343,12 @@ export default function ReimbursementsPage() {
     </Dialog>
   )
 }
+
+export default function ReimbursementsPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ReimbursementsPageContent />
+        </Suspense>
+    );
+}
+
