@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from "next/image"
 import { collection, getDocs, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -53,19 +53,6 @@ interface Transaction {
 const formatCurrency = (amount: number | undefined) => {
     if (amount === undefined || amount === null) return '';
     return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
-}
-
-async function getRelatedFinanceData() {
-    const reimbursementsSnap = await getDocs(collection(db, "reimbursements"));
-    const reimbursements = reimbursementsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const usersSnap = await getDocs(collection(db, "users"));
-    const users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const newItemsSnap = await getDocs(collection(db, "new_item_requests"));
-    const newItems = newItemsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    return { reimbursements, users, newItems };
 }
 
 const transactionFormSchema = z.object({
@@ -585,48 +572,43 @@ const TransactionLogbook = ({
 
 export default function Logbook() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [allReimbursements, setAllReimbursements] = useState<any[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
-    const [allItems, setAllItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchData = () => {
-         getRelatedFinanceData().then(({ reimbursements, users, newItems }) => {
-            setAllReimbursements(reimbursements);
-            setAllUsers(users);
-            setAllItems(newItems);
-        }).catch(error => {
-            console.error("Error fetching related data: ", error);
-        });
-    }
+    const fetchData = useCallback(async () => {
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            setAllUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) {
+            console.error("Error fetching users: ", error);
+        }
+    }, []);
 
     useEffect(() => {
-        fetchData();
-
-        // Listen to transactions collection
         const transactionsQuery = query(
             collection(db, "transactions"), 
             orderBy("date", "desc"),
         );
         
-        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, async (snapshot) => {
+            setLoading(true);
             const newTransactions = snapshot.docs.map(doc => ({ 
                 id: doc.id, 
                 ...doc.data() 
             } as Transaction));
             
             setTransactions(newTransactions.filter(t => !t.isDeleted));
+            await fetchData(); // Fetch users every time transactions update
             setLoading(false);
         }, (error) => {
             console.error("Error fetching transactions: ", error);
             setLoading(false);
         });
-        
 
         return () => {
             unsubscribeTransactions();
         };
-    }, []);
+    }, [fetchData]);
 
     if (loading) {
         return (
@@ -658,4 +640,3 @@ export default function Logbook() {
         </div>
     );
 }
-
