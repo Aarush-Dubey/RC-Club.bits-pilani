@@ -18,10 +18,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { addAccount, deleteAccount, updateAccountsBatch, getTransactionsForExport } from "./actions";
+import { addAccount, deleteAccount, updateAccountsBatch } from "./actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { format, subMonths } from "date-fns";
+import { format } from "date-fns";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 interface Account {
     id: string;
@@ -297,44 +299,23 @@ const BalanceSheetEditor = ({ accounts, onUpdate, closeDialog }: { accounts: Acc
     );
 };
 
-const ExportDialog = ({ onExport }: { onExport: (startDate: string, endDate: string) => void }) => {
-    const [startDate, setStartDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
-    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-    
+const ExportDialog = ({ onExport }: { onExport: () => void }) => {
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                     <Download className="mr-2 h-4 w-4" />
-                    Export
+                    Export PDF
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Export Financial Data</DialogTitle>
-                    <DialogDescription>Select date range for export</DialogDescription>
+                    <DialogTitle>Export Balance Sheet</DialogTitle>
+                    <DialogDescription>This will generate a PDF of the current balance sheet view.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-sm font-medium">Start Date</label>
-                        <Input 
-                            type="date" 
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium">End Date</label>
-                        <Input 
-                            type="date" 
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                        />
-                    </div>
-                </div>
                 <DialogFooter>
-                    <Button onClick={() => onExport(startDate, endDate)}>
-                        Export CSV
+                    <Button onClick={onExport}>
+                        Export PDF
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -345,8 +326,8 @@ const ExportDialog = ({ onExport }: { onExport: (startDate: string, endDate: str
 const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetData, accounts: Account[], onUpdate: () => void }) => {
     const sections = [
         { title: "Current Assets", data: data.currentAssets },
-        { title: "Current Liabilities", data: data.currentLiabilities },
         { title: "Fixed Assets", data: data.fixedAssets },
+        { title: "Current Liabilities", data: data.currentLiabilities },
         { title: "Owner's Equity", data: data.ownersEquity },
     ];
     const { user: currentUser } = useAuth();
@@ -354,40 +335,49 @@ const BalanceSheetTable = ({ data, accounts, onUpdate }: { data: BalanceSheetDat
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const { toast } = useToast();
 
-    const handleExport = async (startDate: string, endDate: string) => {
-        try {
-            const transactions = await getTransactionsForExport(startDate, endDate);
-            
-            // Create CSV content
-            const csvHeaders = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Balance', 'Payee', 'Status'];
-            const csvRows = transactions.map((t: any) => [
-                t.date,
-                t.type,
-                t.category,
-                `"${t.description}"`,
-                t.amount,
-                t.balance,
-                t.payee || '',
-                t.isReversed ? 'Reversed' : 'Active'
+    const handleExport = () => {
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text("Balance Sheet", 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${format(new Date(), 'PPP')}`, 14, 28);
+        
+        const tableData = sections.flatMap(section => {
+            const sectionRows = section.data.accounts.map((account: any) => [
+                { content: account.name, styles: { cellWidth: 80 } },
+                { content: formatCurrency(account.balance), styles: { halign: 'right' } },
             ]);
             
-            const csvContent = [csvHeaders, ...csvRows]
-                .map(row => row.join(','))
-                .join('\n');
-            
-            // Download CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `financial-data-${startDate}-to-${endDate}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            toast({ title: "Success", description: "Financial data exported successfully." });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to export data." });
-        }
+            return [
+                [{ content: section.title, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } }],
+                ...sectionRows,
+                 [{ content: `Total ${section.title}`, styles: { fontStyle: 'bold' } }, { content: formatCurrency(section.data.total), styles: { fontStyle: 'bold', halign: 'right' } }]
+            ];
+        });
+
+        tableData.push([
+            { content: 'Grand Total', styles: { fontStyle: 'bold', fontSize: 12, fillColor: [200, 200, 200] } },
+            { content: formatCurrency(data.grandTotal), styles: { fontStyle: 'bold', fontSize: 12, halign: 'right', fillColor: [200, 200, 200] } }
+        ]);
+
+        (doc as any).autoTable({
+            startY: 35,
+            head: [['Account', 'Balance (₹)']],
+            body: tableData,
+            theme: 'striped',
+            didDrawCell: (data: any) => {
+                 if (data.row.raw.length === 1) { // This is a section header
+                    if (data.row.raw[0].styles.fillColor) {
+                        doc.setFillColor(data.row.raw[0].styles.fillColor[0], data.row.raw[0].styles.fillColor[1], data.row.raw[0].styles.fillColor[2]);
+                    }
+                }
+            }
+        });
+
+        doc.save(`balance-sheet-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        toast({ title: "Success", description: "Balance sheet exported as PDF." });
     };
 
     return (
