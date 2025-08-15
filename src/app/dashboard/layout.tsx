@@ -12,7 +12,6 @@ import {
   ShoppingCart,
   ToyBrick,
   Truck,
-  Settings,
   Users,
 } from "lucide-react"
 
@@ -44,11 +43,6 @@ const adminMenuItems = [
     { href: "/dashboard/manage-club", icon: Users, label: "Manage Club", permission: "canManageUsers" },
 ]
 
-const bottomMenuItems = [
-    { href: "/dashboard/settings", icon: Settings, label: "Settings" },
-]
-
-
 export default function DashboardLayout({
   children,
 }: {
@@ -68,7 +62,6 @@ export default function DashboardLayout({
     return (
       <div className="flex min-h-screen w-full">
         <div className="hidden w-64 flex-col border-r bg-sidebar p-4 md:flex">
-          <Skeleton className="h-8 w-3/4" />
           <div className="mt-8 space-y-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -112,23 +105,6 @@ export default function DashboardLayout({
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-        </SidebarContent>
-        <SidebarContent>
-            <SidebarMenu>
-                 {bottomMenuItems.map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                        <Link href={item.href} passHref>
-                        <SidebarMenuButton
-                            isActive={pathname.startsWith(item.href)}
-                            tooltip={item.label}
-                        >
-                            <item.icon />
-                            <span>{item.label}</span>
-                        </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
