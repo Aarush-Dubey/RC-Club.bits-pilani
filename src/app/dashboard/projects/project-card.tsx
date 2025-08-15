@@ -3,7 +3,7 @@ import Link from "next/link"
 import type { AppUser } from "@/context/auth-context"
 
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { User } from "lucide-react"
 
@@ -50,7 +50,7 @@ const StatusCircle = ({ status }: { status: string }) => {
 
   return (
     <Tooltip>
-        <TooltipTrigger>
+        <TooltipTrigger asChild>
             <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
         </TooltipTrigger>
         <TooltipContent>
