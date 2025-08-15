@@ -13,9 +13,9 @@ export function PublicHeader() {
   return (
     <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
       <Link href="/" className="flex items-center gap-2">
-        <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={32} height={32} className="size-8" />
+        <Image src="/assets/logo.png" alt="RC-Club Logo" width={32} height={32} className="size-8" />
         <h1 className="text-xl font-bold tracking-tighter font-headline">
-          RC Club Manager
+          RC-Club
         </h1>
       </Link>
       <nav className="flex items-center gap-2">

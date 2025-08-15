@@ -6,8 +6,11 @@ import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/context/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'RC Club Manager',
+  title: 'RC-Club',
   description: 'Manage your RC club with ease.',
+  icons: {
+    icon: '/assets/logo.png',
+  },
 };
 
 export default function RootLayout({

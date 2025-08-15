@@ -84,9 +84,9 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center gap-2">
-            <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={32} height={32} className="size-8" />
+            <Image src="/assets/logo.png" alt="RC-Club Logo" width={32} height={32} className="size-8" />
             <h1 className="text-2xl font-bold tracking-tighter font-headline">
-              RC Club Manager
+              RC-Club
             </h1>
           </div>
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>

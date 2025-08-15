@@ -92,7 +92,7 @@ export default function HomePage() {
       </main>
 
        <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm border-t">
-          <p>&copy; {new Date().getFullYear()} RC Club Manager. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} RC-Club. All Rights Reserved.</p>
       </footer>
     </div>
   );
