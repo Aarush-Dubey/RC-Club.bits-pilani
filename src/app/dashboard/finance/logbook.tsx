@@ -367,6 +367,75 @@ const ReverseTransactionDialog = ({
     );
 };
 
+const ExportDialog = ({ allUsers }: { allUsers: any[] }) => {
+    const { toast } = useToast();
+    const [dateRange, setDateRange] = React.useState<{ from: Date; to: Date; }>({
+        from: subMonths(new Date(), 1),
+        to: new Date()
+    });
+
+    const handleTransactionExport = async () => {
+        toast({ title: "Generating Export...", description: "Please wait while we prepare your file." });
+        try {
+            const startDate = format(dateRange.from, 'yyyy-MM-dd');
+            const endDate = format(dateRange.to, 'yyyy-MM-dd');
+            const dataToExport = await getTransactionsForExport(startDate, endDate);
+            
+            const formattedData = dataToExport.map((t: any) => ({
+                Date: t.date,
+                Type: t.type,
+                Category: t.category,
+                Description: t.description,
+                Amount: t.amount,
+                Balance: t.balance,
+                Payee: allUsers.find(u => u.id === t.payee)?.name || t.payee || 'N/A',
+                'Created By': allUsers.find(u => u.id === t.createdBy)?.name || 'Unknown',
+                Status: t.isReversed ? 'Reversed' : t.isReversal ? 'Reversal' : 'Normal',
+                Notes: t.notes
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+            XLSX.writeFile(workbook, `rc-club-transactions-${startDate}-to-${endDate}.xlsx`);
+            toast({ title: "Export Successful!", description: "Your file has been downloaded." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Export Failed", description: (error as Error).message });
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Export Transactions</DialogTitle>
+                    <DialogDescription>Select a date range to export.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <DateRangePicker 
+                        onUpdate={(values) => setDateRange(values.range)}
+                        initialDateFrom={dateRange.from}
+                        initialDateTo={dateRange.to}
+                        align="center"
+                        showCompare={false}
+                    />
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleTransactionExport}>
+                        Export Now
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
 const TransactionLogbook = ({ 
     transactions,
     allUsers,
@@ -416,10 +485,13 @@ const TransactionLogbook = ({
                 
                 <div className="flex items-center gap-2">
                     {isTreasurer && (
-                        <Button onClick={() => setIsAddingOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Transaction
-                        </Button>
+                         <>
+                            <ExportDialog allUsers={allUsers} />
+                            <Button onClick={() => setIsAddingOpen(true)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Transaction
+                            </Button>
+                         </>
                     )}
                 </div>
             </div>
