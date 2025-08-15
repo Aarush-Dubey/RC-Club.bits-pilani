@@ -5,6 +5,24 @@ import { db } from "@/lib/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc, writeBatch, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
+// Helper to convert Firestore Timestamps to JSON-serializable strings
+const serializeData = (data: any): any => {
+    if (!data) return null;
+
+    const serializedData: { [key: string]: any } = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            if (data[key] && typeof data[key].toDate === 'function') {
+                serializedData[key] = data[key].toDate().toISOString();
+            } else {
+                serializedData[key] = data[key];
+            }
+        }
+    }
+    return serializedData;
+};
+
+
 // ----- Balance Sheet Actions -----
 
 export async function addAccount(data: { name: string; group: string; balance: number }) {
@@ -182,6 +200,6 @@ export async function getTransactionsForExport(startDate: string, endDate: strin
   // Filter for 'isDeleted' on the client-side to avoid needing a composite index
   return snapshot.docs.map(doc => ({
     id: doc.id,
-    ...doc.data()
-  })).filter(t => t.isDeleted !== true);
+    ...serializeData(doc.data())
+  })).filter((t: any) => t.isDeleted !== true);
 }
