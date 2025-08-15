@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -459,17 +460,7 @@ const TransactionLogbook = ({
                                     <TableCell>
                                         <Badge variant="outline">{transaction.category}</Badge>
                                     </TableCell>
-                                    <TableCell className="max-w-xs truncate">
-                                        <div className="flex flex-col">
-                                            <span>{transaction.description}</span>
-                                            {transaction.reimbursementId && (
-                                                <Link href={`/dashboard/reimbursements?id=${transaction.reimbursementId}`} className="text-xs text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                                    <LinkIcon className="h-3 w-3" />
-                                                    View Details
-                                                </Link>
-                                            )}
-                                        </div>
-                                    </TableCell>
+                                    <TableCell className="max-w-xs truncate">{transaction.description}</TableCell>
                                     <TableCell className={cn(
                                         "text-right font-mono",
                                         transaction.type === 'income' ? "text-green-600" : "text-red-600"
@@ -542,6 +533,12 @@ const TransactionLogbook = ({
                                 <div className="flex justify-between"><span>Payee/Source</span><span>{selectedTransaction.payee || 'N/A'}</span></div>
                                 <div className="flex justify-between"><span>Category</span><Badge variant="outline">{selectedTransaction.category}</Badge></div>
                                 <div className="flex justify-between"><span>Created By</span><span>{allUsers.find(u => u.id === selectedTransaction.createdBy)?.name || 'Unknown'}</span></div>
+                                 {selectedTransaction.reimbursementId && (
+                                    <Link href={`/dashboard/reimbursements?id=${selectedTransaction.reimbursementId}`} className="text-sm text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                        <LinkIcon className="h-4 w-4" />
+                                        View Associated Reimbursement
+                                    </Link>
+                                )}
                                 <div className="space-y-1">
                                     <Label>Notes</Label>
                                     <p className="text-sm text-muted-foreground">{selectedTransaction.notes || 'No notes provided.'}</p>
