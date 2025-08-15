@@ -127,68 +127,6 @@ export async function reverseTransaction(originalTransactionId: string, reason: 
   });
 }
 
-// ----- Budget Actions -----
-
-export async function createBudget(data: {
-  name: string;
-  category: string;
-  amount: number;
-  period: 'monthly' | 'semester' | 'annual';
-  startDate: string;
-  endDate: string;
-}) {
-  const budgetCollection = collection(db, "budgets");
-  await addDoc(budgetCollection, {
-    ...data,
-    spent: 0,
-    remaining: data.amount,
-    isActive: true,
-    createdAt: serverTimestamp(),
-  });
-  revalidatePath("/dashboard/finance");
-}
-
-export async function updateBudget(budgetId: string, data: any) {
-  const budgetRef = doc(db, "budgets", budgetId);
-  await updateDoc(budgetRef, {
-    ...data,
-    updatedAt: serverTimestamp()
-  });
-  revalidatePath("/dashboard/finance");
-}
-
-export async function deleteBudget(budgetId: string) {
-  const budgetRef = doc(db, "budgets", budgetId);
-  await deleteDoc(budgetRef);
-  revalidatePath("/dashboard/finance");
-}
-
-export async function updateBudgetSpent(category: string, amount: number) {
-  // This will be called when new expenses are added
-  const budgetsQuery = query(
-    collection(db, "budgets"),
-    where("category", "==", category),
-    where("isActive", "==", true)
-  );
-  
-  const budgetsSnap = await getDocs(budgetsQuery);
-  const batch = writeBatch(db);
-  
-  budgetsSnap.docs.forEach(doc => {
-    const budget = doc.data();
-    const newSpent = budget.spent + amount;
-    const newRemaining = budget.amount - newSpent;
-    
-    batch.update(doc.ref, {
-      spent: newSpent,
-      remaining: newRemaining,
-      updatedAt: serverTimestamp()
-    });
-  });
-  
-  await batch.commit();
-}
-
 // ----- Legacy Logbook Actions (for backward compatibility) -----
 
 export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; reimbursementId?: string; createdBy: string }) {

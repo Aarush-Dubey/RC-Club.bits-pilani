@@ -1,7 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BalanceSheet from "./balance-sheet";
 import Logbook from "./logbook";
-import BudgetManager from "./budget-manager";
 import FinanceCharts from "./finance-charts";
 
 export default function FinancePage() {
@@ -11,15 +10,14 @@ export default function FinancePage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight font-headline">Financial Management</h2>
           <p className="text-muted-foreground">
-            Manage all financial aspects of the club including transactions, budgets, and reporting.
+            Manage all financial aspects of the club including transactions, and reporting.
           </p>
         </div>
       </div>
       <Tabs defaultValue="balance-sheet" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="budgets">Budgets</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         
@@ -29,10 +27,6 @@ export default function FinancePage() {
         
         <TabsContent value="transactions" className="space-y-4">
           <Logbook />
-        </TabsContent>
-        
-        <TabsContent value="budgets" className="space-y-4">
-          <BudgetManager />
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-4">
