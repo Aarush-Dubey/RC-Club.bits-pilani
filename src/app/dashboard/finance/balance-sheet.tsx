@@ -165,7 +165,7 @@ const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog
                 </Button>
             </form>
         </Form>
-    )
+    );
 }
 
 const BalanceSheetEditor = ({ accounts, onUpdate, closeDialog }: { accounts: Account[], onUpdate: () => void, closeDialog: () => void }) => {
