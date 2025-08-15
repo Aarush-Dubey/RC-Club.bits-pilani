@@ -2,11 +2,10 @@
 import Link from "next/link"
 import type { AppUser } from "@/context/auth-context"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { User } from "lucide-react"
 
 export type Project = {
   id: string
@@ -81,22 +80,9 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
           </h3>
           <p className="text-muted-foreground text-sm mt-1 line-clamp-2 ">{project.description}</p>
           <div className="flex items-center gap-4 mt-4">
-               <div className="flex -space-x-2">
-                  {project.memberIds.slice(0,3).map((memberId: string) => {
-                      const member: any = users.find((u: any) => u.id === memberId)
-                      if (!member) return null;
-                      return (
-                      <Avatar key={memberId} className="border-2 border-card h-8 w-8">
-                          <AvatarImage src={`https://i.pravatar.cc/150?u=${member?.email}`} />
-                          <AvatarFallback>{member?.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      )
-                  })}
-                  {project.memberIds.length > 3 && (
-                    <Avatar className="border-2 border-card h-8 w-8">
-                        <AvatarFallback>+{project.memberIds.length - 3}</AvatarFallback>
-                    </Avatar>
-                  )}
+               <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>{project.memberIds.length} members</span>
               </div>
               {projectLead && (
               <div className="text-sm">

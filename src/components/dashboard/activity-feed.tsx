@@ -7,17 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+
 import {
   HandCoins,
   History,
   Package,
   ToyBrick,
   Truck,
+  User as UserIcon
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -67,10 +64,7 @@ function FeedItem({ item, users, inventoryItems }: { item: any, users: Record<st
 
   return (
     <div className="flex items-start gap-4">
-       <Avatar className="h-9 w-9 border">
-          <AvatarImage src={`https://i.pravatar.cc/150?u=${user?.email}`} />
-          <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
-        </Avatar>
+       <UserIcon className="h-9 w-9 text-muted-foreground p-1.5 bg-muted rounded-full" />
       <div className="flex-1">
         <p className="text-sm">
           <span className="font-semibold">{userName}</span>

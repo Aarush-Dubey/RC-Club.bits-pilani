@@ -5,14 +5,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import { useAuth, type AppUser } from "@/context/auth-context";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectActions } from "./project-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, UserPlus, LogOut, Flag, ShoppingCart, CheckCircle, ArrowLeft, User as UserIcon } from "lucide-react";
 import { joinProject, leaveProject, initiateProjectCompletion } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -282,10 +281,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                                                 const author = members.find((m: AppUser) => m.uid === update.postedById);
                                                 return (
                                                     <div key={update.id} className="flex gap-4">
-                                                        <Avatar>
-                                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${author?.email}`} />
-                                                            <AvatarFallback>{author?.name?.charAt(0) || 'U'}</AvatarFallback>
-                                                        </Avatar>
+                                                        <UserIcon className="h-9 w-9 text-muted-foreground p-1.5 bg-muted rounded-full" />
                                                         <div className="flex-1 space-y-2">
                                                             <div className="flex items-baseline justify-between">
                                                                 <p className="font-semibold">{author?.name}</p>
@@ -373,10 +369,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
                             <CardContent className="space-y-4">
                                 {members.map((member: any) => (
                                     <div key={member.id} className="flex items-center gap-4">
-                                        <Avatar>
-                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
-                                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
+                                        <UserIcon className="h-9 w-9 text-muted-foreground p-1.5 bg-muted rounded-full" />
                                         <div>
                                             <p className="font-semibold">{member.name}</p>
                                             <p className="text-sm text-muted-foreground">{member.id === project.leadId ? 'Project Lead' : 'Member'}</p>

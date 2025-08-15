@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation"
 
 import { useAuth } from "@/context/auth-context"
 import { auth } from "@/lib/firebase"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -55,10 +54,7 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.email}`} alt={`@${user.displayName}`} />
-            <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-          </Avatar>
+            <UserIcon className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
