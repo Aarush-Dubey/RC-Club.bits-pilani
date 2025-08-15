@@ -6,7 +6,6 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import {
-  BarChart,
   HandCoins,
   LayoutGrid,
   LineChart,
@@ -78,7 +77,7 @@ export default function DashboardLayout({
         </div>
         <div className="flex-1">
           <header className="flex h-16 items-center justify-end border-b px-6">
-            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-9" />
           </header>
           <main className="p-8">
             <Skeleton className="h-64 w-full" />
@@ -91,7 +90,6 @@ export default function DashboardLayout({
   const menuItems = [
       ...baseMenuItems,
       ...adminMenuItems.filter(item => user.permissions?.[item.permission as keyof typeof user.permissions]),
-      ...bottomMenuItems
   ]
 
   return (
@@ -100,12 +98,12 @@ export default function DashboardLayout({
         <SidebarHeader>
           <Link href="/" className="flex items-center gap-2 p-2">
             <Image src="/assets/logo.png" alt="RC Club Manager Logo" width={28} height={28} className="size-7" />
-            <h2 className="text-lg font-bold tracking-tighter text-sidebar-foreground font-headline">
+            <h2 className="text-lg font-semibold tracking-tighter text-sidebar-foreground">
               RC Club Manager
             </h2>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="flex-grow">
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
@@ -122,11 +120,28 @@ export default function DashboardLayout({
             ))}
           </SidebarMenu>
         </SidebarContent>
+        <SidebarContent>
+            <SidebarMenu>
+                 {bottomMenuItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                        <Link href={item.href} passHref>
+                        <SidebarMenuButton
+                            isActive={pathname.startsWith(item.href)}
+                            tooltip={item.label}
+                        >
+                            <item.icon />
+                            <span>{item.label}</span>
+                        </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </SidebarContent>
       </Sidebar>
       <SidebarInset>
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto max-w-3xl py-8">{children}</div>
+          <div className="container mx-auto p-4 sm:p-6 md:p-8">{children}</div>
         </main>
       </SidebarInset>
     </SidebarProvider>

@@ -115,11 +115,11 @@ export default function ProjectsPage() {
   
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight font-headline">Projects</h2>
-            <p className="text-muted-foreground">
+            <h1 className="text-h1">Projects</h1>
+            <p className="text-base text-muted-foreground mt-2">
               Browse and manage all projects in the club.
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function ProjectsPage() {
           <div className="space-y-6">
               {projects.length > 0 ? (
                 <TooltipProvider>
-                  <div className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {projects.map((project) => (
                       <ProjectCard key={project.id} project={project} users={allUsers} currentUser={currentUser}/>
                     ))}
@@ -167,7 +167,7 @@ export default function ProjectsPage() {
       </div>
       <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
+          <DialogTitle className="text-2xl">Propose a New Project</DialogTitle>
           <DialogDescriptionComponent>Fill out the details below to submit your project idea for approval.</DialogDescriptionComponent>
         </DialogHeader>
         <NewProjectForm onFormSubmit={handleFormSubmit} users={allUsers} inventory={inventory} currentUser={currentUser} />

@@ -5,7 +5,7 @@ import { Users, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function ManageClubPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
           <Link href="/dashboard">
               <Button variant="outline" size="icon">
@@ -13,8 +13,8 @@ export default function ManageClubPage() {
               </Button>
           </Link>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Manage Club</h2>
-          <p className="text-muted-foreground">
+          <h1 className="text-h1">Manage Club</h1>
+          <p className="text-base text-muted-foreground mt-2">
             Administrative tools for managing users and system permissions.
           </p>
         </div>
@@ -23,8 +23,8 @@ export default function ManageClubPage() {
         <Card className="flex flex-col">
           <CardHeader>
             <div className="flex items-start gap-4">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                    <Users className="h-6 w-6 text-primary" />
+                <div className="bg-secondary p-3">
+                    <Users className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
                     <CardTitle>User Management</CardTitle>
@@ -49,8 +49,8 @@ export default function ManageClubPage() {
         <Card className="flex flex-col">
           <CardHeader>
              <div className="flex items-start gap-4">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                    <ShieldCheck className="h-6 w-6 text-primary" />
+                <div className="bg-secondary p-3">
+                    <ShieldCheck className="h-6 w-6 text-foreground" />
                 </div>
                 <div>
                     <CardTitle>Roles & Permissions</CardTitle>

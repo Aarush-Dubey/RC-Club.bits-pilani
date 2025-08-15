@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus, Search, Filter } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, SlidersHorizontal, History, Pencil, Box, Filter, Search } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
@@ -37,9 +37,7 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { enhanceJustification } from "@/ai/flows/enhance-justification"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -62,7 +60,7 @@ const StatusCircle = ({ status }: { status: string }) => {
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger>
-          <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+          <div className={cn("h-3 w-3", config.color)}></div>
         </TooltipTrigger>
         <TooltipContent>
           <p>{config.tooltip}</p>
@@ -605,6 +603,7 @@ function RequestsView({ data, fetchData }: { data: any, fetchData: () => void })
 function ManageView({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) {
     const isMobile = useIsMobile();
     const [activeManageTab, setActiveManageTab] = useState("checkouts");
+    const [searchQuery, setSearchQuery] = useState("");
     const [filters, setFilters] = useState<{ userId: string | null; projectId: string | null }>({ userId: null, projectId: null });
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -638,7 +637,7 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
                                 ))}
                             </SelectContent>
                         </Select>
-                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} />}
+                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} searchQuery={searchQuery} />}
                          {activeManageTab === "logs" && <ManageLogsView data={data} />}
                          {activeManageTab === "stock" && <ManageStockView data={data} fetchData={fetchData} />}
                     </div>
@@ -653,59 +652,70 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
-                             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        <Filter className="mr-2 h-4 w-4" />
-                                        Filter
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80" align="end">
-                                    <div className="grid gap-4">
-                                        <div className="space-y-2">
-                                            <h4 className="font-medium leading-none">Filters</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                                Filter checked out items.
-                                            </p>
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <div className="grid grid-cols-3 items-center gap-4">
-                                                <Label htmlFor="user-filter">User</Label>
-                                                <Select value={filters.userId || ''} onValueChange={(value) => setFilters(f => ({ ...f, userId: value === 'all' ? null : value }))}>
-                                                    <SelectTrigger id="user-filter" className="col-span-2 h-8">
-                                                        <SelectValue placeholder="Select a user" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All Users</SelectItem>
-                                                        {data.users.map((user: any) => (
-                                                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search checkouts..."
+                                        className="pl-8"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                                <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="icon">
+                                            <Filter className="h-4 w-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80" align="end">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Filters</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Filter checked out items.
+                                                </p>
                                             </div>
-                                             <div className="grid grid-cols-3 items-center gap-4">
-                                                <Label htmlFor="project-filter">Project</Label>
-                                                <Select value={filters.projectId || ''} onValueChange={(value) => setFilters(f => ({ ...f, projectId: value === 'all' ? null : value }))}>
-                                                    <SelectTrigger id="project-filter" className="col-span-2 h-8">
-                                                        <SelectValue placeholder="Select a project" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All Projects</SelectItem>
-                                                         <SelectItem value="personal">Personal Use</SelectItem>
-                                                        {data.projects.map((project: any) => (
-                                                            <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="grid gap-2">
+                                                <div className="grid grid-cols-3 items-center gap-4">
+                                                    <Label htmlFor="user-filter">User</Label>
+                                                    <Select value={filters.userId || ''} onValueChange={(value) => setFilters(f => ({ ...f, userId: value === 'all' ? null : value }))}>
+                                                        <SelectTrigger id="user-filter" className="col-span-2 h-8">
+                                                            <SelectValue placeholder="Select a user" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All Users</SelectItem>
+                                                            {data.users.map((user: any) => (
+                                                                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                 <div className="grid grid-cols-3 items-center gap-4">
+                                                    <Label htmlFor="project-filter">Project</Label>
+                                                    <Select value={filters.projectId || ''} onValueChange={(value) => setFilters(f => ({ ...f, projectId: value === 'all' ? null : value }))}>
+                                                        <SelectTrigger id="project-filter" className="col-span-2 h-8">
+                                                            <SelectValue placeholder="Select a project" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All Projects</SelectItem>
+                                                             <SelectItem value="personal">Personal Use</SelectItem>
+                                                            {data.projects.map((project: any) => (
+                                                                <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
+                                             <Button variant="ghost" onClick={() => setFilters({ userId: null, projectId: null })}>Clear Filters</Button>
                                         </div>
-                                         <Button variant="ghost" onClick={() => setFilters({ userId: null, projectId: null })}>Clear Filters</Button>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
                         <TabsContent value="checkouts" className="mt-4">
-                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} />
+                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} filters={filters} searchQuery={searchQuery} />
                         </TabsContent>
                         <TabsContent value="logs" className="mt-4">
                            <ManageLogsView data={data} />
@@ -720,7 +730,7 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
     )
 }
 
-const ManageCheckoutsView = ({ data, canManageInventory, fetchData, filters }: { data: any, canManageInventory: boolean, fetchData: () => void, filters: { userId: string | null, projectId: string | null } }) => {
+const ManageCheckoutsView = ({ data, canManageInventory, fetchData, filters, searchQuery }: { data: any, canManageInventory: boolean, fetchData: () => void, filters: { userId: string | null, projectId: string | null }, searchQuery: string }) => {
     
     const filteredRequests = data.inventoryRequests
         .filter((req: any) => {
@@ -742,6 +752,19 @@ const ManageCheckoutsView = ({ data, canManageInventory, fetchData, filters }: {
             }
             
             return userMatch && projectMatch;
+        })
+        .filter((req: any) => {
+            if (!searchQuery) return true;
+            const item = data.inventory.find((i: any) => i.id === req.itemId);
+            const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+            const project = data.projects.find((p: any) => p.id === req.projectId);
+            const lowerCaseQuery = searchQuery.toLowerCase();
+
+            return (
+                item?.name.toLowerCase().includes(lowerCaseQuery) ||
+                user?.name.toLowerCase().includes(lowerCaseQuery) ||
+                (project?.title || 'Personal Use').toLowerCase().includes(lowerCaseQuery)
+            );
         });
 
     return (
@@ -825,7 +848,7 @@ function ManageStockView({ data, fetchData }: { data: any, fetchData: () => void
                     <CardTitle>Manage Stock</CardTitle>
                     <DialogTrigger asChild>
                         <Button variant="ghost" size="sm">
-                            <Plus className="mr-2 h-4 w-4" />
+                            <PlusCircle className="mr-2 h-4 w-4" />
                             New Item
                         </Button>
                     </DialogTrigger>
@@ -895,11 +918,11 @@ export default function InventoryPage() {
 
   return (
     <Dialog>
-        <div className="space-y-8">
+        <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                <h2 className="text-3xl font-bold tracking-tight font-headline">Inventory</h2>
-                <p className="text-muted-foreground">
+                <h1 className="text-h1">Inventory</h1>
+                <p className="text-base text-muted-foreground mt-2">
                     Manage equipment, track loans, and approve requests.
                 </p>
                 </div>

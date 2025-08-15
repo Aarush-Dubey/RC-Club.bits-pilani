@@ -58,7 +58,7 @@ const StatusCircle = ({ status }: { status: string }) => {
   return (
     <Tooltip>
         <TooltipTrigger asChild>
-            <div className={cn("h-3 w-3 rounded-full", config.color)}></div>
+            <div className={cn("h-3 w-3", config.color)}></div>
         </TooltipTrigger>
         <TooltipContent>
             <p>{config.tooltip}</p>
@@ -94,11 +94,11 @@ export const ProjectCard = ({ project, users, currentUser }: { project: Project;
   }
 
   return (
-      <div key={project.id} className="group flex flex-col border rounded-lg p-4 h-full relative">
+      <div key={project.id} className="group flex flex-col border p-4 h-full relative bg-secondary">
           <div className="flex items-center justify-between">
             <StatusCircle status={project.status} />
           </div>
-          <h3 className="font-headline text-xl mt-2 group-hover:text-primary transition-colors flex-grow">
+          <h3 className="text-h3 mt-2 group-hover:text-primary transition-colors flex-grow">
             <Link href={`/dashboard/projects/${project.id}`} className="static">
               <span className="absolute inset-0" />
               {project.title}

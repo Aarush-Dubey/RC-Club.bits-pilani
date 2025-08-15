@@ -52,7 +52,7 @@ const StatusCircle = ({ status }: { status: string }) => {
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger>
-          <div className={cn("h-2.5 w-2.5 rounded-full", config.color)}></div>
+          <div className={cn("h-2.5 w-2.5", config.color)}></div>
         </TooltipTrigger>
         <TooltipContent>
           <p>{config.tooltip}</p>
@@ -227,10 +227,10 @@ function ReimbursementsPageContent() {
 
   return (
     <Dialog onOpenChange={handleOpenChange}>
-       <div className="space-y-8">
+       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Reimbursements</h2>
-          <p className="text-muted-foreground">
+          <h1 className="text-h1">Reimbursements</h1>
+          <p className="text-base text-muted-foreground mt-2">
             Submit and track expense reimbursement requests.
           </p>
         </div>
@@ -315,7 +315,7 @@ function ReimbursementsPageContent() {
                         )}
 
                          {selectedProcurementItem && (
-                          <Card className="bg-muted/50">
+                          <Card className="bg-secondary">
                             <CardHeader className="p-4">
                               <CardTitle className="text-base">Associated Procurement Request</CardTitle>
                             </CardHeader>
@@ -344,7 +344,7 @@ function ReimbursementsPageContent() {
                                 alt="Receipt"
                                 width={400}
                                 height={400}
-                                className="w-full h-auto rounded-md border object-contain"
+                                className="w-full h-auto border object-contain"
                                 />
                             </a>
                             ) : (
@@ -377,4 +377,3 @@ export default function ReimbursementsPage() {
         </Suspense>
     );
 }
-

@@ -98,13 +98,13 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">
+          <h1 className="text-h1">
             Welcome, {user?.displayName || 'Club Member'}!
-          </h2>
-          <p className="text-muted-foreground">
+          </h1>
+          <p className="text-base text-muted-foreground mt-2">
             Here's a quick overview of what's happening in the club.
           </p>
         </div>
@@ -138,8 +138,8 @@ export default function DashboardPage() {
             )}
         </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="flex flex-col gap-8 lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-6 lg:col-span-2">
             {loading ? (
                 <Card>
                     <CardHeader><Skeleton className='h-8 w-1/3' /></CardHeader>
@@ -155,7 +155,7 @@ export default function DashboardPage() {
               </>
             )}
         </div>
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
             {canApproveProjects && (
               <Card>
                   <CardHeader>
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                                   <Card key={project.id}>
                                         <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                             <div className="flex-1">
-                                                <p className="font-semibold font-headline text-lg">{project.title}</p>
+                                                <p className="font-semibold text-lg">{project.title}</p>
                                                 <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
                                             </div>
                                             <Link href={`/dashboard/projects/${project.id}`}>
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                                 ))}
                             </div>
                           ) : (
-                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg flex flex-col items-center gap-2">
+                            <div className="text-center py-12 text-muted-foreground border-2 border-dashed flex flex-col items-center gap-2">
                                 <PackageCheck className="h-10 w-10 text-green-500" />
                                 <h3 className="text-xl font-semibold">All Clear!</h3>
                                 <p>There are no projects waiting for approval.</p>

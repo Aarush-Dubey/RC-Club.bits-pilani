@@ -5,17 +5,17 @@ import Logbook from "./logbook";
 
 export default function FinancePage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Financial Management</h2>
-          <p className="text-muted-foreground">
+          <h1 className="text-h1">Financial Management</h1>
+          <p className="text-base text-muted-foreground mt-2">
             Manage all financial aspects of the club including transactions, and reporting.
           </p>
         </div>
       </div>
       <Tabs defaultValue="balance-sheet" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList>
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>

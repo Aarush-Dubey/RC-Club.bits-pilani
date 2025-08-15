@@ -101,10 +101,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight font-headline">Settings</h2>
-          <p className="text-muted-foreground">
+          <h1 className="text-h1">Settings</h1>
+          <p className="text-base text-muted-foreground mt-2">
             Manage your account settings and preferences.
           </p>
         </div>
