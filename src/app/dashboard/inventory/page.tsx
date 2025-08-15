@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus } from "lucide-react"
+import { PlusCircle, Check, X, Loader2, ClipboardCheck, ShoppingCart, Sparkles, SlidersHorizontal, History, Pencil, Box, ChevronDown, Plus, Search } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth, type AppUser } from "@/context/auth-context"
@@ -191,6 +191,7 @@ async function getData() {
             ...inventoryRequests.map(req => req.fulfilledById),
             ...inventoryRequests.map(req => req.returnedById),
             ...inventoryRequests.map(req => req.rejectedById),
+            ...inventoryRequests.map(req => req.checkedOutToId),
         ].filter(Boolean))
     ];
     
@@ -603,6 +604,7 @@ function RequestsView({ data, fetchData }: { data: any, fetchData: () => void })
 function ManageView({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) {
     const isMobile = useIsMobile();
     const [activeManageTab, setActiveManageTab] = useState("checkouts");
+    const [searchQuery, setSearchQuery] = useState("");
 
     const manageTabs = [
         { value: "checkouts", label: "Current Checkouts", icon: SlidersHorizontal },
@@ -634,22 +636,34 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
                                 ))}
                             </SelectContent>
                         </Select>
-                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />}
+                         {activeManageTab === "checkouts" && <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} searchQuery={searchQuery} />}
                          {activeManageTab === "logs" && <ManageLogsView data={data} />}
                          {activeManageTab === "stock" && <ManageStockView data={data} fetchData={fetchData} />}
                     </div>
                 ) : (
                     <Tabs defaultValue="checkouts">
-                        <TabsList>
-                            {manageTabs.map(tab => (
-                                <TabsTrigger key={tab.value} value={tab.value}>
-                                    <tab.icon className="mr-2 h-4 w-4" />
-                                    {tab.label}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                        <div className="flex justify-between items-center mb-4">
+                            <TabsList>
+                                {manageTabs.map(tab => (
+                                    <TabsTrigger key={tab.value} value={tab.value}>
+                                        <tab.icon className="mr-2 h-4 w-4" />
+                                        {tab.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                             <div className="relative w-full max-w-xs">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search checkouts..."
+                                    className="pl-8"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
                         <TabsContent value="checkouts" className="mt-4">
-                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} />
+                             <ManageCheckoutsView data={data} canManageInventory={canManageInventory} fetchData={fetchData} searchQuery={searchQuery} />
                         </TabsContent>
                         <TabsContent value="logs" className="mt-4">
                            <ManageLogsView data={data} />
@@ -664,43 +678,60 @@ function ManageView({ data, canManageInventory, fetchData }: { data: any, canMan
     )
 }
 
-const ManageCheckoutsView = ({ data, canManageInventory, fetchData }: { data: any, canManageInventory: boolean, fetchData: () => void }) => (
-    <Table>
-        <TableHeader>
-            <TableRow>
-                <TableHead>Item Details</TableHead>
-                <TableHead>Checked Out To</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {data.inventoryRequests
-                .filter((req: any) => {
-                    const item = data.inventory.find((i: any) => i.id === req.itemId);
-                    return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
-                })
-                .map((req: any) => {
-                    const item = data.inventory.find((i: any) => i.id === req.itemId);
-                    const user = data.users.find((u: any) => u.id === req.checkedOutToId);
-                    const project = data.projects.find((p: any) => p.id === req.projectId);
-                    return (
-                        <TableRow key={req.id}>
-                            <TableCell>
-                                <div className="font-medium">{item?.name} (x{req.quantity})</div>
-                                {req.status === 'pending_return' && <Badge variant="outline" className="mt-1 bg-orange-100 text-orange-800 border-orange-200">Pending Return</Badge>}
-                            </TableCell>
-                            <TableCell>{user?.name || 'N/A'}</TableCell>
-                            <TableCell>{project?.title || 'Personal Use'}</TableCell>
-                             <TableCell className="text-right">
-                                <ReturnActions request={req} canConfirm={canManageInventory} onActionComplete={fetchData} />
-                             </TableCell>
-                        </TableRow>
-                    );
-                })}
-        </TableBody>
-    </Table>
-);
+const ManageCheckoutsView = ({ data, canManageInventory, fetchData, searchQuery }: { data: any, canManageInventory: boolean, fetchData: () => void, searchQuery: string }) => {
+    
+    const filteredRequests = data.inventoryRequests
+        .filter((req: any) => {
+            const item = data.inventory.find((i: any) => i.id === req.itemId);
+            return ['fulfilled', 'pending_return'].includes(req.status) && item && !item.isPerishable;
+        })
+        .filter((req: any) => {
+            if (!searchQuery) return true;
+            const item = data.inventory.find((i: any) => i.id === req.itemId);
+            const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+            const project = data.projects.find((p: any) => p.id === req.projectId);
+            const lowerCaseQuery = searchQuery.toLowerCase();
+            
+            return (
+                item?.name.toLowerCase().includes(lowerCaseQuery) ||
+                user?.name.toLowerCase().includes(lowerCaseQuery) ||
+                (project && project.title.toLowerCase().includes(lowerCaseQuery))
+            );
+        });
+
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Item Details</TableHead>
+                    <TableHead>Checked Out To</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredRequests.map((req: any) => {
+                        const item = data.inventory.find((i: any) => i.id === req.itemId);
+                        const user = data.users.find((u: any) => u.id === req.checkedOutToId);
+                        const project = data.projects.find((p: any) => p.id === req.projectId);
+                        return (
+                            <TableRow key={req.id}>
+                                <TableCell>
+                                    <div className="font-medium">{item?.name} (x{req.quantity})</div>
+                                    {req.status === 'pending_return' && <Badge variant="outline" className="mt-1 bg-orange-100 text-orange-800 border-orange-200">Pending Return</Badge>}
+                                </TableCell>
+                                <TableCell>{user?.name || 'N/A'}</TableCell>
+                                <TableCell>{project?.title || 'Personal Use'}</TableCell>
+                                <TableCell className="text-right">
+                                    <ReturnActions request={req} canConfirm={canManageInventory} onActionComplete={fetchData} />
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
+            </TableBody>
+        </Table>
+    );
+}
 
 const ManageLogsView = ({ data }: { data: any }) => (
      <Table>
