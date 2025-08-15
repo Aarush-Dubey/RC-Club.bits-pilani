@@ -127,39 +127,55 @@ const AddAccountForm = ({ onAdd, closeDialog }: { onAdd: () => void, closeDialog
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4 items-start">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem className="col-span-2">
-                        <FormLabel>Account Name</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="balance" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Opening Balance</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="group" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Group</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Account Name</FormLabel>
                             <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select group" /></SelectValue>
+                                <Input {...field} />
                             </FormControl>
-                            <SelectContent>
-                                <SelectItem value="currentAssets">Current Assets</SelectItem>
-                                <SelectItem value="fixedAssets">Fixed Assets</SelectItem>
-                                <SelectItem value="ownersEquity">Owner's Equity</SelectItem>
-                                <SelectItem value="currentLiabilities">Current Liabilities</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <Button type="submit" className="col-span-2" disabled={form.formState.isSubmitting}>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="balance"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Opening Balance</FormLabel>
+                            <FormControl>
+                                <Input type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="group"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Group</FormLabel>
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Select group" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="currentAssets">Current Assets</SelectItem>
+                                    <SelectItem value="fixedAssets">Fixed Assets</SelectItem>
+                                    <SelectItem value="ownersEquity">Owner's Equity</SelectItem>
+                                    <SelectItem value="currentLiabilities">Current Liabilities</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button type="submit" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Add Account
                 </Button>
@@ -339,7 +355,7 @@ const ExportDialog = ({ balanceSheetData, allUsers, onExportPDF }: { balanceShee
     };
     
     const handleBalanceSheetXLSXExport = () => {
-        const worksheetData = [];
+        const worksheetData: (string | number)[][] = [];
         worksheetData.push(['Balance Sheet']);
         worksheetData.push([`Generated on: ${format(new Date(), 'PPP')}`]);
         worksheetData.push([]); // Spacer row
