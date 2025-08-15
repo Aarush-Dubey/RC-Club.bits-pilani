@@ -115,6 +115,7 @@ export default function ProjectsPage() {
   
   return (
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <TooltipProvider>
         <div className="space-y-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -163,6 +164,7 @@ export default function ProjectsPage() {
             </div>
           )}
         </div>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-3xl h-screen sm:h-auto overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">Propose a New Project</DialogTitle>
