@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, orderBy, query, setDoc, getDoc } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 export async function getRolesAndPermissions() {
@@ -21,7 +21,7 @@ export async function getRolesAndPermissions() {
         const sortedPermissions = Object.entries(permissionsData)
             .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
             .reduce((obj, [key, value]) => {
-                obj[key] = value;
+                (obj as Record<string, boolean>)[key] = value;
                 return obj;
             }, {} as Record<string, boolean>);
 
@@ -47,3 +47,4 @@ export async function createNewRole(roleName: string, permissions: Record<string
     await setDoc(roleRef, permissions);
     revalidatePath("/dashboard/manage-club/roles");
 }
+
