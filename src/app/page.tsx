@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Rocket, Users, Wrench } from 'lucide-react';
+import { Rocket, Users, Wrench, Plane } from 'lucide-react';
 import { PublicHeader } from '@/components/public-header';
 
 const projects = [
@@ -47,8 +47,8 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-white dark:bg-black text-black dark:text-white">
       <PublicHeader />
       <main className="flex-grow">
-        <section className="bg-secondary py-20 md:py-32">
-          <div className="container px-4 md:px-6 text-center">
+        <section className="relative bg-secondary py-20 md:py-32 overflow-hidden">
+          <div className="container px-4 md:px-6 text-center relative z-10">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
               RC-Club BITS Pilani
             </h1>
@@ -61,6 +61,37 @@ export default function HomePage() {
               </Button>
             </div>
           </div>
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-0 w-full h-full">
+                <svg
+                    className="w-full h-full"
+                    viewBox="0 0 800 400"
+                    preserveAspectRatio="xMidYMid slice"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <g transform="translate(400, 200) scale(1.2)">
+                        <path
+                            d="M -350 20 C -250 -100, 250 100, 350 -20"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth="2"
+                            fill="none"
+                            strokeDasharray="4 8"
+                            className="path-animate"
+                        >
+                            <animate
+                                attributeName="stroke-dashoffset"
+                                from="1000"
+                                to="0"
+                                dur="3s"
+                                fill="freeze"
+                                begin="0.5s"
+                            />
+                        </path>
+                        <g className="plane-animate">
+                           <Plane className="h-6 w-6 text-primary" fill="hsl(var(--primary))" />
+                        </g>
+                    </g>
+                </svg>
+            </div>
         </section>
         
         <section id="our-work" className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark py-16 md:py-24">

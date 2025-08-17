@@ -86,3 +86,39 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+    .path-animate {
+        animation: draw-path 3s ease-out forwards;
+        animation-delay: 0.5s;
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+    }
+
+    .plane-animate {
+        offset-path: path("M -350 20 C -250 -100, 250 100, 350 -20");
+        animation: fly-plane 3s ease-out forwards;
+        animation-delay: 0.5s;
+        opacity: 0;
+    }
+
+    @keyframes draw-path {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    @keyframes fly-plane {
+        0% {
+            offset-distance: 0%;
+            opacity: 1;
+        }
+        90% {
+             opacity: 1;
+        }
+        100% {
+            offset-distance: 100%;
+            opacity: 1;
+        }
+    }
+}
