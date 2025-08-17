@@ -48,16 +48,20 @@ export default function HomePage() {
       <PublicHeader />
 
       <main className="flex-grow">
-        <section className="bg-white dark:bg-black text-black dark:text-white py-20 md:py-32">
-          <div className="container px-4 md:px-6 text-center">
+        <section 
+            className="relative bg-cover bg-center bg-no-repeat py-20 md:py-32"
+            style={{ backgroundImage: `url(/assets/hero.png)` }}
+        >
+          <div className="absolute inset-0 bg-black/60"></div>
+          <div className="container relative px-4 md:px-6 text-center text-white">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
               BITS Pilani RC Club
             </h1>
-            <p className="mx-auto max-w-3xl text-lg text-neutral-600 dark:text-neutral-400">
+            <p className="mx-auto max-w-3xl text-lg text-neutral-200">
               Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
             </p>
             <div className="mt-8">
-              <Button asChild size="lg" variant="default" className="bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 rounded-none">
+              <Button asChild size="lg" variant="default" className="bg-white text-black hover:bg-neutral-200 rounded-none">
                 <Link href="#our-work">Explore Our Work</Link>
               </Button>
             </div>
