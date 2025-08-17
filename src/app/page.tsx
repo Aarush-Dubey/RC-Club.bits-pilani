@@ -74,7 +74,7 @@ export default function HomePage() {
             </div>
             <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light dark:bg-brutalist-border-dark border-y border-brutalist-border-light dark:border-brutalist-border-dark">
               {projects.map((project) => (
-                  <div key={project.name} className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark group border-x border-brutalist-border-light dark:border-brutalist-border-dark">
+                  <div key={project.name} className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark group border-x border-brutalist-border-light dark:border-brutalist-border-dark shadow-md hover:shadow-lg transition-shadow">
                       <div className="relative overflow-hidden aspect-video">
                            <Image
                               src={project.image}
@@ -103,7 +103,7 @@ export default function HomePage() {
                 </div>
                  <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light dark:bg-brutalist-border-dark border border-brutalist-border-light dark:border-brutalist-border-dark">
                     {benefits.map((benefit) => (
-                        <div key={benefit.title} className="bg-white dark:bg-black p-6 border-brutalist-border-light dark:border-brutalist-border-dark">
+                        <div key={benefit.title} className="bg-white dark:bg-black p-6 border-brutalist-border-light dark:border-brutalist-border-dark shadow-md hover:shadow-lg transition-shadow">
                             <div className="flex items-center gap-4 mb-4">
                                 <div className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark p-3 border border-brutalist-border-light dark:border-brutalist-border-dark">
                                     <benefit.icon className="size-6 text-black dark:text-white" />
@@ -139,7 +139,7 @@ export default function HomePage() {
                 alt="RC Club Workshop"
                 width={600}
                 height={400}
-                className="w-full border border-brutalist-border-light dark:border-brutalist-border-dark"
+                className="w-full border border-brutalist-border-light dark:border-brutalist-border-dark shadow-lg"
               />
             </div>
           </div>
