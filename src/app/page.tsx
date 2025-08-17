@@ -50,7 +50,7 @@ export default function HomePage() {
       <main className="flex-grow">
         <section className="bg-white dark:bg-black text-black dark:text-white py-20 md:py-32">
           <div className="container px-4 md:px-6 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
               BITS Pilani RC Club
             </h1>
             <p className="mx-auto max-w-3xl text-lg text-neutral-600 dark:text-neutral-400">
