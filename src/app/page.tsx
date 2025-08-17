@@ -55,7 +55,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-black/60"></div>
           <div className="container relative px-4 md:px-6 text-center text-white">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
-              BITS Pilani RC Club
+              RC-Club BITS Pilani
             </h1>
             <p className="mx-auto max-w-3xl text-lg text-neutral-200">
               Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
