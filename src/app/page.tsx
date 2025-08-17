@@ -45,29 +45,35 @@ const benefits = [
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-black text-black dark:text-white">
-      <PublicHeader />
+      <div 
+        className="relative bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(/assets/Hero.png)` }}
+      >
+        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="relative">
+          <PublicHeader />
 
+          <main className="flex-grow">
+            <section className="py-20 md:py-32">
+              <div className="container px-4 md:px-6 text-center text-white">
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
+                  RC-Club BITS Pilani
+                </h1>
+                <p className="mx-auto max-w-3xl text-lg text-neutral-200">
+                  Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
+                </p>
+                <div className="mt-8">
+                  <Button asChild size="lg" variant="default" className="bg-white text-black hover:bg-neutral-200 rounded-none">
+                    <Link href="#our-work">Explore Our Work</Link>
+                  </Button>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+      
       <main className="flex-grow">
-        <section 
-            className="relative bg-cover bg-center bg-no-repeat py-20 md:py-32"
-            style={{ backgroundImage: `url(/assets/Hero.png)` }}
-        >
-          <div className="absolute inset-0 bg-black/60"></div>
-          <div className="container relative px-4 md:px-6 text-center text-white">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
-              RC-Club BITS Pilani
-            </h1>
-            <p className="mx-auto max-w-3xl text-lg text-neutral-200">
-              Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="default" className="bg-white text-black hover:bg-neutral-200 rounded-none">
-                <Link href="#our-work">Explore Our Work</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
         <section id="our-work" className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark py-16 md:py-24">
           <div className="container px-4 md:px-6">
             <div className="text-center mb-12">
