@@ -202,18 +202,6 @@ export default function DashboardPage() {
             </Link>
         )}
       </div>
-
-      <div className="space-y-6">
-            {loading || !systemStatus ? (
-                <Skeleton className="h-48 w-full" />
-            ) : (
-                <KeyStatus 
-                    keys={systemStatus.keyStatus} 
-                    recentTransfers={systemStatus.recentTransfers}
-                    onStatusChange={fetchData}
-                />
-            )}
-      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="flex flex-col gap-6 lg:col-span-2">
@@ -233,6 +221,15 @@ export default function DashboardPage() {
             )}
         </div>
         <div className="flex flex-col gap-6">
+            {loading || !systemStatus ? (
+                <Skeleton className="h-48 w-full" />
+            ) : (
+                <KeyStatus 
+                    keys={systemStatus.keyStatus} 
+                    recentTransfers={systemStatus.recentTransfers}
+                    onStatusChange={fetchData}
+                />
+            )}
             {canApproveProjects && (
               <Card>
                   <CardHeader>
