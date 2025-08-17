@@ -50,7 +50,7 @@ export default function HomePage() {
       <main className="flex-grow">
         <section 
             className="relative bg-cover bg-center bg-no-repeat py-20 md:py-32"
-            style={{ backgroundImage: `url(/assets/hero.png)` }}
+            style={{ backgroundImage: `url(https://placehold.co/1920x1080.png)` }}
         >
           <div className="absolute inset-0 bg-black/60"></div>
           <div className="container relative px-4 md:px-6 text-center text-white">
