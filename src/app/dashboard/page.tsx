@@ -4,17 +4,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/auth-context'
-import { getPendingProjectApprovals, getSystemStatus } from './actions'
+import { getPendingProjectApprovals, getSystemStatus, toggleRoomStatus } from './actions'
+import { formatDistanceToNow } from "date-fns"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Project, User } from './projects/project-card'
-import { ArrowRight, PackageCheck } from 'lucide-react'
+import { ArrowRight, PackageCheck, Loader2 } from 'lucide-react'
 import { ActionItems } from '@/components/dashboard/action-items'
-import { RoomStatus } from '@/components/dashboard/room-status'
 import { KeyStatus } from '@/components/dashboard/key-status'
 import { MyInventory } from '@/components/dashboard/my-inventory'
+import { useToast } from '@/hooks/use-toast'
+import { cn } from '@/lib/utils'
 
 type DashboardData = {
     approvalRequests: Project[],
@@ -60,6 +62,52 @@ const ApprovalListSkeleton = () => (
         ))}
     </div>
 );
+
+const RoomStatusDisplay = ({
+  status,
+  onStatusChange,
+}: {
+  status: SystemStatusData['roomStatus'];
+  onStatusChange: () => void;
+}) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleToggle = async () => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'You must be logged in.' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await toggleRoomStatus(user.uid);
+      toast({ title: 'Status Updated', description: `Room is now ${status.isOpen ? 'Closed' : 'Open'}.` });
+      onStatusChange();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: (error as Error).message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4 text-sm border p-3">
+        <span className="font-medium">Room Status:</span>
+        <span className={cn('font-bold', status.isOpen ? 'text-green-600' : 'text-red-600')}>
+            {status.isOpen ? 'Open' : 'Closed'}
+        </span>
+        <span className="text-xs text-muted-foreground">
+            (Last updated by {status.updatedBy} {status.updatedAt ? formatDistanceToNow(new Date(status.updatedAt), { addSuffix: true }) : ''})
+        </span>
+        <Button onClick={handleToggle} disabled={isLoading} variant="outline" size="sm" className="ml-auto">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {status.isOpen ? 'Mark as Closed' : 'Mark as Open'}
+        </Button>
+    </div>
+  );
+};
+
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
@@ -115,28 +163,23 @@ export default function DashboardPage() {
         )}
       </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {loading || !systemStatus ? (
-                <>
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
-                </>
+      <div className="space-y-6">
+          {loading || !systemStatus ? (
+                <Skeleton className="h-12 w-full" />
             ) : (
-                <>
-                    <RoomStatus 
-                        isOpen={systemStatus.roomStatus.isOpen} 
-                        updatedBy={systemStatus.roomStatus.updatedBy}
-                        updatedAt={systemStatus.roomStatus.updatedAt}
-                        onStatusChange={fetchData}
-                    />
-                    <KeyStatus 
-                        keys={systemStatus.keyStatus} 
-                        recentTransfers={systemStatus.recentTransfers}
-                        onStatusChange={fetchData}
-                    />
-                </>
+                <RoomStatusDisplay status={systemStatus.roomStatus} onStatusChange={fetchData} />
             )}
-        </div>
+            
+            {loading || !systemStatus ? (
+                <Skeleton className="h-48 w-full" />
+            ) : (
+                <KeyStatus 
+                    keys={systemStatus.keyStatus} 
+                    recentTransfers={systemStatus.recentTransfers}
+                    onStatusChange={fetchData}
+                />
+            )}
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="flex flex-col gap-6 lg:col-span-2">
