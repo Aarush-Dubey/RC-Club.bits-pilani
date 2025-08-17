@@ -3,18 +3,19 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { getUsers, updateUserRole, updateEmailWhitelist, getWhitelistedEmails, deleteWhitelistedEmail } from '../actions';
+import { getUsers, updateUserRole, updateEmailWhitelist, getWhitelistedEmails, deleteWhitelistedEmail, addEmailToWhitelist } from '../actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Search, Upload, Info, Trash2, Eye } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, Upload, Info, Trash2, Eye, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import * as XLSX from 'xlsx';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
 interface User {
   id: string;
@@ -22,6 +23,70 @@ interface User {
   email: string;
   role: string;
 }
+
+const AddEmailDialog = ({ onEmailAdded }: { onEmailAdded: () => void }) => {
+    const [email, setEmail] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+    
+    const handleAddEmail = async () => {
+        if (!email) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Email address cannot be empty.' });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await addEmailToWhitelist(email);
+            toast({ title: "Email Added", description: `${email} has been added to the whitelist.` });
+            setEmail('');
+            setIsOpen(false);
+            onEmailAdded();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Failed to Add', description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Email
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add Email to Whitelist</DialogTitle>
+                    <DialogDescription>
+                        Manually add a single email address to the list of allowed users.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="email-to-add">Email Address</Label>
+                    <Input 
+                        id="email-to-add"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="new.member@example.com"
+                        className="mt-2"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+                    <Button onClick={handleAddEmail} disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Add to Whitelist
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 const WhitelistDetailsDialog = ({ onListUpdate }: { onListUpdate: () => void }) => {
     const [emails, setEmails] = useState<string[]>([]);
@@ -145,14 +210,14 @@ const WhitelistManager = ({ onUpdate }: { onUpdate: () => void }) => {
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Email Whitelist</CardTitle>
-                    <CardDescription>Upload an Excel file to update the list of users allowed to register and log in.</CardDescription>
+                    <CardDescription>Control which users are allowed to register and log in to the application.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <Alert>
                         <Info className="h-4 w-4" />
-                        <AlertTitle>File Format Instructions</AlertTitle>
+                        <AlertTitle>Upload Instructions</AlertTitle>
                         <AlertDescription>
-                            The Excel file must contain a single column with the header named "email". Each row should contain one email address.
+                            To bulk update the whitelist, upload an Excel file (.xlsx) with a single column header named "email". This will replace the entire existing whitelist.
                         </AlertDescription>
                     </Alert>
                     <div className="flex gap-2">
@@ -165,17 +230,18 @@ const WhitelistManager = ({ onUpdate }: { onUpdate: () => void }) => {
                             id="whitelist-upload"
                         />
                         <label htmlFor="whitelist-upload">
-                            <Button asChild variant="outline" disabled={isLoading}>
+                            <Button asChild variant="secondary" disabled={isLoading}>
                                <div>
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                    {isLoading ? 'Processing...' : 'Upload Whitelist File'}
+                                    {isLoading ? 'Processing...' : 'Upload File'}
                                </div>
                             </Button>
                         </label>
+                         <AddEmailDialog onEmailAdded={onUpdate} />
                         <DialogTrigger asChild>
                             <Button variant="secondary">
                                 <Eye className="mr-2 h-4 w-4" />
-                                View Details
+                                View Current Whitelist
                             </Button>
                         </DialogTrigger>
                     </div>

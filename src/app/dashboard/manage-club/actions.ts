@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, updateDoc, writeBatch, deleteDoc, orderBy, query } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, writeBatch, deleteDoc, orderBy, query, setDoc } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // Helper to convert Firestore Timestamps to JSON-serializable strings
@@ -54,6 +54,15 @@ export async function getWhitelistedEmails() {
 export async function deleteWhitelistedEmail(email: string) {
     const emailRef = doc(db, 'allowed_emails', email);
     await deleteDoc(emailRef);
+    revalidatePath("/dashboard/manage-club/users");
+}
+
+export async function addEmailToWhitelist(email: string) {
+    if (!email || !email.includes('@')) {
+        throw new Error("Invalid email address provided.");
+    }
+    const emailRef = doc(db, 'allowed_emails', email.toLowerCase().trim());
+    await setDoc(emailRef, { email: email.toLowerCase().trim() });
     revalidatePath("/dashboard/manage-club/users");
 }
 
