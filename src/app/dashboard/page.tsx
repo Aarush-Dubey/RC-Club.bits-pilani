@@ -63,7 +63,7 @@ const ApprovalListSkeleton = () => (
     </div>
 );
 
-const RoomStatusDisplay = ({
+const RoomStatusToggle = ({
   status,
   onStatusChange,
 }: {
@@ -92,17 +92,11 @@ const RoomStatusDisplay = ({
   };
 
   return (
-    <div className="flex items-center gap-4 text-sm border p-3">
-        <span className="font-medium">Room Status:</span>
-        <span className={cn('font-bold', status.isOpen ? 'text-green-600' : 'text-red-600')}>
-            {status.isOpen ? 'Open' : 'Closed'}
-        </span>
-        <span className="text-xs text-muted-foreground">
-            (Last updated by {status.updatedBy} {status.updatedAt ? formatDistanceToNow(new Date(status.updatedAt), { addSuffix: true }) : ''})
-        </span>
-        <Button onClick={handleToggle} disabled={isLoading} variant="outline" size="sm" className="ml-auto">
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">Room is</span>
+       <Button onClick={handleToggle} disabled={isLoading} variant="ghost" size="sm" className={cn("font-bold", status.isOpen ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700')}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {status.isOpen ? 'Mark as Closed' : 'Mark as Open'}
+            {status.isOpen ? 'Open' : 'Closed'}
         </Button>
     </div>
   );
@@ -148,10 +142,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-h1">
-            Welcome, {user?.displayName || 'Club Member'}!
-          </h1>
+        <div className="flex-1">
+          <div className="flex items-baseline gap-4">
+            <h1 className="text-h1">
+                Welcome, {user?.displayName || 'Club Member'}!
+            </h1>
+             {loading || !systemStatus ? (
+                <Skeleton className="h-6 w-32" />
+            ) : (
+                <RoomStatusToggle status={systemStatus.roomStatus} onStatusChange={fetchData} />
+            )}
+          </div>
           <p className="text-base text-muted-foreground mt-2">
             Here's a quick overview of what's happening in the club.
           </p>
@@ -164,12 +165,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="space-y-6">
-          {loading || !systemStatus ? (
-                <Skeleton className="h-12 w-full" />
-            ) : (
-                <RoomStatusDisplay status={systemStatus.roomStatus} onStatusChange={fetchData} />
-            )}
-            
             {loading || !systemStatus ? (
                 <Skeleton className="h-48 w-full" />
             ) : (
