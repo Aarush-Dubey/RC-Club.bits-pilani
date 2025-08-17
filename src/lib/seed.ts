@@ -431,7 +431,30 @@ const permissionsByRole = {
     canViewDashboardMetrics: false,
     canAccessAdminPanel: false,
     canCreateBuckets: true,
-  }
+  },
+  probationary: {
+    canHoldKey: false,
+    canManageUsers: false,
+    canViewAllUsers: false,
+    canCreateProjects: false, // Restricted
+    canApproveProjects: false,
+    canCloseProjects: false,
+    canViewAllProjects: false,
+    canRequestInventory: true,
+    canApproveInventory: false,
+    canManageInventoryStock: false,
+    canViewInventoryLogs: false,
+    canRequestNewItem: true,
+    canApproveNewItemRequest: false,
+    canMarkNewItemOrdered: false,
+    canSubmitReimbursements: true,
+    canApproveReimbursements: false,
+    canViewFinanceSummary: false,
+    canExportFinanceLogs: false,
+    canViewDashboardMetrics: false,
+    canAccessAdminPanel: false,
+    canCreateBuckets: false, // Restricted
+  },
 };
 
 

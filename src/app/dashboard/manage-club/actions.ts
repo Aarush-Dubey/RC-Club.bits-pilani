@@ -32,7 +32,7 @@ export async function getUsers() {
     
     // For simplicity, fetching all possible roles from the seed file.
     // In a real app, this might come from a dedicated 'roles' collection.
-    const roles = ['admin', 'coordinator', 'treasurer', 'inventory_manager', 'drone_lead', 'plane_lead', 'member'];
+    const roles = ['admin', 'coordinator', 'treasurer', 'inventory_manager', 'drone_lead', 'plane_lead', 'member', 'probationary'];
     
     return { users, roles };
 }

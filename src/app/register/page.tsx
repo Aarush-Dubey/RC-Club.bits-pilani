@@ -64,7 +64,7 @@ export default function RegisterPage() {
         id: user.uid,
         name: name,
         email: email,
-        role: "member", // Default role
+        role: "probationary", // Default role
         createdAt: serverTimestamp(),
         joinedProjects: [],
         checkout_items: [],
@@ -106,7 +106,7 @@ export default function RegisterPage() {
           </div>
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Enter your details to join the club&apos;s digital workspace.
+            Enter your details to join the club's digital workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
