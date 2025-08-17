@@ -12,10 +12,10 @@ export function PublicHeader() {
   const { user, loading } = useAuth()
 
   return (
-    <header className="container px-4 md:px-6 py-4 flex justify-between items-center sticky top-0 z-50 border-b border-transparent">
+    <header className="container px-4 md:px-6 py-4 flex justify-between items-center sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
       <Link href="/" className="flex items-center gap-2">
         <Image src="/assets/logo.png" alt="RC-Club Logo" width={32} height={32} className="size-8" />
-        <h1 className="text-xl font-bold tracking-tighter text-white">
+        <h1 className="text-xl font-bold tracking-tighter text-foreground">
           RC-Club
         </h1>
       </Link>
@@ -25,15 +25,15 @@ export function PublicHeader() {
           <Skeleton className="h-10 w-24 rounded-none" />
         ) : user ? (
           <Link href="/dashboard">
-            <Button variant="outline" className="rounded-none border-white text-white hover:bg-white/10">Go to Dashboard</Button>
+            <Button variant="outline" className="rounded-none">Go to Dashboard</Button>
           </Link>
         ) : (
           <>
             <Link href="/login">
-              <Button variant="ghost" className="rounded-none text-white hover:bg-white/10">Login</Button>
+              <Button variant="ghost" className="rounded-none">Login</Button>
             </Link>
             <Link href="/register">
-              <Button variant="default" className="bg-white text-black hover:bg-neutral-200 rounded-none">Sign Up</Button>
+              <Button variant="default" className="rounded-none">Sign Up</Button>
             </Link>
           </>
         )}
