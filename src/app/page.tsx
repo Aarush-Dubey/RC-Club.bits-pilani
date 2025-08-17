@@ -48,7 +48,8 @@ export default function HomePage() {
       <PublicHeader />
 
       <main className="flex-grow">
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <section className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px]"></div>
           <h1 className="text-display font-bold tracking-tighter">
             BITS Pilani RC Club
           </h1>
