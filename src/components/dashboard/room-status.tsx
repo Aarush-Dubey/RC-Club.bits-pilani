@@ -26,7 +26,8 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt, onStatusChange }: Roo
     const Icon = isOpen ? DoorOpen : DoorClosed;
     const text = isOpen ? "Room is Open" : "Room is Closed";
     const description = isOpen ? "The club room is currently accessible." : "Access to the room is currently restricted.";
-    const color = isOpen ? "text-green-500" : "text-red-500";
+    const cardClass = isOpen ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
+    const textClass = isOpen ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300";
     const buttonText = isOpen ? "Mark as Closed" : "Mark as Open";
 
     const handleToggle = async () => {
@@ -38,7 +39,7 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt, onStatusChange }: Roo
         try {
             await toggleRoomStatus(user.uid);
             toast({ title: "Status Updated", description: `Room is now ${isOpen ? 'Closed' : 'Open'}.` });
-            onStatusChange(); // This will trigger the data refetch on the parent page
+            onStatusChange();
         } catch (error) {
             toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
         } finally {
@@ -47,16 +48,15 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt, onStatusChange }: Roo
     };
 
     return (
-        <Card className="flex flex-col">
+        <Card className={cn("flex flex-col", cardClass)}>
             <CardHeader>
                 <CardTitle>Room Status</CardTitle>
-                <CardDescription>Current availability of the club room.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
                 <div className="flex items-center gap-4">
-                    <Icon className={cn("h-12 w-12", color)} />
+                    <Icon className={cn("h-12 w-12", textClass)} />
                     <div>
-                        <p className={cn("text-xl font-bold", color)}>{text}</p>
+                        <p className={cn("text-xl font-bold", textClass)}>{text}</p>
                         <p className="text-sm text-muted-foreground">{description}</p>
                     </div>
                 </div>
@@ -67,7 +67,7 @@ export function RoomStatus({ isOpen, updatedBy, updatedAt, onStatusChange }: Roo
                 )}
             </CardContent>
             <CardFooter>
-                 <Button onClick={handleToggle} disabled={isLoading} className="w-full">
+                 <Button onClick={handleToggle} disabled={isLoading} variant={isOpen ? "destructive" : "default"} className="w-full">
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {buttonText}
                  </Button>
