@@ -70,13 +70,7 @@ export async function updateEmailWhitelist(emails: string[]) {
     const batch = writeBatch(db);
     const emailsCollection = collection(db, 'allowed_emails');
     
-    // 1. Get all existing documents to delete them
-    const existingEmailsSnapshot = await getDocs(emailsCollection);
-    existingEmailsSnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-    });
-
-    // 2. Add all new emails
+    // Add all new emails from the uploaded file
     const uniqueEmails = [...new Set(emails.map(email => email.toLowerCase().trim()))];
     uniqueEmails.forEach(email => {
         if (email) { // Ensure email is not an empty string

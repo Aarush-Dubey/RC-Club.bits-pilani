@@ -184,7 +184,7 @@ const WhitelistManager = ({ onUpdate }: { onUpdate: () => void }) => {
                 await updateEmailWhitelist(emails);
                 toast({
                     title: "Whitelist Updated",
-                    description: `Successfully updated the whitelist with ${emails.length} emails.`,
+                    description: `Successfully appended ${emails.length} emails to the whitelist.`,
                 });
                 onUpdate();
             } else {
@@ -217,7 +217,7 @@ const WhitelistManager = ({ onUpdate }: { onUpdate: () => void }) => {
                         <Info className="h-4 w-4" />
                         <AlertTitle>Upload Instructions</AlertTitle>
                         <AlertDescription>
-                            To bulk update the whitelist, upload an Excel file (.xlsx) with a single column header named "email". This will replace the entire existing whitelist.
+                            To bulk update the whitelist, upload an Excel file (.xlsx) with a single column header named "email". This will append the emails to the existing whitelist.
                         </AlertDescription>
                     </Alert>
                     <div className="flex gap-2">
