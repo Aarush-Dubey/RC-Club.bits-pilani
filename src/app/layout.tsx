@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Manage your RC club with ease.',
   icons: {
     icon: '/assets/logo.png',
+    shortcut: '/assets/logo.png',
+    apple: '/assets/logo.png',
   },
 };
 
