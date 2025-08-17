@@ -44,37 +44,37 @@ const benefits = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-white text-black">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-black text-black dark:text-white">
       <PublicHeader />
 
       <main className="flex-grow">
-        <section className="bg-white text-black py-20 md:py-32">
+        <section className="bg-white dark:bg-black text-black dark:text-white py-20 md:py-32">
           <div className="container px-4 md:px-6 text-center">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
               BITS Pilani RC Club
             </h1>
-            <p className="mx-auto max-w-3xl text-lg text-neutral-600">
+            <p className="mx-auto max-w-3xl text-lg text-neutral-600 dark:text-neutral-400">
               Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
             </p>
             <div className="mt-8">
-              <Button asChild size="lg" variant="default" className="bg-black text-white hover:bg-neutral-800 rounded-none">
+              <Button asChild size="lg" variant="default" className="bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 rounded-none">
                 <Link href="#our-work">Explore Our Work</Link>
               </Button>
             </div>
           </div>
         </section>
 
-        <section id="our-work" className="bg-brutalist-secondary-light py-16 md:py-24">
+        <section id="our-work" className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark py-16 md:py-24">
           <div className="container px-4 md:px-6">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold">Our Work</h2>
-              <p className="mx-auto mt-2 max-w-xl text-neutral-600">
+              <p className="mx-auto mt-2 max-w-xl text-neutral-600 dark:text-neutral-400">
                 A selection of our most innovative projects and competition entries.
               </p>
             </div>
-            <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light border-y border-brutalist-border-light">
+            <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light dark:bg-brutalist-border-dark border-y border-brutalist-border-light dark:border-brutalist-border-dark">
               {projects.map((project) => (
-                  <div key={project.name} className="bg-brutalist-secondary-light group border-x border-brutalist-border-light">
+                  <div key={project.name} className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark group border-x border-brutalist-border-light dark:border-brutalist-border-dark">
                       <div className="relative overflow-hidden aspect-video">
                            <Image
                               src={project.image}
@@ -93,24 +93,24 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="why-join" className="bg-white py-16 md:py-24">
+        <section id="why-join" className="bg-white dark:bg-black py-16 md:py-24">
             <div className="container px-4 md:px-6">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-4xl font-bold">What You'll Gain</h2>
-                     <p className="mx-auto mt-2 max-w-xl text-neutral-600">
+                     <p className="mx-auto mt-2 max-w-xl text-neutral-600 dark:text-neutral-400">
                        Joining the RC Club is more than a hobby—it's a launchpad for your career.
                     </p>
                 </div>
-                 <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light border border-brutalist-border-light">
+                 <div className="grid gap-px md:grid-cols-3 bg-brutalist-border-light dark:bg-brutalist-border-dark border border-brutalist-border-light dark:border-brutalist-border-dark">
                     {benefits.map((benefit) => (
-                        <div key={benefit.title} className="bg-white p-6 border-brutalist-border-light">
+                        <div key={benefit.title} className="bg-white dark:bg-black p-6 border-brutalist-border-light dark:border-brutalist-border-dark">
                             <div className="flex items-center gap-4 mb-4">
-                                <div className="bg-brutalist-secondary-light p-3 border border-brutalist-border-light">
-                                    <benefit.icon className="size-6 text-black" />
+                                <div className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark p-3 border border-brutalist-border-light dark:border-brutalist-border-dark">
+                                    <benefit.icon className="size-6 text-black dark:text-white" />
                                 </div>
                                 <h3 className="text-xl font-medium">{benefit.title}</h3>
                             </div>
-                            <p className="text-neutral-600">
+                            <p className="text-neutral-600 dark:text-neutral-400">
                                 {benefit.description}
                             </p>
                         </div>
@@ -119,16 +119,16 @@ export default function HomePage() {
             </div>
         </section>
 
-        <section className="py-16 md:py-24 bg-brutalist-secondary-light border-y border-brutalist-border-light">
+        <section className="py-16 md:py-24 bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark border-y border-brutalist-border-light dark:border-brutalist-border-dark">
           <div className="container px-4 md:px-6 grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-4">
               <h2 className="text-3xl md:text-4xl font-bold">About Us</h2>
-              <p className="text-neutral-600">
+              <p className="text-neutral-600 dark:text-neutral-400">
                 Founded in 2008, the BITS Pilani RC Club is a community of passionate enthusiasts dedicated to
                 aerospace engineering. We provide the tools, space, and support for members to bring their most ambitious
                 projects to life, consistently achieving top ranks in national and international competitions.
               </p>
-              <Button asChild size="lg" variant="default" className="bg-black text-white hover:bg-neutral-800 rounded-none">
+              <Button asChild size="lg" variant="default" className="bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 rounded-none">
                 <Link href="/register">Become a Member</Link>
               </Button>
             </div>
@@ -139,14 +139,14 @@ export default function HomePage() {
                 alt="RC Club Workshop"
                 width={600}
                 height={400}
-                className="w-full border border-brutalist-border-light"
+                className="w-full border border-brutalist-border-light dark:border-brutalist-border-dark"
               />
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="container px-4 md:px-6 py-6 text-center text-neutral-500 text-sm border-t border-brutalist-border-light">
+      <footer className="container px-4 md:px-6 py-6 text-center text-neutral-500 dark:text-neutral-400 text-sm border-t border-brutalist-border-light dark:border-brutalist-border-dark">
           <p>&copy; {new Date().getFullYear()} RC-Club. All Rights Reserved.</p>
       </footer>
     </div>
