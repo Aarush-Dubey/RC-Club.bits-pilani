@@ -49,9 +49,19 @@ export default function HomePage() {
       <main className="flex-grow">
         <section className="relative bg-secondary py-20 md:py-32 overflow-hidden">
           <div className="container px-4 md:px-6 text-center relative z-10">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
-              RC-Club BITS Pilani
-            </h1>
+            <div className="relative inline-block">
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 drop-shadow-lg">
+                RC-Club BITS Pilani
+              </h1>
+              <div className="absolute top-0 -right-12 md:-right-16 h-full flex items-center -z-10">
+                  <svg width="64" height="64" viewBox="0 0 100 100" className="h-12 w-12 md:h-16 md:w-16">
+                      <path d="M 5 60 Q 30 50, 60 40" stroke="hsl(var(--primary))" strokeWidth="3" fill="none" strokeDasharray="5 5" />
+                      <g transform="translate(60, 35) rotate(0)">
+                          <Plane className="h-5 w-5 md:h-6 md:w-6 text-primary" fill="hsl(var(--primary))" />
+                      </g>
+                  </svg>
+              </div>
+            </div>
             <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
               Building autonomous aircraft, pushing boundaries, and training the next generation of aerospace innovators.
             </p>
@@ -61,37 +71,6 @@ export default function HomePage() {
               </Button>
             </div>
           </div>
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-0 w-full h-full">
-                <svg
-                    className="w-full h-full"
-                    viewBox="0 0 800 400"
-                    preserveAspectRatio="xMidYMid slice"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <g transform="translate(400, 200) scale(1.2)">
-                        <path
-                            d="M -350 20 C -250 -100, 250 100, 350 -20"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth="2"
-                            fill="none"
-                            strokeDasharray="4 8"
-                            className="path-animate"
-                        >
-                            <animate
-                                attributeName="stroke-dashoffset"
-                                from="1000"
-                                to="0"
-                                dur="3s"
-                                fill="freeze"
-                                begin="0.5s"
-                            />
-                        </path>
-                        <g className="plane-animate">
-                           <Plane className="h-6 w-6 text-primary" fill="hsl(var(--primary))" />
-                        </g>
-                    </g>
-                </svg>
-            </div>
         </section>
         
         <section id="our-work" className="bg-brutalist-secondary-light dark:bg-brutalist-secondary-dark py-16 md:py-24">
