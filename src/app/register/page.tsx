@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs, limit } from "firebase/firestore"
 import { BarChart, Loader2 } from "lucide-react"
 
 import { auth, db } from "@/lib/firebase"
@@ -34,6 +34,21 @@ export default function RegisterPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
+      // 1. Check if email is in the whitelist
+      const q = query(collection(db, "allowed_emails"), where("email", "==", email.toLowerCase()), limit(1));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Registration Denied",
+          description: "This email address is not authorized to register. Please contact an administrator.",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // 2. If whitelisted, create the user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -41,10 +56,10 @@ export default function RegisterPage() {
       )
       const user = userCredential.user
 
-      // Update Firebase Auth profile
+      // 3. Update Firebase Auth profile
       await updateProfile(user, { displayName: name })
 
-      // Create user document in Firestore
+      // 4. Create user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         id: user.uid,
         name: name,

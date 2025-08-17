@@ -7,8 +7,10 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { BarChart, Loader2 } from "lucide-react"
+import { collection, query, where, getDocs, limit } from "firebase/firestore"
 
-import { auth } from "@/lib/firebase"
+
+import { auth, db } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -32,6 +34,21 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
+      // 1. Check if email is in the whitelist
+      const q = query(collection(db, "allowed_emails"), where("email", "==", email.toLowerCase()), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "This email address is not authorized to access the platform.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. If whitelisted, attempt to sign in
       await signInWithEmailAndPassword(auth, email, password)
       toast({
         title: "Login Successful",

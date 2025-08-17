@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // Helper to convert Firestore Timestamps to JSON-serializable strings
@@ -42,5 +42,28 @@ export async function updateUserRole(userId: string, newRole: string) {
     await updateDoc(userRef, {
         role: newRole
     });
+    revalidatePath("/dashboard/manage-club/users");
+}
+
+export async function updateEmailWhitelist(emails: string[]) {
+    const batch = writeBatch(db);
+    const emailsCollection = collection(db, 'allowed_emails');
+    
+    // 1. Get all existing documents to delete them
+    const existingEmailsSnapshot = await getDocs(emailsCollection);
+    existingEmailsSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+
+    // 2. Add all new emails
+    const uniqueEmails = [...new Set(emails.map(email => email.toLowerCase().trim()))];
+    uniqueEmails.forEach(email => {
+        if (email) { // Ensure email is not an empty string
+            const docRef = doc(emailsCollection, email);
+            batch.set(docRef, { email });
+        }
+    });
+
+    await batch.commit();
     revalidatePath("/dashboard/manage-club/users");
 }
