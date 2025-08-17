@@ -12,56 +12,105 @@ export default function HomePage() {
       <PublicHeader />
 
       <main className="flex-grow">
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <h1 className="text-display font-bold tracking-tighter">
+            The Ultimate Hub for Your RC Club
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Streamline project tracking, manage inventory with ease, and automate
+            finances. All in one place.
+          </p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Link href="/register">
+              <Button size="lg">Join the Club</Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline">
+                Member Login
+              </Button>
+            </Link>
+          </div>
+        </section>
+
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <Card className="bg-secondary">
-            <CardHeader>
-              <CardTitle className="text-h2">Help Us Build Our Homepage!</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <div className="text-center">
+            <h2 className="text-h2 font-bold">What We Offer</h2>
+            <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
+              A suite of tools designed to make club management seamless.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ToyBrick /> Project Tracking
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Propose new projects, track progress with updates, and manage
+                  team members from a centralized dashboard.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck /> Inventory & Procurement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Keep track of all club equipment, manage loan requests, and
+                  streamline new procurement orders.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HandCoins /> Automated Finance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Handle reimbursement requests with automated approval flows
+                  and gain financial insights with our AI-powered tools.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="bg-secondary py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-4">
+              <h2 className="text-h2 font-bold">About the Club</h2>
               <p className="text-muted-foreground">
-                We're redesigning the public face of our RC club's management platform. Below is a breakdown of the current (now previous) homepage content. We need your honest feedback, criticism, and suggestions to make it better.
+                We are a community of passionate RC enthusiasts dedicated to
+                building, flying, and racing. Our club provides the tools,
+                space, and support for members to bring their most ambitious
+                projects to life.
               </p>
-              
-              <div className="space-y-4">
-                <h3 className="text-h3 font-semibold">The Prompt:</h3>
-                <div className="p-4 border bg-background font-mono text-sm space-y-2">
-                    <p className="font-bold">"Please review the following homepage structure and provide suggestions. The goal is a professional, clean, and inviting page for new and existing members. What's missing? What's unclear? What would you change?"</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-h3 font-semibold">Current Homepage Structure (for critique):</h3>
-                <div className="p-4 border bg-background font-mono text-sm space-y-4">
-                  <div>
-                    <p className="font-bold text-primary">[Section 1: Hero]</p>
-                    <p>&gt; <span className="text-muted-foreground">Title: "The Ultimate Hub for Your RC Club"</span></p>
-                    <p>&gt; <span className="text-muted-foreground">Subtitle: "Streamline project tracking, manage inventory, and handle finances with ease..."</span></p>
-                    <p>&gt; <span className="text-muted-foreground">Buttons: "Join the Club", "Member Login"</span></p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-primary">[Section 2: What We Offer]</p>
-                    <p>&gt; <span className="text-muted-foreground">Card 1: "Project Tracking"</span></p>
-                    <p>&gt; <span className="text-muted-foreground">Card 2: "Inventory & Procurement"</span></p>
-                    <p>&gt; <span className="text-muted-foreground">Card 3: "Automated Finance"</span></p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-primary">[Section 3: About the Club]</p>
-                    <p>&gt; <span className="text-muted-foreground">Content: A brief description of the club and its community.</span></p>
-                    <p>&gt; <span className="text-muted-foreground">Image: Placeholder image of a workshop.</span></p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-center pt-4">
-                <p className="text-lg">What are your thoughts?</p>
-              </div>
-
-            </CardContent>
-          </Card>
+              <Button asChild>
+                <Link href="/register">Become a Member</Link>
+              </Button>
+            </div>
+            <div>
+              <Image
+                src="https://placehold.co/600x400.png"
+                data-ai-hint="rc plane workshop"
+                alt="RC Club Workshop"
+                width={600}
+                height={400}
+                className="w-full"
+              />
+            </div>
+          </div>
         </section>
       </main>
 
-       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm border-t">
+      <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground text-sm border-t">
           <p>&copy; {new Date().getFullYear()} RC-Club. All Rights Reserved.</p>
       </footer>
     </div>
