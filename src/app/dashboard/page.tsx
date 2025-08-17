@@ -17,6 +17,15 @@ import { KeyStatus } from '@/components/dashboard/key-status'
 import { MyInventory } from '@/components/dashboard/my-inventory'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 type DashboardData = {
     approvalRequests: Project[],
@@ -73,6 +82,7 @@ const RoomStatusToggle = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleToggle = async () => {
     if (!user) {
@@ -84,6 +94,7 @@ const RoomStatusToggle = ({
       await toggleRoomStatus(user.uid);
       toast({ title: 'Status Updated', description: `Room is now ${status.isOpen ? 'Closed' : 'Open'}.` });
       onStatusChange();
+      setIsDialogOpen(false);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Update Failed', description: (error as Error).message });
     } finally {
@@ -92,13 +103,41 @@ const RoomStatusToggle = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Room is</span>
-       <Button onClick={handleToggle} disabled={isLoading} variant="ghost" size="sm" className={cn("font-bold", status.isOpen ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700')}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Room is</span>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className={cn("font-bold", status.isOpen ? 'text-green-600 hover:text-green-700' : 'text-red-600 hover:text-red-700')}>
             {status.isOpen ? 'Open' : 'Closed'}
-        </Button>
-    </div>
+          </Button>
+        </DialogTrigger>
+      </div>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change Room Status</DialogTitle>
+          <DialogDescription>
+            You are about to change the status of the main club room.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm">
+            Current status: <span className={cn("font-bold", status.isOpen ? 'text-green-600' : 'text-red-600')}>{status.isOpen ? 'Open' : 'Closed'}</span>
+          </p>
+          {status.updatedBy && status.updatedAt && (
+             <p className="text-sm text-muted-foreground">
+              Last updated by {status.updatedBy} {formatDistanceToNow(new Date(status.updatedAt), { addSuffix: true })}.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleToggle} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mark as {status.isOpen ? 'Closed' : 'Open'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
