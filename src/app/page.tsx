@@ -335,12 +335,28 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center max-w-4xl mx-auto">
             
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
-              RC Club{' '}
-              <span className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
-                BITS Pilani
-              </span>
-            </h1>
+            <div className="relative inline-block">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+                RC Club{' '}
+                <span className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                  BITS Pilani
+                </span>
+              </h1>
+              <svg 
+                className="absolute -top-4 -right-16 h-20 w-20 text-red-500" 
+                fill="none" 
+                viewBox="0 0 100 100"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                  <g transform="translate(10, 80) rotate(-30)">
+                    <Plane className="w-6 h-6" />
+                  </g>
+                  <path d="M 20 80 Q 40 60, 80 50" strokeDasharray="5,5" />
+              </svg>
+            </div>
             
             <p className="text-xl text-muted-foreground mb-4 max-w-3xl mx-auto leading-relaxed">
               <strong className="text-2xl font-bold text-orange-500">Build Fly Crash Repeat</strong>
@@ -557,23 +573,16 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-1 gap-12 max-w-xl mx-auto">
             <div className="space-y-8">
               <div>
-                <h3 className="text-xl font-semibold mb-4">Get in Touch</h3>
+                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Get in Touch</h3>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
                     <Mail className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-medium">Email</p>
                       <p className="text-sm text-muted-foreground">rcclub@pilani.bits-pilani.ac.in</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Phone className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Contact</p>
-                      <p className="text-sm text-muted-foreground">Available through club activities</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
@@ -587,8 +596,8 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="text-xl font-semibold mb-4">Follow Our Journey</h3>
-                <div className="flex space-x-4">
+                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Follow Our Journey</h3>
+                <div className="flex space-x-4 justify-center md:justify-start">
                   <Button variant="outline" size="sm" className="p-3">
                     <Github className="w-5 h-5" />
                   </Button>
@@ -599,40 +608,6 @@ export default function HomePage() {
                     <Linkedin className="w-5 h-5" />
                   </Button>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-muted/30 border border-border rounded-2xl p-8">
-              <h3 className="text-xl font-semibold mb-6">Quick Message</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="Your name"
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="your.email@example.com"
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Message</label>
-                  <textarea 
-                    rows={4} 
-                    placeholder="Tell us about your interest in RC aircraft..."
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-                  ></textarea>
-                </div>
-                <Button className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white">
-                  Send Message
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
               </div>
             </div>
           </div>
