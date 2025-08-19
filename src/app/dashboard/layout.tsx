@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import { ThemeProvider } from "@/context/theme-provider"
 
 const baseMenuItems = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
@@ -86,33 +87,40 @@ export default function DashboardLayout({
   ]
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <Sidebar>
-        <SidebarHeader />
-        <SidebarContent className="flex-grow">
-          <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
-                    tooltip={item.label}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-      </Sidebar>
-      <SidebarInset>
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-4 sm:p-6 md:p-8">{children}</div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+     <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <SidebarProvider defaultOpen={false}>
+          <Sidebar>
+            <SidebarHeader />
+            <SidebarContent className="flex-grow">
+              <SidebarMenu>
+                {menuItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <Link href={item.href} passHref>
+                      <SidebarMenuButton
+                        isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
+                        tooltip={item.label}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+          <SidebarInset>
+            <DashboardHeader />
+            <main className="flex-1 overflow-y-auto">
+              <div className="container mx-auto p-4 sm:p-6 md:p-8">{children}</div>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </ThemeProvider>
   )
 }

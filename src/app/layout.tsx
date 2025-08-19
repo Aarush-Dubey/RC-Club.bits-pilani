@@ -3,7 +3,6 @@ import './globals.css'
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils'
-import { ThemeProvider } from '@/context/theme-provider'
 
 export const metadata: Metadata = {
   title: 'RC-Club',
@@ -39,17 +38,10 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("min-h-screen bg-background font-sans antialiased")}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
           <AuthProvider>
             {children}
           </AuthProvider>
           <Toaster />
-        </ThemeProvider>
       </body>
     </html>
   );
