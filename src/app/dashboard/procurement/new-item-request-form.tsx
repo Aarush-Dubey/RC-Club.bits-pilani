@@ -102,7 +102,7 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
     setIsSubmitting(true);
     try {
       await addRequestToBucket(bucketId, {
-        request: data,
+        requests: [data],
         requestedById: currentUser.uid,
       });
 
