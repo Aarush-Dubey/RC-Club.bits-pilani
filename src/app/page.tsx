@@ -40,7 +40,7 @@ const navigation = [
 ];
 
 const stats = [
-  { label: 'Build Fly', value: 'Crash' },
+  { label: 'Build Fly Crash', value: '🔥' },
   { label: 'Repeat', value: '♾️' }
 ];
 
@@ -119,9 +119,9 @@ const projects = [
 const achievements = [
   {
     title: 'Robofest Champion 2023',
-    description: 'Won ₹5 lakh in the national robotics competition with our autonomous UAV.',
+    description: 'Won the national robotics competition with our autonomous UAV.',
     icon: Trophy,
-    highlight: true
+    highlight: false
   },
   {
     title: 'Multiple Competition Participations',
@@ -346,10 +346,10 @@ export default function HomePage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                  <g transform="translate(10, 80) rotate(-30)">
+                  <g className="plane-animate">
                     <Plane className="w-6 h-6" />
                   </g>
-                  <path d="M 20 80 Q 40 60, 80 50" strokeDasharray="5,5" />
+                  <path d="M 20 80 Q 40 60, 80 50" strokeDasharray="5,5" className="path-animate" />
               </svg>
             </div>
             
@@ -404,7 +404,7 @@ export default function HomePage() {
                   We're RC Club BITS Pilani - where engineering meets chaos and somehow beautiful things happen. Our motto? <strong>Build Fly Crash Repeat</strong>. Because every crash is just a learning opportunity in disguise.
                 </p>
                 <p className="text-muted-foreground">
-                  From winning ₹5 lakh at Robofest to conducting Sky Highs (one of the best events at Apogee), we've proven that our builds don't just look good - they actually work.
+                  From winning at Robofest to conducting Sky Highs (one of the best events at Apogee), we've proven that our builds don't just look good - they actually work.
                 </p>
               </div>
               
@@ -413,7 +413,7 @@ export default function HomePage() {
                   <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-medium">Competition Winners</p>
-                    <p className="text-sm text-muted-foreground">₹5 lakh Robofest champions - our UAV actually flew when it mattered</p>
+                    <p className="text-sm text-muted-foreground">Robofest champions - our UAV actually flew when it mattered</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -449,7 +449,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 border-t border-border">
+      <section id="achievements" className="py-20 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
@@ -460,15 +460,15 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {achievements.map((achievement, index) => (
-              <div key={index} className={`${achievement.highlight ? 'bg-gradient-to-br from-orange-500/10 to-red-600/10 border border-orange-200 dark:border-orange-800' : 'bg-muted/30 border border-border hover:bg-muted/50'} transition-colors rounded-2xl p-8`}>
+              <div key={index} className="bg-muted/30 border border-border hover:bg-muted/50 transition-colors rounded-2xl p-8">
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
                     <achievement.icon className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className={`text-xl font-semibold mb-2 ${achievement.highlight ? 'text-orange-600 dark:text-orange-400' : ''}`}>{achievement.title}</h3>
+                    <h3 className="text-xl font-semibold mb-2">{achievement.title}</h3>
                     <p className="text-muted-foreground">{achievement.description}</p>
                   </div>
                 </div>
@@ -570,9 +570,9 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-1 gap-12 max-w-xl mx-auto">
-            <div className="space-y-8">
+            <div className="space-y-8 md:col-span-1 flex flex-col items-center">
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Get in Touch</h3>
+                <h3 className="text-xl font-semibold mb-4 text-center">Get in Touch</h3>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
                     <Mail className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
@@ -591,9 +591,9 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Follow Our Journey</h3>
-                <div className="flex space-x-4 justify-center md:justify-start">
+              <div className="pt-8">
+                <h3 className="text-xl font-semibold mb-4 text-center">Follow Our Journey</h3>
+                <div className="flex space-x-4 justify-center">
                   <Button variant="outline" size="sm" className="p-3">
                     <Github className="w-5 h-5" />
                   </Button>
