@@ -124,12 +124,6 @@ const achievements = [
     highlight: true
   },
   {
-    title: 'Best Technical Paper',
-    description: 'Recognition for innovative approach in autonomous flight systems.',
-    icon: Award,
-    highlight: false
-  },
-  {
     title: 'Multiple Competition Participations',
     description: 'Regular participation and recognition in various national and regional competitions.',
     icon: Target,
