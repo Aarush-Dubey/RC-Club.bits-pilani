@@ -81,20 +81,20 @@ const projects = [
     }
   },
   {
-    title: 'Competition UAV',
-    description: 'The ₹5 lakh Robofest winner. This baby actually works (most of the time).',
-    status: 'Champion',
-    category: 'Autonomous',
+    title: '5 Axis Hotwire CNC machine',
+    description: 'Made in-house to create complex foam cores for our custom aircraft designs.',
+    status: 'Operational',
+    category: 'In-house Tools',
     details: {
-      overview: 'Our championship-winning autonomous UAV that secured the ₹5 lakh prize at Robofest. This project represents months of dedicated engineering and testing.',
+      overview: 'A custom-built 5-axis hotwire CNC machine designed and fabricated by our club members. This machine allows us to cut intricate foam shapes for wings and fuselages with high precision.',
       specifications: [
-        'Autonomous flight capability',
-        'Advanced sensor integration',
-        'Competition-specific mission payload',
-        'Reliable flight control system'
+        '5-axis of freedom for complex cuts',
+        'Nichrome wire for clean, precise foam cutting',
+        'Custom GRBL-based controller firmware',
+        'Designed for large foam blocks'
       ],
-      challenges: 'Developing robust autonomous navigation and meeting strict competition requirements.',
-      outcome: 'First place at Robofest with a prize of ₹5 lakh, proving our technical capabilities.'
+      challenges: 'Calibrating the five axes for synchronized movement and ensuring consistent wire temperature were major engineering hurdles.',
+      outcome: 'Fully operational machine that has drastically improved our ability to prototype and build custom airframes with complex aerodynamic profiles.'
     }
   },
   {
@@ -282,6 +282,7 @@ export default function HomePage() {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     (selectedProject as any).status === 'Champion' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     (selectedProject as any).status === 'Built' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    (selectedProject as any).status === 'Operational' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                   }`}>
                     {(selectedProject as any).status}
@@ -505,6 +506,7 @@ export default function HomePage() {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         project.status === 'Champion' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                         project.status === 'Built' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                         project.status === 'Operational' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                         'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                       }`}>
                         {project.status}
