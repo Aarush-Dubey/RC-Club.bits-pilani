@@ -92,9 +92,9 @@ const serializeFirestoreTimestamps = (data: any): any => {
     return data;
 };
 
-export default function BucketDetailsClient({ initialData, bucketId }: { initialData: any, bucketId: string }) {
-    const [data, setData] = useState<any>(initialData);
-    const [loading, setLoading] = useState(!initialData);
+export default function BucketDetailsClient({ bucketId }: { bucketId: string }) {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
     const [isNewItemFormOpen, setIsNewItemFormOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
@@ -104,8 +104,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
 
     useEffect(() => {
         if (!bucketId) return;
-
-        setLoading(true);
 
         const bucketRef = doc(db, "procurement_buckets", bucketId);
         
@@ -126,7 +124,6 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                 members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
             }
 
-            // Also listen to requests
             const requestsQuery = query(collection(db, "new_item_requests"), where("linkedBucketId", "==", bucketId));
             const unsubscribeRequests = onSnapshot(requestsQuery, (requestsSnap) => {
                 const requests = requestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
@@ -139,13 +136,11 @@ export default function BucketDetailsClient({ initialData, bucketId }: { initial
                 setLoading(false);
             });
             
-            // Return a function to cleanup both listeners
             return () => {
                 unsubscribeRequests();
             };
         });
 
-        // Cleanup subscription on unmount
         return () => {
             unsubscribeBucket();
         };
