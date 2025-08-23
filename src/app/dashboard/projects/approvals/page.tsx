@@ -1,8 +1,6 @@
 
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { auth } from "@/lib/firebase"
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Check, X } from 'lucide-react'
 
@@ -24,9 +22,17 @@ async function getApprovalData() {
     let users: User[] = [];
     if (userIds.length > 0) {
         // Firestore 'in' query is limited to 30 elements.
-        // For larger sets, you might need to chunk the requests.
-        const usersSnapshot = await getDocs(query(collection(db, "users"), where("id", "in", userIds.slice(0,30))));
-        users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
+        const userChunks = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+            userChunks.push(userIds.slice(i, i + 30));
+        }
+
+        for (const chunk of userChunks) {
+            if (chunk.length > 0) {
+                const usersSnapshot = await getDocs(query(collection(db, "users"), where("id", "in", chunk)));
+                users.push(...usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[]);
+            }
+        }
     }
     
     return { approvalRequests, users };
