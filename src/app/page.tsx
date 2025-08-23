@@ -329,29 +329,12 @@ export default function HomePage() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center max-w-4xl mx-auto">
-            
-            <div className="relative inline-block">
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
-                RC Club{' '}
-                <span className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
-                  BITS Pilani
-                </span>
-              </h1>
-              <svg 
-                className="absolute -top-4 -right-16 h-20 w-20 text-red-500" 
-                fill="none" 
-                viewBox="0 0 100 100"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                  <g className="plane-animate">
-                    <Plane className="w-6 h-6" />
-                  </g>
-                  <path d="M 20 80 Q 40 60, 80 50" strokeDasharray="5,5" className="path-animate" />
-              </svg>
-            </div>
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+              RC Club{' '}
+              <span className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                BITS Pilani
+              </span>
+            </h1>
             
             <p className="text-xl text-muted-foreground mb-4 max-w-3xl mx-auto leading-relaxed">
               <strong className="text-2xl font-bold text-orange-500">Build Fly Crash Repeat</strong>
