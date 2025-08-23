@@ -31,18 +31,6 @@ import {
   MapPin
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'About', href: '#about' },
-  { name: 'Projects', href: '#projects' },
-  { name: 'Sky Highs', href: '#sky-highs' },
-  { name: 'Achievements', href: '#achievements' },
-  { name: 'Contact', href: '#contact' }
-];
-
-const stats = [
-  { label: 'Build Fly Crash', value: '🔥' },
-  { label: 'Repeat', value: '♾️' }
-];
 
 const features = [
   {
@@ -135,7 +123,6 @@ export default function HomePage() {
   const [isDark, setIsDark] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [memberClicks, setMemberClicks] = useState(0);
   const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
@@ -172,15 +159,6 @@ export default function HomePage() {
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogoClick = () => {
-    setMemberClicks(prev => prev + 1);
-    if (memberClicks >= 4) {
-      // Show member login after 5 clicks
-      alert('Member Login Portal');
-      setMemberClicks(0);
-    }
-  };
-
   const openProjectModal = (project:any) => {
     setSelectedProject(project);
   };
@@ -197,30 +175,18 @@ export default function HomePage() {
       <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <button 
-              onClick={handleLogoClick}
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
-            >
+             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
                 <Plane className="w-4 h-4 text-white transform rotate-45" />
               </div>
               <span className="font-bold text-lg">RC Club</span>
-              {memberClicks > 2 && (
-                <UserCheck className="w-4 h-4 text-muted-foreground opacity-50" />
-              )}
-            </button>
+            </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              {navigation.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => scrollToSection(item.href)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.name}
-                </button>
-              ))}
+            <div className="hidden md:flex items-center space-x-4">
+              <Link href="/login">
+                <Button>Members Login</Button>
+              </Link>
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-md hover:bg-accent transition-colors"
@@ -250,15 +216,13 @@ export default function HomePage() {
           {isMobileMenuOpen && (
             <div className="md:hidden border-t border-border">
               <div className="py-2 space-y-1">
-                {navigation.map((item) => (
+                <Link href="/login" className="block w-full">
                   <button
-                    key={item.name}
-                    onClick={() => scrollToSection(item.href)}
                     className="block w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
                   >
-                    {item.name}
+                    Members Login
                   </button>
-                ))}
+                </Link>
               </div>
             </div>
           )}
@@ -360,16 +324,6 @@ export default function HomePage() {
                 Sky Highs @ Apogee
               </Button>
             </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-20 grid grid-cols-2 lg:grid-cols-2 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center p-4 rounded-lg bg-muted/30 border border-border">
-                <div className="text-2xl lg:text-3xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -619,3 +573,4 @@ export default function HomePage() {
     </div>
   );
 }
+
