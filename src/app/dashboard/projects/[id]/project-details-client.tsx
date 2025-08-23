@@ -1,10 +1,13 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import { useAuth, type AppUser } from "@/context/auth-context";
+import { doc, getDoc, collection, getDocs, query, where, Timestamp, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +26,7 @@ import { NewUpdateForm } from "./new-update-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import type { Project, InventoryItem } from "../page";
 
 
 function getProjectStatusConfig(status: string) {
@@ -49,6 +53,25 @@ const getInventoryStatusConfig = (status: string) => {
     }
 }
 
+// Helper to convert Firestore Timestamps to strings for client-side state
+const serializeFirestoreTimestamps = (data: any): any => {
+    if (!data) return data;
+    if (Array.isArray(data)) {
+        return data.map(serializeFirestoreTimestamps);
+    }
+    if (typeof data === 'object' && data !== null) {
+        if (data instanceof Timestamp) {
+            return data.toDate().toISOString();
+        }
+        const newObj: { [key: string]: any } = {};
+        for (const key in data) {
+            newObj[key] = serializeFirestoreTimestamps(data[key]);
+        }
+        return newObj;
+    }
+    return data;
+};
+
 const StatusCircle = ({ status, type }: { status: string, type: 'project' | 'inventory' }) => {
   const config = type === 'project' ? getProjectStatusConfig(status) : getInventoryStatusConfig(status);
 
@@ -66,8 +89,10 @@ const StatusCircle = ({ status, type }: { status: string, type: 'project' | 'inv
   );
 };
 
-export default function ProjectDetailsClient({ initialData }: { initialData: any }) {
+export default function ProjectDetailsClient({ projectId }: { projectId: string }) {
     const { user: currentUser, loading: authLoading } = useAuth();
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isJoining, setIsJoining] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
@@ -76,8 +101,97 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     const { toast } = useToast();
     const router = useRouter();
 
+    useEffect(() => {
+        const fetchProjectData = async () => {
+            const projectRef = doc(db, "projects", projectId);
+            const projectSnap = await getDoc(projectRef);
 
-    if (authLoading) {
+            if (!projectSnap.exists()) {
+                setLoading(false);
+                return;
+            }
+            
+            const projectData = projectSnap.data();
+            const memberIds = Array.isArray(projectData.memberIds) && projectData.memberIds.length > 0
+                ? projectData.memberIds
+                : [projectData.leadId];
+
+            const project = serializeFirestoreTimestamps({ id: projectSnap.id, ...projectData, memberIds });
+            
+            let members: AppUser[] = [];
+            if (memberIds.length > 0) {
+                const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
+                const usersSnap = await getDocs(usersQuery);
+                members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
+            }
+            
+            const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
+            const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
+            const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+
+            const allInventoryItemsSnap = await getDocs(collection(db, "inventory_items"));
+            const inventoryItems = allInventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+            
+            const updatesQuery = query(collection(db, "projects", projectId, "updates"), orderBy("createdAt", "desc"));
+            const updatesSnap = await getDocs(updatesQuery);
+            const updates = updatesSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+            
+            setData({ project, members, inventoryRequests, inventoryItems, updates });
+            setLoading(false);
+        }
+        
+        fetchProjectData();
+
+    }, [projectId]);
+
+    const onDataRefresh = () => {
+        // This is a bit of a hack to re-trigger the useEffect. A more robust solution might use a state management library.
+        setLoading(true);
+        setData(null);
+        setTimeout(() => {
+             const fetchProjectData = async () => {
+                const projectRef = doc(db, "projects", projectId);
+                const projectSnap = await getDoc(projectRef);
+
+                if (!projectSnap.exists()) {
+                    setLoading(false);
+                    return;
+                }
+                
+                const projectData = projectSnap.data();
+                const memberIds = Array.isArray(projectData.memberIds) && projectData.memberIds.length > 0
+                    ? projectData.memberIds
+                    : [projectData.leadId];
+
+                const project = serializeFirestoreTimestamps({ id: projectSnap.id, ...projectData, memberIds });
+                
+                let members: AppUser[] = [];
+                if (memberIds.length > 0) {
+                    const usersQuery = query(collection(db, "users"), where("id", "in", memberIds));
+                    const usersSnap = await getDocs(usersQuery);
+                    members = usersSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() })) as AppUser[];
+                }
+                
+                const inventoryRequestsQuery = query(collection(db, "inventory_requests"), where("projectId", "==", projectId));
+                const inventoryRequestsSnap = await getDocs(inventoryRequestsQuery);
+                const inventoryRequests = inventoryRequestsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+
+                const allInventoryItemsSnap = await getDocs(collection(db, "inventory_items"));
+                const inventoryItems = allInventoryItemsSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+                
+                const updatesQuery = query(collection(db, "projects", projectId, "updates"), orderBy("createdAt", "desc"));
+                const updatesSnap = await getDocs(updatesQuery);
+                const updates = updatesSnap.docs.map(doc => serializeFirestoreTimestamps({ id: doc.id, ...doc.data() }));
+                
+                setData({ project, members, inventoryRequests, inventoryItems, updates });
+                setLoading(false);
+            }
+        
+            fetchProjectData();
+        }, 100); // Small delay to ensure state update is processed
+    };
+
+    if (authLoading || loading) {
         return (
              <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -112,11 +226,11 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         )
     }
 
-    if (!initialData) {
-        return null;
+    if (!data) {
+        return <p>Project not found.</p>;
     }
 
-    const { project, members, inventoryRequests, inventoryItems, updates } = initialData;
+    const { project, members, inventoryRequests, inventoryItems, updates } = data;
     
     const isMember = currentUser && project.memberIds.includes(currentUser.uid);
     const isLead = currentUser && currentUser.uid === project.leadId;
@@ -131,7 +245,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         try {
             await joinProject(project.id, currentUser.uid);
             toast({ title: "Success!", description: `You have joined the project "${project.title}".` });
-            router.refresh();
+            onDataRefresh();
         } catch (error) {
             toast({ variant: "destructive", title: "Failed to Join", description: (error as Error).message });
         } finally {
@@ -148,7 +262,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         try {
             await leaveProject(project.id, currentUser.uid);
             toast({ title: "You've left the project", description: `You are no longer a member of "${project.title}".` });
-            router.refresh();
+            onDataRefresh();
         } catch (error) {
             toast({ variant: "destructive", title: "Failed to Leave", description: (error as Error).message });
         } finally {
@@ -165,7 +279,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         try {
             await closeProject(project.id, currentUser.uid);
             toast({ title: "Project Closed", description: "The project has been archived." });
-            router.refresh();
+            onDataRefresh();
         } catch (error) {
             toast({ variant: "destructive", title: "Failed to Close Project", description: (error as Error).message });
         } finally {
@@ -178,7 +292,7 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
         try {
             await initiateProjectCompletion(project.id);
             toast({ title: "Project Completion Initiated", description: "Please return all non-perishable items to the inventory manager." });
-            router.refresh();
+            onDataRefresh();
         } catch (error) {
             toast({ variant: "destructive", title: "Failed to Initiate Completion", description: (error as Error).message });
         } finally {
@@ -187,12 +301,12 @@ export default function ProjectDetailsClient({ initialData }: { initialData: any
     }
     
     const handleRequestSubmit = () => {
-        router.refresh();
+        onDataRefresh();
         setIsRequestFormOpen(false);
     }
     
     const handleUpdateSubmit = () => {
-        router.refresh();
+        onDataRefresh();
         setIsUpdateFormOpen(false);
     }
 
