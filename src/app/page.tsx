@@ -30,6 +30,7 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import Image from 'next/image';
 
 
 const features = [
@@ -176,9 +177,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
              <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                <Plane className="w-4 h-4 text-white transform rotate-45" />
-              </div>
+               <Image src="/assets/logo.png" alt="RC Club Logo" width={32} height={32} />
               <span className="font-bold text-lg">RC Club</span>
             </Link>
 
@@ -559,9 +558,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-red-600 rounded-md flex items-center justify-center">
-                <Plane className="w-3 h-3 text-white transform rotate-45" />
-              </div>
+               <Image src="/assets/logo.png" alt="RC Club Logo" width={24} height={24} />
               <span className="font-semibold">RC Club BITS Pilani</span>
             </div>
             <p className="text-sm text-muted-foreground">
