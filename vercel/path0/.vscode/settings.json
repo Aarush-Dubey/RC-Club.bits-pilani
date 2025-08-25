@@ -1,0 +1,8 @@
+// This file contains settings for Visual Studio Code that are specific to this project.
+// These settings help maintain consistent coding styles and behavior across different development environments.
+// "IDX.aI.enableInlineCompletion" enables AI-powered inline code completion.
+// "IDX.aI.enableCodebaseIndexing" allows the AI to index the entire codebase for better context-aware suggestions.
+{
+    "IDX.aI.enableInlineCompletion": true,
+    "IDX.aI.enableCodebaseIndexing": true
+}

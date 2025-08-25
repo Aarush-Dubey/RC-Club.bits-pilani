@@ -1,0 +1,114 @@
+/**
+ * This file defines the global styles and theme for the application using Tailwind CSS.
+ * It imports custom fonts and sets up CSS variables for light and dark themes,
+ * covering colors for background, text, primary actions, and other UI elements.
+ * It also includes base styles and animations.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 96.1%; /* Off-white */
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 346.8 91.4% 45.3%; /* Crimson */
+    --primary-foreground: 355.7 100% 97.3%;
+ 
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+ 
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+ 
+    --accent: 210 22% 28%; /* Charcoal */
+    --accent-foreground: 0 0% 98%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+ 
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 346.8 91.4% 45.3%;
+
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+ 
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+ 
+    --primary: 346.8 91.4% 45.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+ 
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+ 
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+ 
+    --accent: 210 22% 28%; /* Charcoal */
+    --accent-foreground: 0 0% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 346.8 91.4% 45.3%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+     font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6, .font-headline {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+.path-animate {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: path-animate 5s ease-in-out forwards;
+}
+
+.plane-animate {
+    offset-path: path("M5 60 Q 30 50, 60 40");
+    animation: plane-animate 5s ease-in-out forwards 1s;
+    motion-rotation: auto;
+}
+
+@keyframes path-animate {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes plane-animate {
+    to {
+        offset-distance: 100%;
+    }
+}
+

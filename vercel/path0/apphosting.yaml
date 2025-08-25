@@ -1,0 +1,14 @@
+# This file contains the configuration for Firebase App Hosting.
+# It defines the runtime behavior of the backend, including instance scaling, CPU, and memory allocation.
+# These settings are optimized for cost-effectiveness by allowing scale-to-zero while managing performance under load.
+
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0         # allows scale-to-zero (no idle cost)
+  maxInstances: 5         # limit overhead
+  concurrency: 80         # high, to reduce instances under load
+  cpu: 1                  # cut vCPU usage
+  memoryMiB: 256          # minimal viable memory
+
