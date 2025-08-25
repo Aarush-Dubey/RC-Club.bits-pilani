@@ -184,7 +184,7 @@ export default function HomePage() {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
               <Link href="/login">
-                <Button>Members Login</Button>
+                <Button className="bg-orange-500 hover:bg-orange-600">Members Login</Button>
               </Link>
               <button
                 onClick={toggleTheme}
@@ -373,7 +373,7 @@ export default function HomePage() {
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-orange-500/10 to-red-600/10 border border-border relative overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-32 h-32 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center animate-pulse">
-                    <Plane className="w-16 h-16 text-white transform rotate-45" />
+                    <Image src="/assets/logo.png" alt="RC Club Logo" width={64} height={64} />
                   </div>
                 </div>
                 <div className="absolute top-4 right-4 text-4xl">🔥</div>
@@ -570,4 +570,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 
