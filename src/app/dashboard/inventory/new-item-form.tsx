@@ -27,7 +27,6 @@ const formSchema = z.object({
     name: z.string().min(3, "Item name must be at least 3 characters long."),
     description: z.string().optional(),
     totalQuantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-    costPerUnit: z.coerce.number().min(0, "Cost must be a positive number."),
     isPerishable: z.boolean().default(false),
     location: z.string().optional(),
 });
@@ -49,7 +48,6 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
       name: "",
       description: "",
       totalQuantity: 1,
-      costPerUnit: 0,
       isPerishable: false,
       location: "",
     },
@@ -92,7 +90,6 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
         name: data.name,
         description: data.description || "",
         totalQuantity: data.totalQuantity,
-        costPerUnit: data.costPerUnit,
         isPerishable: data.isPerishable,
         location: data.location,
       });
@@ -146,31 +143,18 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
             />
              <FormField
                 control={form.control}
-                name="costPerUnit"
+                name="location"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Cost per Unit (₹)</FormLabel>
+                    <FormLabel>Location</FormLabel>
                     <FormControl>
-                    <Input type="number" step="0.01" {...field} min={0}/>
+                    <Input placeholder="e.g., Shelf A, Box 3" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
         </div>
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Shelf A, Box 3" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="description"

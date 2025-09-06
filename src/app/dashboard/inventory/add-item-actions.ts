@@ -9,14 +9,12 @@ export async function addInventoryItem({
     name,
     description,
     totalQuantity,
-    costPerUnit,
     isPerishable,
     location
 }: {
     name: string;
     description: string;
     totalQuantity: number;
-    costPerUnit: number;
     isPerishable: boolean;
     location?: string;
 }) {
@@ -29,7 +27,6 @@ export async function addInventoryItem({
         totalQuantity,
         availableQuantity: totalQuantity,
         checkedOutQuantity: 0,
-        costPerUnit,
         isPerishable,
         location: location || null,
         createdAt: serverTimestamp(),
