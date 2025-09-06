@@ -9,7 +9,11 @@ import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getAuth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
+import { 
+  getAuth, 
+  browserLocalPersistence, 
+  setPersistence 
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -28,10 +32,15 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Initialize Auth with local persistence
-const auth = typeof window !== 'undefined' ? initializeAuth(app, {
-  persistence: indexedDBLocalPersistence
-}) : getAuth(app);
+// Use getAuth (not initializeAuth)
+const auth = getAuth(app);
+
+// Set persistence explicitly (client-only)
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.error("Error setting auth persistence:", err);
+  });
+}
 
 
 // Initialize Analytics only on the client side
