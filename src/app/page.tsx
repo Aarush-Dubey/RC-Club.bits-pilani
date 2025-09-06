@@ -304,7 +304,7 @@ export default function HomePage() {
             </p>
             
             <p className="text-lg text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
-              We build crazy projects from UAVs to F-22 Raptor models. Sometimes they fly, sometimes they don't. But we always learn something new.
+              We build crazy projects from UAVs to Drones to model Planes. Sometimes they fly, sometimes they don't. But we always learn something new.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -562,7 +562,7 @@ export default function HomePage() {
               <span className="font-semibold">RC Club BITS Pilani</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 RC Club BITS Pilani. Build Fly Crash Repeat. 🔥
+              © 2025 RC Club BITS Pilani. Build Fly Crash Repeat. 🔥
             </p>
           </div>
         </div>
@@ -570,3 +570,4 @@ export default function HomePage() {
     </div>
   );
 }
+
