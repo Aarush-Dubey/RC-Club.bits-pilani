@@ -72,7 +72,40 @@ const procurementBuckets: any[] = [
 ];
 
 const accounts: any[] = [
-    // { id: 'acc-1', name: "Cash", group: "currentAssets", balance: 635706.56 },
+    { id: 'ca-1', name: "Cash", group: "currentAssets", balance: 633561.56 },
+    { id: 'ca-2', name: "Perishables", group: "currentAssets", balance: 17942.00 },
+    { id: 'ca-3', name: "Apogee 2025", group: "currentAssets", balance: 1469.00 },
+    { id: 'ca-4', name: "BOSM24 Equipment", group: "currentAssets", balance: 152.60 },
+    { id: 'ca-5', name: "Robofest Receivable", group: "currentAssets", balance: 0 },
+    { id: 'ca-6', name: "BOSM Receivable", group: "currentAssets", balance: 0 },
+    
+    { id: 'cl-1', name: "Shourin", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-2', name: "Sai", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-3', name: "Nishant", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-4', name: "Divy", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-5', name: "Aneesh", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-6', name: "Harshil", group: "currentLiabilities", balance: 0 },
+    { id: 'cl-7', name: "Achyut", group: "currentLiabilities", balance: 500 },
+    { id: 'cl-8', name: "Ritwik", group: "currentLiabilities", balance: 755.75 },
+    { id: 'cl-9', name: "Rishit", group: "currentLiabilities", balance: 755.75 },
+    { id: 'cl-10', name: "Advay", group: "currentLiabilities", balance: 755.75 },
+    { id: 'cl-11', name: "Adit", group: "currentLiabilities", balance: 755.75 },
+    { id: 'cl-12', name: "Parin Kumar Susil", group: "currentLiabilities", balance: 1000 },
+    { id: 'cl-13', name: "Yog Panjarale", group: "currentLiabilities", balance: 1121 },
+    { id: 'cl-14', name: "Rupen", group: "currentLiabilities", balance: 1500 },
+    { id: 'cl-15', name: "Nayan Bopche", group: "currentLiabilities", balance: 1500 },
+    { id: 'cl-16', name: "ved", group: "currentLiabilities", balance: 1885 },
+    { id: 'cl-17', name: "Atharv Zope", group: "currentLiabilities", balance: 2528 },
+    { id: 'cl-18', name: "Chirag Tyagi", group: "currentLiabilities", balance: 16780 },
+    { id: 'cl-19', name: "Manoj Soni", group: "currentLiabilities", balance: 87218.34 },
+
+    { id: 'fa-1', name: "General Equipment", group: "fixedAssets", balance: 148294.55 },
+    { id: 'fa-2', name: "Robofest24 Equipment", group: "fixedAssets", balance: 139598.71 },
+    { id: 'fa-3', name: "Robofest25/BOSM25", group: "fixedAssets", balance: 103019.34 },
+    { id: 'fa-4', name: "Apogee 2025", group: "fixedAssets", balance: 32187.31 },
+    { id: 'fa-5', name: "BOSM24 Equipment", group: "fixedAssets", balance: 21234.39 },
+
+    { id: 'oe-1', name: "Stockholders' Equity", group: "ownersEquity", balance: -980404.12 },
 ];
 
 const transactionsData: any[] = [
