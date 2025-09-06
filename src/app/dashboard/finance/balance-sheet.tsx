@@ -61,6 +61,7 @@ interface BalanceSheetData {
 }
 
 interface Liability {
+    id?: string;
     name: string;
     balance: number;
 }
@@ -521,8 +522,7 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Asset Group</TableHead>
-                                    <TableHead>Accounts</TableHead>
+                                    <TableHead>Account</TableHead>
                                     <TableHead className="text-right">Balance</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -530,20 +530,19 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
                                 {sections.map(section => (
                                     <React.Fragment key={section.title}>
                                         <TableRow>
-                                            <TableCell colSpan={2} className="font-bold">{section.title}</TableCell>
+                                            <TableCell className="font-bold">{section.title}</TableCell>
                                             <TableCell className="text-right font-bold">{formatCurrency(section.data.total)}</TableCell>
                                         </TableRow>
-                                        {(section.data.accounts as any[]).map(account => (
-                                            <TableRow key={account.name} className="hover:bg-muted/50">
-                                                <TableCell className="pl-8"></TableCell>
-                                                <TableCell>{account.name}</TableCell>
+                                        {(section.data.accounts as (Account | Liability)[]).map((account, index) => (
+                                            <TableRow key={account.id || `${account.name}-${index}`} className="hover:bg-muted/50">
+                                                <TableCell className="pl-8">{account.name}</TableCell>
                                                 <TableCell className="text-right">{formatCurrency(account.balance)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </React.Fragment>
                                 ))}
                                 <TableRow className="border-t-2 border-primary">
-                                    <TableCell colSpan={2} className="font-bold text-lg">Grand Total</TableCell>
+                                    <TableCell className="font-bold text-lg">Grand Total</TableCell>
                                     <TableCell className="text-right font-bold text-lg">{formatCurrency(data.grandTotal)}</TableCell>
                                 </TableRow>
                             </TableBody>
