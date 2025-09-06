@@ -1,5 +1,11 @@
 
 "use client"
+/**
+ * This file defines the login page for the application.
+ * It provides a user interface for signing in with either email and password or Google,
+ * and handles the authentication logic using Firebase. It also checks if a user's email
+ * is on a whitelist before allowing them to log in.
+ */
 console.log("Hello Login started")
 import { useState } from "react"
 import Link from "next/link"
@@ -85,7 +91,7 @@ export default function LoginPage() {
             title: "Login Successful",
             description: "Welcome back!",
         });
-        router.push('/dashboard');
+        window.location.href = 'https://rc-club-bits-pilani.vercel.app/dashboard';
     } catch (error: any) {
         console.error("Google Sign-In Error:", error);
         let errorMessage = `An error occurred: ${error.message} (Code: ${error.code})`;
