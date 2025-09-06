@@ -5,6 +5,9 @@
  * It also configures authentication to persist locally using IndexedDB.
  */
 // Import the functions you need from the SDKs you need
+
+
+console.log("HI the api key is :",process.env.NEXT_PUBLIC_FIREBASE_API_KEY); // should print your key
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";

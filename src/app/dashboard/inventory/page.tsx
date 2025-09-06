@@ -157,6 +157,10 @@ function InventoryItemRow({ item, currentUser, onFormSubmit }: { item: any, curr
                             <div className="text-sm font-medium text-muted-foreground">Available</div>
                             <div className="text-lg font-bold">{item.availableQuantity}</div>
                         </div>
+                         <div>
+                            <div className="text-sm font-medium text-muted-foreground">Location</div>
+                            <div className="text-lg font-bold">{item.location || 'N/A'}</div>
+                        </div>
                     </div>
                     <Button disabled={item.availableQuantity === 0} onClick={() => { setIsDetailsOpen(false); setIsRequestFormOpen(true); }}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
@@ -434,6 +438,7 @@ function EditableInventoryItemRow({ item, onFormSubmit }: { item: any, onFormSub
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
             <TableRow>
                 <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell>{item.location || 'N/A'}</TableCell>
                 <TableCell>{item.totalQuantity}</TableCell>
                 <TableCell>{item.availableQuantity}</TableCell>
                 <TableCell className="text-right">
@@ -858,6 +863,7 @@ function ManageStockView({ data, fetchData }: { data: any, fetchData: () => void
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Item</TableHead>
+                                <TableHead>Location</TableHead>
                                 <TableHead>Total</TableHead>
                                 <TableHead>Available</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>

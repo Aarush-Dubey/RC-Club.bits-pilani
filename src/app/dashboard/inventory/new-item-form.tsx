@@ -29,6 +29,7 @@ const formSchema = z.object({
     totalQuantity: z.coerce.number().min(1, "Quantity must be at least 1."),
     costPerUnit: z.coerce.number().min(0, "Cost must be a positive number."),
     isPerishable: z.boolean().default(false),
+    location: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +51,7 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
       totalQuantity: 1,
       costPerUnit: 0,
       isPerishable: false,
+      location: "",
     },
   });
 
@@ -92,6 +94,7 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
         totalQuantity: data.totalQuantity,
         costPerUnit: data.costPerUnit,
         isPerishable: data.isPerishable,
+        location: data.location,
       });
 
       toast({
@@ -157,11 +160,24 @@ export function NewInventoryItemForm({ onFormSubmit }: NewInventoryItemFormProps
         </div>
         <FormField
           control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Shelf A, Box 3" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
                 <div className="flex justify-between items-center">
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>Use/Description (Optional)</FormLabel>
                    <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceDescription} disabled={isEnhancing || isSubmitting}>
                       {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                       Enhance with AI

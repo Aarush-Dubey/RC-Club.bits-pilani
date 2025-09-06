@@ -10,13 +10,15 @@ export async function addInventoryItem({
     description,
     totalQuantity,
     costPerUnit,
-    isPerishable
+    isPerishable,
+    location
 }: {
     name: string;
     description: string;
     totalQuantity: number;
     costPerUnit: number;
     isPerishable: boolean;
+    location?: string;
 }) {
     const newItemRef = doc(collection(db, "inventory_items"));
     
@@ -29,6 +31,7 @@ export async function addInventoryItem({
         checkedOutQuantity: 0,
         costPerUnit,
         isPerishable,
+        location: location || null,
         createdAt: serverTimestamp(),
     });
     
