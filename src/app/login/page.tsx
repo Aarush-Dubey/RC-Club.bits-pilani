@@ -7,7 +7,7 @@
  * is on a whitelist before allowing them to log in.
  */
 console.log("Hello Login started")
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -46,6 +46,14 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  useEffect(() => {
+    console.log('auth instance:', auth);
+    console.log('auth.constructor.name:', auth?.constructor?.name);
+    const provider = new GoogleAuthProvider();
+    console.log('provider instance:', provider);
+    console.log('provider instanceof GoogleAuthProvider:', provider instanceof GoogleAuthProvider);
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
@@ -221,3 +229,6 @@ export default function LoginPage() {
   )
 }
 console.log("Hello Login finised")
+
+
+    
