@@ -1,11 +1,9 @@
-
 "use client"
 
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
@@ -26,6 +24,9 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from 'xlsx';
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { HotTable } from '@handsontable/react';
+import 'handsontable/dist/handsontable.full.css';
+
 
 interface Account {
     id: string;
@@ -442,12 +443,6 @@ const ExportDialog = ({ balanceSheetData, allUsers, onExportPDF }: { balanceShee
 };
 
 const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: BalanceSheetData, accounts: Account[], allUsers: any[], onUpdate: () => void }) => {
-    const sections = [
-        { title: "Current Assets", data: data.currentAssets },
-        { title: "Fixed Assets", data: data.fixedAssets },
-        { title: "Current Liabilities", data: data.currentLiabilities },
-        { title: "Owner's Equity", data: data.ownersEquity },
-    ];
     const { user: currentUser } = useAuth();
     const isTreasurer = currentUser?.role === 'treasurer';
     const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -498,6 +493,29 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
         toast({ title: "Success", description: "Balance sheet exported as PDF." });
     };
 
+    const sections = [
+        { title: "Current Assets", data: data.currentAssets },
+        { title: "Fixed Assets", data: data.fixedAssets },
+        { title: "Current Liabilities", data: data.currentLiabilities },
+        { title: "Owner's Equity", data: data.ownersEquity },
+    ];
+    
+    const spreadsheetData = sections.flatMap(section => {
+        const header = [{value: section.title, readOnly: true, className: 'htMiddle htCenter htBold htGray'}, {value: '', readOnly: true, className: 'htGray'}];
+        const accountRows = (section.data.accounts as any[]).map(account => [
+            {value: account.name, readOnly: true},
+            {value: account.balance, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }}
+        ]);
+        const totalRow = [{value: `Total ${section.title}`, readOnly: true, className: 'htBold'}, {value: section.data.total, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }, className: 'htBold'}];
+        return [header, ...accountRows, totalRow, [{}, {}]]; // Add spacer row
+    });
+
+    spreadsheetData.push([
+        {value: 'Grand Total', readOnly: true, className: 'htCenter htBold htPrimary'},
+        {value: data.grandTotal, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }, className: 'htBold htPrimary'}
+    ]);
+
+
     return (
         <div className="space-y-6">
             <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
@@ -517,37 +535,29 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="font-bold">Account</TableHead>
-                                    <TableHead className="text-right font-bold">Balance</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sections.map(section => (
-                                    <React.Fragment key={section.title}>
-                                        <TableRow className="bg-muted/50">
-                                            <TableCell colSpan={2} className="font-semibold">{section.title}</TableCell>
-                                        </TableRow>
-                                        {(section.data.accounts as any[]).map((account, index) => (
-                                            <TableRow key={`${section.title}-${account.name}-${index}`}>
-                                                <TableCell className="pl-8">{account.name}</TableCell>
-                                                <TableCell className="text-right font-mono">{formatCurrency(account.balance)}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                         <TableRow>
-                                             <TableCell className="pl-8 font-semibold">Total {section.title}</TableCell>
-                                             <TableCell className="text-right font-mono font-semibold">{formatCurrency(section.data.total)}</TableCell>
-                                        </TableRow>
-                                    </React.Fragment>
-                                ))}
-                                 <TableRow className="bg-primary/10 font-bold text-lg">
-                                     <TableCell>Grand Total</TableCell>
-                                     <TableCell className="text-right font-mono">{formatCurrency(data.grandTotal)}</TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
+                        <style>{`
+                            .htGray { background-color: #f0f0f0 !important; }
+                            .htPrimary { background-color: hsl(var(--primary) / 0.1) !important; }
+                            .handsontable .htRight { text-align: right !important; padding-right: 4px; }
+                        `}</style>
+                        <HotTable
+                            data={spreadsheetData}
+                            colHeaders={["Account", "Balance (₹)"]}
+                            rowHeaders={false}
+                            width="100%"
+                            height="auto"
+                            licenseKey="non-commercial-and-evaluation"
+                            readOnly
+                            colWidths={[350, 150]}
+                            mergeCells={[
+                                { row: 0, col: 0, rowspan: 1, colspan: 2 },
+                                { row: data.currentAssets.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
+                                { row: data.currentAssets.accounts.length + 2 + data.fixedAssets.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
+                                { row: data.currentAssets.accounts.length + 2 + data.fixedAssets.accounts.length + 2 + data.currentLiabilities.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
+                                { row: spreadsheetData.length -1, col: 0, rowspan: 1, colspan: 2 }
+                            ]}
+                            className="[&_td]:!p-2 [&_th]:!p-2"
+                        />
                     </CardContent>
                 </Card>
                 <DialogContent className="h-[90vh] flex flex-col">
