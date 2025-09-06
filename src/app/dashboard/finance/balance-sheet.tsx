@@ -520,31 +520,30 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="font-bold">Asset Group</TableHead>
-                                    <TableHead className="font-bold">Accounts</TableHead>
+                                    <TableHead className="font-bold">Account</TableHead>
                                     <TableHead className="text-right font-bold">Balance</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {sections.map(section => (
                                     <React.Fragment key={section.title}>
-                                        <TableRow>
-                                            <TableCell rowSpan={(section.data.accounts as any[]).length + 2} className="align-top font-semibold">{section.title}</TableCell>
+                                        <TableRow className="bg-muted/50">
+                                            <TableCell colSpan={2} className="font-semibold">{section.title}</TableCell>
                                         </TableRow>
                                         {(section.data.accounts as any[]).map((account, index) => (
-                                            <TableRow key={account.name}>
-                                                <TableCell>{account.name}</TableCell>
+                                            <TableRow key={`${section.title}-${account.name}-${index}`}>
+                                                <TableCell className="pl-8">{account.name}</TableCell>
                                                 <TableCell className="text-right font-mono">{formatCurrency(account.balance)}</TableCell>
                                             </TableRow>
                                         ))}
-                                        <TableRow className="bg-muted/50 font-bold">
-                                             <TableCell>Total {section.title}</TableCell>
-                                             <TableCell className="text-right font-mono">{formatCurrency(section.data.total)}</TableCell>
+                                         <TableRow>
+                                             <TableCell className="pl-8 font-semibold">Total {section.title}</TableCell>
+                                             <TableCell className="text-right font-mono font-semibold">{formatCurrency(section.data.total)}</TableCell>
                                         </TableRow>
                                     </React.Fragment>
                                 ))}
                                  <TableRow className="bg-primary/10 font-bold text-lg">
-                                     <TableCell colSpan={2}>Grand Total</TableCell>
+                                     <TableCell>Grand Total</TableCell>
                                      <TableCell className="text-right font-mono">{formatCurrency(data.grandTotal)}</TableCell>
                                 </TableRow>
                             </TableBody>
