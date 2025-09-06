@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from 'xlsx';
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { HotTable } from '@handsontable/react';
-import 'handsontable/dist/handsontable.full.css';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
 interface Account {
@@ -500,22 +499,6 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
         { title: "Owner's Equity", data: data.ownersEquity },
     ];
     
-    const spreadsheetData = sections.flatMap(section => {
-        const header = [{value: section.title, readOnly: true, className: 'htMiddle htCenter htBold htGray'}, {value: '', readOnly: true, className: 'htGray'}];
-        const accountRows = (section.data.accounts as any[]).map(account => [
-            {value: account.name, readOnly: true},
-            {value: account.balance, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }}
-        ]);
-        const totalRow = [{value: `Total ${section.title}`, readOnly: true, className: 'htBold'}, {value: section.data.total, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }, className: 'htBold'}];
-        return [header, ...accountRows, totalRow, [{}, {}]]; // Add spacer row
-    });
-
-    spreadsheetData.push([
-        {value: 'Grand Total', readOnly: true, className: 'htCenter htBold htPrimary'},
-        {value: data.grandTotal, readOnly: true, type: 'numeric', numericFormat: { pattern: '0,0.00' }, className: 'htBold htPrimary'}
-    ]);
-
-
     return (
         <div className="space-y-6">
             <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
@@ -535,29 +518,36 @@ const BalanceSheetTable = ({ data, accounts, allUsers, onUpdate }: { data: Balan
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <style>{`
-                            .htGray { background-color: #f0f0f0 !important; }
-                            .htPrimary { background-color: hsl(var(--primary) / 0.1) !important; }
-                            .handsontable .htRight { text-align: right !important; padding-right: 4px; }
-                        `}</style>
-                        <HotTable
-                            data={spreadsheetData}
-                            colHeaders={["Account", "Balance (₹)"]}
-                            rowHeaders={false}
-                            width="100%"
-                            height="auto"
-                            licenseKey="non-commercial-and-evaluation"
-                            readOnly
-                            colWidths={[350, 150]}
-                            mergeCells={[
-                                { row: 0, col: 0, rowspan: 1, colspan: 2 },
-                                { row: data.currentAssets.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
-                                { row: data.currentAssets.accounts.length + 2 + data.fixedAssets.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
-                                { row: data.currentAssets.accounts.length + 2 + data.fixedAssets.accounts.length + 2 + data.currentLiabilities.accounts.length + 2, col: 0, rowspan: 1, colspan: 2 },
-                                { row: spreadsheetData.length -1, col: 0, rowspan: 1, colspan: 2 }
-                            ]}
-                            className="[&_td]:!p-2 [&_th]:!p-2"
-                        />
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Asset Group</TableHead>
+                                    <TableHead>Accounts</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sections.map(section => (
+                                    <React.Fragment key={section.title}>
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="font-bold">{section.title}</TableCell>
+                                            <TableCell className="text-right font-bold">{formatCurrency(section.data.total)}</TableCell>
+                                        </TableRow>
+                                        {(section.data.accounts as any[]).map(account => (
+                                            <TableRow key={account.name} className="hover:bg-muted/50">
+                                                <TableCell className="pl-8"></TableCell>
+                                                <TableCell>{account.name}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(account.balance)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                                <TableRow className="border-t-2 border-primary">
+                                    <TableCell colSpan={2} className="font-bold text-lg">Grand Total</TableCell>
+                                    <TableCell className="text-right font-bold text-lg">{formatCurrency(data.grandTotal)}</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
                 <DialogContent className="h-[90vh] flex flex-col">
