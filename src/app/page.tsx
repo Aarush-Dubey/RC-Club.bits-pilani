@@ -567,8 +567,13 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      <div className="fixed bottom-4 right-4 bg-red-500 text-white p-2 rounded-lg z-50">
+        dev -1
+      </div>
     </div>
   );
 }
+
 
 
