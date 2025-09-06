@@ -584,14 +584,11 @@ function ActivityLogItemRow({ request, item, user, project, approver, returner }
 }
 
 function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser: AppUser | null, fetchData: () => void }) {
-    const perishableItems = data.inventory.filter((item: any) => item.isPerishable);
-    const fixedItems = data.inventory.filter((item: any) => !item.isPerishable);
-
-    const renderInventoryTable = (title: string, description: string, items: any[]) => (
+    return (
         <Card>
             <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
+                <CardTitle>Available Inventory</CardTitle>
+                <CardDescription>All items available for request. Click an item to view details.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -602,12 +599,12 @@ function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {items.length > 0 ? items.map((item: any) => (
+                        {data.inventory.length > 0 ? data.inventory.map((item: any) => (
                             <InventoryItemRow key={item.id} item={item} currentUser={currentUser} onFormSubmit={fetchData} />
                         )) : (
                             <TableRow>
                                 <TableCell colSpan={2} className="h-24 text-center">
-                                    No items in this category.
+                                    No items in inventory.
                                 </TableCell>
                             </TableRow>
                         )}
@@ -615,21 +612,6 @@ function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser
                 </Table>
             </CardContent>
         </Card>
-    );
-
-    return (
-        <div className="space-y-6">
-            {renderInventoryTable(
-                "Available Inventory (Consumables)",
-                "Consumable or perishable items. Click to view details and request.",
-                perishableItems
-            )}
-            {renderInventoryTable(
-                "Fixed Items",
-                "Non-perishable, reusable items and equipment.",
-                fixedItems
-            )}
-        </div>
     );
 }
 
