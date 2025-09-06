@@ -87,12 +87,8 @@ export default function LoginPage() {
         });
         router.push('/dashboard');
     } catch (error: any) {
-        let errorMessage = "An unknown error occurred.";
-        if (error.code === 'auth/popup-closed-by-user') {
-            errorMessage = 'The sign-in window was closed before completing.';
-        } else if (error.code === 'auth/account-exists-with-different-credential') {
-            errorMessage = 'An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.';
-        }
+        console.error("Google Sign-In Error:", error);
+        let errorMessage = `An error occurred: ${error.message} (Code: ${error.code})`;
         toast({
             variant: "destructive",
             title: "Google Sign-In Failed",
