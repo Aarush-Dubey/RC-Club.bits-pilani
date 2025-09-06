@@ -5,26 +5,33 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 
-export async function updateItemQuantity({
+export async function updateInventoryItem({
     itemId,
-    newTotalQuantity,
-    oldTotalQuantity,
+    name,
+    description,
+    location,
+    totalQuantity,
     checkedOutQuantity
 }: {
     itemId: string;
-    newTotalQuantity: number;
-    oldTotalQuantity: number;
+    name: string;
+    description: string;
+    location: string;
+    totalQuantity: number;
     checkedOutQuantity: number;
 }) {
-    if (newTotalQuantity < checkedOutQuantity) {
+    if (totalQuantity < checkedOutQuantity) {
         throw new Error("Total quantity cannot be less than the quantity currently checked out.");
     }
     
-    const newAvailableQuantity = newTotalQuantity - checkedOutQuantity;
+    const newAvailableQuantity = totalQuantity - checkedOutQuantity;
 
     const itemRef = doc(db, "inventory_items", itemId);
     await updateDoc(itemRef, {
-        totalQuantity: newTotalQuantity,
+        name,
+        description,
+        location,
+        totalQuantity: totalQuantity,
         availableQuantity: newAvailableQuantity,
     });
     

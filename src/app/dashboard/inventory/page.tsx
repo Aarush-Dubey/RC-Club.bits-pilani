@@ -11,7 +11,7 @@ import { format } from "date-fns"
 import { useAuth, type AppUser } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { approveInventoryRequest, rejectInventoryRequest, confirmReturn, requestInventory } from "./actions"
-import { updateItemQuantity, deleteInventoryItem } from "./manage-actions"
+import { updateInventoryItem, deleteInventoryItem } from "./manage-actions"
 import { NewInventoryItemForm } from "./new-item-form"
 
 import { Badge } from "@/components/ui/badge"
@@ -41,6 +41,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Textarea } from "@/components/ui/textarea"
 
 const getStatusConfig = (status: string) => {
     switch (status) {
@@ -350,84 +355,142 @@ function ReturnActions({ request, canConfirm, onActionComplete }: { request: any
     );
 }
 
-function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => void }) {
-    const [totalQuantity, setTotalQuantity] = useState(item.totalQuantity);
-    const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
+const editItemFormSchema = z.object({
+  name: z.string().min(3, "Item name must be at least 3 characters long."),
+  description: z.string().optional(),
+  totalQuantity: z.coerce.number().min(0, "Quantity cannot be negative."),
+  location: z.string().optional(),
+});
+type EditItemFormValues = z.infer<typeof editItemFormSchema>;
 
-    const handleUpdate = async () => {
-        setIsLoading(true);
+function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => void }) {
+    const { toast } = useToast();
+    const form = useForm<EditItemFormValues>({
+        resolver: zodResolver(editItemFormSchema),
+        defaultValues: {
+            name: item.name,
+            description: item.description || "",
+            totalQuantity: item.totalQuantity,
+            location: item.location || "",
+        },
+    });
+
+    const onSubmit = async (values: EditItemFormValues) => {
         try {
-            await updateItemQuantity({
+            await updateInventoryItem({
                 itemId: item.id,
-                newTotalQuantity: totalQuantity,
-                oldTotalQuantity: item.totalQuantity,
-                checkedOutQuantity: item.checkedOutQuantity
+                name: values.name,
+                description: values.description || "",
+                location: values.location || "",
+                totalQuantity: values.totalQuantity,
+                checkedOutQuantity: item.checkedOutQuantity,
             });
-            toast({ title: "Item Updated", description: `${item.name} quantity has been updated.` });
+            toast({ title: "Item Updated", description: `${item.name} has been updated.` });
             onFormSubmit();
         } catch (error) {
             toast({ variant: "destructive", title: "Update Failed", description: (error as Error).message });
-        } finally {
-            setIsLoading(false);
         }
     };
-
+    
     const handleDelete = async () => {
-        setIsLoading(true);
-        try {
-            await deleteInventoryItem(item.id);
-            toast({ title: "Item Deleted", description: `${item.name} has been removed from inventory.` });
-            onFormSubmit();
-        } catch (error) {
-            toast({ variant: "destructive", title: "Delete Failed", description: (error as Error).message });
-        } finally {
-            setIsLoading(false);
-        }
+        form.handleSubmit(async () => {
+            try {
+                await deleteInventoryItem(item.id);
+                toast({ title: "Item Deleted", description: `${item.name} has been removed from inventory.` });
+                onFormSubmit();
+            } catch (error) {
+                toast({ variant: "destructive", title: "Delete Failed", description: (error as Error).message });
+            }
+        })();
     };
 
     return (
-        <div className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="total-quantity">Total Quantity</Label>
-                <Input
-                    id="total-quantity"
-                    type="number"
-                    value={totalQuantity}
-                    onChange={(e) => setTotalQuantity(parseInt(e.target.value, 10))}
-                    min={item.checkedOutQuantity}
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                 <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Item Name</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
-                <p className="text-xs text-muted-foreground">
-                    Cannot be less than the currently checked out quantity ({item.checkedOutQuantity}).
-                </p>
-            </div>
-            <div className="flex justify-between">
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled={isLoading}>Delete Item</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the item from inventory.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Confirm Deletion
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                <Button onClick={handleUpdate} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Update Quantity
-                </Button>
-            </div>
-        </div>
+                 <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                                <Textarea {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="totalQuantity"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Total Quantity</FormLabel>
+                             <FormControl>
+                                <Input type="number" {...field} min={item.checkedOutQuantity} />
+                             </FormControl>
+                             <FormMessage />
+                             <p className="text-xs text-muted-foreground pt-1">
+                                Cannot be less than the currently checked out quantity ({item.checkedOutQuantity}).
+                            </p>
+                        </FormItem>
+                    )}
+                />
+
+                <DialogFooter className="flex justify-between w-full">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" type="button">Delete Item</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the item from inventory.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} disabled={form.formState.isSubmitting}>
+                                    {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Confirm Deletion
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Update Item
+                    </Button>
+                </DialogFooter>
+            </form>
+        </Form>
     );
 }
 
