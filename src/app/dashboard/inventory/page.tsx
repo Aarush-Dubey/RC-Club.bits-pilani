@@ -463,10 +463,10 @@ function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => v
                     )}
                 />
 
-                <DialogFooter className="flex justify-between w-full">
-                    <AlertDialog>
+                <DialogFooter className="flex w-full justify-between pt-4">
+                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" type="button">Delete Item</Button>
+                            <Button variant="destructive" type="button" disabled={form.formState.isSubmitting}>Delete Item</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -477,7 +477,7 @@ function EditItemForm({ item, onFormSubmit }: { item: any, onFormSubmit: () => v
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete} disabled={form.formState.isSubmitting}>
+                                <AlertDialogAction onClick={handleDelete} disabled={form.formState.isSubmitting} className="bg-destructive hover:bg-destructive/90">
                                     {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Confirm Deletion
                                 </AlertDialogAction>
@@ -584,27 +584,30 @@ function ActivityLogItemRow({ request, item, user, project, approver, returner }
 }
 
 function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser: AppUser | null, fetchData: () => void }) {
-    return (
+    const perishableItems = data.inventory.filter((item: any) => item.isPerishable);
+    const fixedItems = data.inventory.filter((item: any) => !item.isPerishable);
+
+    const renderInventoryTable = (title: string, description: string, items: any[]) => (
         <Card>
             <CardHeader>
-                <CardTitle>Available Inventory</CardTitle>
-                <CardDescription>Click on an item to view details and request it.</CardDescription>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="text-right">Available</TableHead>
+                            <TableHead>Item</TableHead>
+                            <TableHead className="text-right">Available</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {data.inventory.length > 0 ? data.inventory.map((item: any) => (
+                        {items.length > 0 ? items.map((item: any) => (
                             <InventoryItemRow key={item.id} item={item} currentUser={currentUser} onFormSubmit={fetchData} />
                         )) : (
                             <TableRow>
                                 <TableCell colSpan={2} className="h-24 text-center">
-                                    No inventory items found.
+                                    No items in this category.
                                 </TableCell>
                             </TableRow>
                         )}
@@ -612,7 +615,22 @@ function AllItemsView({ data, currentUser, fetchData }: { data: any, currentUser
                 </Table>
             </CardContent>
         </Card>
-    )
+    );
+
+    return (
+        <div className="space-y-6">
+            {renderInventoryTable(
+                "Available Inventory (Consumables)",
+                "Consumable or perishable items. Click to view details and request.",
+                perishableItems
+            )}
+            {renderInventoryTable(
+                "Fixed Items",
+                "Non-perishable, reusable items and equipment.",
+                fixedItems
+            )}
+        </div>
+    );
 }
 
 function RequestsView({ data, fetchData }: { data: any, fetchData: () => void }) {
