@@ -8,7 +8,6 @@
 
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
-console.log("HI the api key is :",process.env.NEXT_PUBLIC_FIREBASE_API_KEY); // should print your key
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";

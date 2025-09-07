@@ -79,19 +79,27 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
 
   const authenticator = async () => {
     try {
-      const response = await fetch('/api/upload-auth');
-      const data = await response.json();
-      if (!response.ok) {
-          // If the server returns an error, try to parse it and throw
-          throw new Error(data.error || `Request failed with status ${response.status}`);
-      }
-      return { signature: data.signature, expire: data.expire, token: data.token };
-    } catch (error) {
-      console.error("Authenticator error:", error);
-      // Re-throw the error to be caught by the handleSubmit function
-      throw error;
+        const response = await fetch('/api/upload-auth');
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Request failed with status ${response.status}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch (e) {
+                // If parsing fails, use the raw text
+                errorMessage = errorText || errorMessage;
+            }
+            throw new Error(errorMessage);
+        }
+        const data = await response.json();
+        return { signature: data.signature, expire: data.expire, token: data.token };
+    } catch (error: any) {
+        console.error("Authenticator error:", error);
+        throw new Error(`Failed to get upload signature: ${error.message}`);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,5 +272,3 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
     </>
   )
 }
-
-    
