@@ -312,6 +312,12 @@ function ReimbursementsPageContent() {
         </Dialog>
       </div>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>New Reimbursement Request</DialogTitle>
+          <DialogDescription>
+            Submit a reimbursement request for an approved and purchased item.
+          </DialogDescription>
+        </DialogHeader>
         <ReimbursementForm
             onFormSubmit={onFormSubmit}
             currentUser={currentUser}
