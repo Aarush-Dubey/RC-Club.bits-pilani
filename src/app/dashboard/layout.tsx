@@ -37,7 +37,6 @@ const baseMenuItems = [
   { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
   { href: "/dashboard/procurement", icon: Truck, label: "Procurement" },
   { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements" },
-  { href: "/dashboard/finance", icon: LineChart, label: "Finance" },
 ];
 
 const adminMenuItems = [
