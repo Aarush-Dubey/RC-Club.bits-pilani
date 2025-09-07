@@ -110,6 +110,7 @@ export default function ApprovalsClient() {
                                 <TableHead>Request</TableHead>
                                 <TableHead>Requested By</TableHead>
                                 <TableHead>Date</TableHead>
+                                <TableHead>Est. Cost</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -124,6 +125,7 @@ export default function ApprovalsClient() {
                                         </TableCell>
                                         <TableCell>{requestUser?.name || 'Unknown User'}</TableCell>
                                         <TableCell>{item.createdAt ? format(item.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}</TableCell>
+                                        <TableCell className="font-mono">₹{item.expectedCost.toFixed(2)}</TableCell>
                                         <TableCell className="text-right">
                                             <ApprovalActions requestId={item.id} itemName={item.itemName} onAction={fetchData} />
                                         </TableCell>
@@ -131,7 +133,7 @@ export default function ApprovalsClient() {
                                 )
                             }) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         <Inbox className="mx-auto h-8 w-8 text-muted-foreground" />
                                         <p className="mt-2">No pending requests.</p>
                                     </TableCell>
