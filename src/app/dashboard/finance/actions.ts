@@ -2,210 +2,202 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, deleteDoc, serverTimestamp, runTransaction, getDoc, writeBatch, query, orderBy, limit, getDocs, where } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, serverTimestamp, runTransaction, getDocs, writeBatch, query, orderBy, Timestamp } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
-// Helper to convert Firestore Timestamps to JSON-serializable strings
-const serializeData = (data: any): any => {
-    if (!data) return null;
+// All monetary values are handled as integers in minor units (e.g., paise, cents)
 
-    const serializedData: { [key: string]: any } = {};
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            if (data[key] && typeof data[key].toDate === 'function') {
-                serializedData[key] = data[key].toDate().toISOString();
-            } else {
-                serializedData[key] = data[key];
-            }
+export interface ChartOfAccount {
+    id: string;
+    name: string;
+    group: 'Current Assets' | 'Fixed Assets' | 'Current Liabilities' | 'Equity' | 'Revenue' | 'Expenses';
+    isDebitNormal: boolean;
+}
+
+export interface TransactionLine {
+    acctCode: string;
+    debitMinor: number;
+    creditMinor: number;
+}
+
+export interface TransactionData {
+    date: string; // YYYY-MM-DD
+    narration: string;
+    lines: TransactionLine[];
+    createdById: string;
+}
+
+export async function getChartOfAccounts(): Promise<ChartOfAccount[]> {
+    const snapshot = await getDocs(query(collection(db, "chart_of_accounts"), orderBy("id")));
+    return snapshot.docs.map(doc => doc.data() as ChartOfAccount);
+}
+
+export async function getTransactions() {
+    const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"), orderBy("entryNumber", "desc"));
+    const transactionsSnap = await getDocs(transactionsQuery);
+    
+    const linesCollection = collection(db, 'transaction_lines');
+    const linesSnap = await getDocs(linesCollection);
+    const linesByTransactionId = linesSnap.docs.reduce((acc, doc) => {
+        const line = doc.data();
+        const txId = line.transactionId;
+        if (!acc[txId]) {
+            acc[txId] = [];
         }
-    }
-    return serializedData;
-};
+        acc[txId].push(line);
+        return acc;
+    }, {} as Record<string, any[]>);
 
-
-// ----- Balance Sheet Actions -----
-
-export async function addAccount(data: { name: string; group: string; balance: number }) {
-  const accountsCollection = collection(db, "accounts");
-  await addDoc(accountsCollection, {
-    ...data,
-    createdAt: serverTimestamp(),
-  });
-  revalidatePath("/dashboard/finance");
-}
-
-export async function updateAccountsBatch(updates: { id: string; balance: number }[]) {
-  const batch = writeBatch(db);
-  updates.forEach(update => {
-    const accountRef = doc(db, "accounts", update.id);
-    batch.update(accountRef, { balance: update.balance });
-  });
-  await batch.commit();
-  revalidatePath("/dashboard/finance");
-}
-
-export async function deleteAccount(accountId: string) {
-  const accountRef = doc(db, "accounts", accountId);
-  await deleteDoc(accountRef);
-  revalidatePath("/dashboard/finance");
-}
-
-// ----- Enhanced Transaction Actions -----
-
-export async function addTransaction(data: {
-  type: 'income' | 'expense';
-  category: string;
-  description: string;
-  amount: number;
-  date: string;
-  payee?: string;
-  proofUrl?: string;
-  notes?: string;
-  reimbursementId?: string;
-  createdBy: string;
-}) {
-  return await runTransaction(db, async (transaction) => {
-    // Get the last transaction to calculate new balance
-    const lastTransactionQuery = query(
-      collection(db, "transactions"), 
-      orderBy("date", "desc"),
-      orderBy("createdAt", "desc"), 
-      limit(1)
-    );
-    const lastTransactionSnap = await getDocs(lastTransactionQuery);
-    const lastBalance = lastTransactionSnap.empty ? 0 : lastTransactionSnap.docs[0].data().balance;
-    
-    // Calculate new balance
-    const balanceChange = data.type === 'income' ? data.amount : -data.amount;
-    const newBalance = lastBalance + balanceChange;
-
-    // Create transaction record
-    const transactionRef = doc(collection(db, "transactions"));
-    transaction.set(transactionRef, {
-      ...data,
-      balance: newBalance,
-      isReversed: false,
-      createdAt: serverTimestamp(),
+    const transactions = transactionsSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            date: data.date.toDate().toISOString(),
+            createdAt: data.createdAt.toDate().toISOString(),
+            lines: linesByTransactionId[doc.id] || []
+        }
     });
 
-    return transactionRef.id;
-  });
+    return transactions;
 }
 
-export async function reverseTransaction(originalTransactionId: string, reason: string) {
-  return await runTransaction(db, async (transaction) => {
-    // Get original transaction
-    const originalRef = doc(db, "transactions", originalTransactionId);
-    const originalSnap = await transaction.get(originalRef);
-    
-    if (!originalSnap.exists()) {
-      throw new Error("Original transaction not found");
+
+export async function addTransaction(data: TransactionData) {
+    if (!data.createdById) {
+        throw new Error("User must be authenticated.");
     }
-    
-    const originalData = originalSnap.data();
-    
-    if (originalData.isReversed) {
-      throw new Error("Transaction already reversed");
+    if (data.lines.length < 2) {
+        throw new Error("A transaction must have at least two lines (a debit and a credit).");
     }
 
-    // Mark original as reversed
-    transaction.update(originalRef, { 
-      isReversed: true,
-      reversedAt: serverTimestamp(),
-      reversalReason: reason
+    const totalDebits = data.lines.reduce((sum, line) => sum + line.debitMinor, 0);
+    const totalCredits = data.lines.reduce((sum, line) => sum + line.creditMinor, 0);
+
+    if (totalDebits !== totalCredits) {
+        throw new Error("Debits and credits must be equal.");
+    }
+    if (totalDebits === 0) {
+        throw new Error("Transaction amount cannot be zero.");
+    }
+
+    return await runTransaction(db, async (transaction) => {
+        // Get the latest entry number to increment it
+        const counterRef = doc(db, 'system_counters', 'transactions');
+        const counterDoc = await transaction.get(counterRef);
+        const newEntryNumber = (counterDoc.data()?.lastNumber || 0) + 1;
+        
+        // 1. Create the main transaction document
+        const transactionRef = doc(collection(db, "transactions"));
+        transaction.set(transactionRef, {
+            entryNumber: newEntryNumber,
+            date: Timestamp.fromDate(new Date(data.date)),
+            narration: data.narration,
+            createdById: data.createdById,
+            createdAt: serverTimestamp(),
+            isReversed: false,
+        });
+
+        // 2. Create the transaction line documents
+        data.lines.forEach(line => {
+            const lineRef = doc(collection(db, "transaction_lines"));
+            transaction.set(lineRef, {
+                transactionId: transactionRef.id,
+                acctCode: line.acctCode,
+                debitMinor: line.debitMinor,
+                creditMinor: line.creditMinor,
+            });
+        });
+
+        // 3. Log the audit event
+        const auditLogRef = doc(collection(db, 'audit_log'));
+        transaction.set(auditLogRef, {
+            timestamp: serverTimestamp(),
+            userId: data.createdById,
+            actionType: 'CREATE_TRANSACTION',
+            referenceId: transactionRef.id,
+            newValue: JSON.stringify(data)
+        });
+
+        // 4. Update the counter
+        transaction.set(counterRef, { lastNumber: newEntryNumber }, { merge: true });
+
+        return { transactionId: transactionRef.id, entryNumber: newEntryNumber };
     });
+}
 
-    // Get current balance
-    const lastTransactionQuery = query(
-      collection(db, "transactions"), 
-      orderBy("date", "desc"), 
-      orderBy("createdAt", "desc"), 
-      limit(1)
-    );
-    const lastTransactionSnap = await getDocs(lastTransactionQuery);
-    const currentBalance = lastTransactionSnap.empty ? 0 : lastTransactionSnap.docs[0].data().balance;
+export async function reverseTransaction(transactionId: string, reversedById: string, reason: string) {
+    if (!reversedById) {
+        throw new Error("User must be authenticated.");
+    }
 
-    // Create reversing entry
-    const reversingRef = doc(collection(db, "transactions"));
-    const balanceChange = originalData.type === 'income' ? -originalData.amount : originalData.amount;
-    
-    transaction.set(reversingRef, {
-      type: originalData.type === 'income' ? 'expense' : 'income',
-      category: originalData.category,
-      description: `REVERSAL: ${originalData.description}`,
-      amount: originalData.amount,
-      date: new Date().toISOString().split('T')[0],
-      payee: originalData.payee,
-      notes: `Reversing transaction: ${reason}`,
-      balance: currentBalance + balanceChange,
-      isReversed: false,
-      isReversal: true,
-      originalTransactionId: originalTransactionId,
-      createdAt: serverTimestamp(),
-      createdBy: originalData.createdBy // The original creator
+    return await runTransaction(db, async (t) => {
+        const originalTxRef = doc(db, "transactions", transactionId);
+        const originalTxSnap = await t.get(originalTxRef);
+
+        if (!originalTxSnap.exists() || originalTxSnap.data().isReversed) {
+            throw new Error("Transaction not found or already reversed.");
+        }
+
+        // Get original lines
+        const linesQuery = query(collection(db, "transaction_lines"), where("transactionId", "==", transactionId));
+        const linesSnap = await getDocs(linesQuery);
+        const originalLines = linesSnap.docs.map(d => d.data());
+
+        // Create the reversing transaction
+        const reversingLines: TransactionLine[] = originalLines.map(line => ({
+            acctCode: line.acctCode,
+            debitMinor: line.creditMinor, // Swap debit and credit
+            creditMinor: line.debitMinor,
+        }));
+        
+        const reversalData: TransactionData = {
+            date: new Date().toISOString().split('T')[0],
+            narration: `Reversal of Entry #${originalTxSnap.data().entryNumber}. Reason: ${reason}`,
+            lines: reversingLines,
+            createdById: reversedById
+        };
+
+        // Use the addTransaction logic within this transaction for consistency
+        const counterRef = doc(db, 'system_counters', 'transactions');
+        const counterDoc = await t.get(counterRef);
+        const newEntryNumber = (counterDoc.data()?.lastNumber || 0) + 1;
+
+        const newTxRef = doc(collection(db, "transactions"));
+        t.set(newTxRef, {
+            entryNumber: newEntryNumber,
+            date: Timestamp.now(),
+            narration: reversalData.narration,
+            createdById: reversalData.createdById,
+            createdAt: serverTimestamp(),
+            isReversed: false,
+            reversesTransactionId: transactionId,
+        });
+
+        reversalData.lines.forEach(line => {
+            const lineRef = doc(collection(db, "transaction_lines"));
+            t.set(lineRef, { ...line, transactionId: newTxRef.id });
+        });
+
+        t.set(counterRef, { lastNumber: newEntryNumber });
+
+        // Mark original transaction as reversed
+        t.update(originalTxRef, {
+            isReversed: true,
+            reversedAt: serverTimestamp(),
+            reversedById: reversedById,
+        });
+
+        // Audit log for the reversal
+        const auditLogRef = doc(collection(db, 'audit_log'));
+        t.set(auditLogRef, {
+            timestamp: serverTimestamp(),
+            userId: reversedById,
+            actionType: 'REVERSE_TRANSACTION',
+            referenceId: transactionId,
+            newValue: `Reversed with new transaction ${newTxRef.id}`
+        });
+
+        return { reversalTransactionId: newTxRef.id };
     });
-  });
-}
-
-// ----- Legacy Logbook Actions (for backward compatibility) -----
-
-export async function addLogbookEntry(data: { date: string; assetGroup: string; account: string; description: string; debit?: number; credit?: number; reimbursementId?: string; createdBy: string }) {
-  // Convert to new transaction format
-  const transactionData = {
-    type: data.debit ? 'income' as const : 'expense' as const,
-    category: data.assetGroup,
-    description: data.description,
-    amount: data.debit || data.credit || 0,
-    date: data.date,
-    payee: data.account,
-    notes: `Legacy entry from ${data.assetGroup}/${data.account}`,
-    reimbursementId: data.reimbursementId,
-    createdBy: data.createdBy
-  };
-  
-  await addTransaction(transactionData);
-  revalidatePath("/dashboard/finance");
-}
-
-export async function updateLogbookEntry(logId: string, data: any) {
-  // For legacy compatibility, we'll allow updates but note they should use reversal
-  const logRef = doc(db, "transactions", logId);
-  await updateDoc(logRef, {
-    ...data,
-    updatedAt: serverTimestamp(),
-    isLegacyUpdate: true
-  });
-  revalidatePath("/dashboard/finance");
-}
-
-export async function deleteLogbookEntry(logId: string) {
-  // For legacy compatibility, mark as deleted instead of actually deleting
-  const logRef = doc(db, "transactions", logId);
-  await updateDoc(logRef, {
-    isDeleted: true,
-    deletedAt: serverTimestamp()
-  });
-  revalidatePath("/dashboard/finance");
-}
-
-// ----- Export Actions -----
-
-export async function getTransactionsForExport(startDate: string, endDate: string) {
-  const transactionsQuery = query(
-    collection(db, "transactions"),
-    where("date", ">=", startDate),
-    where("date", "<=", endDate),
-    orderBy("date", "desc")
-  );
-  
-  const snapshot = await getDocs(transactionsQuery);
-  // Filter for 'isDeleted' on the client-side to avoid needing a composite index
-  const transactions = snapshot.docs
-    .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    }))
-    .filter((t: any) => t.isDeleted !== true);
-
-  return transactions.map(t => serializeData(t));
 }

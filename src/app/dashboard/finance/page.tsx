@@ -1,9 +1,48 @@
 
+"use client"
+
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BalanceSheet from "./balance-sheet";
 import Logbook from "./logbook";
+import { getChartOfAccounts, getTransactions, type ChartOfAccount } from './actions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function FinancePage() {
+  const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccount[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+        const [accounts, transactions] = await Promise.all([
+            getChartOfAccounts(),
+            getTransactions()
+        ]);
+        setChartOfAccounts(accounts);
+        setTransactions(transactions);
+    } catch (error) {
+        console.error("Failed to fetch financial data:", error);
+    } finally {
+        setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+        <div className="space-y-6">
+            <Skeleton className="h-10 w-1/4" />
+            <Skeleton className="h-10 w-1/2" />
+            <Skeleton className="h-64 w-full" />
+        </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -17,15 +56,15 @@ export default function FinancePage() {
       <Tabs defaultValue="balance-sheet" className="space-y-4">
         <TabsList>
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="logbook">Logbook</TabsTrigger>
         </TabsList>
         
         <TabsContent value="balance-sheet" className="space-y-4">
-          <BalanceSheet />
+          <BalanceSheet chartOfAccounts={chartOfAccounts} transactions={transactions} />
         </TabsContent>
         
-        <TabsContent value="transactions" className="space-y-4">
-          <Logbook />
+        <TabsContent value="logbook" className="space-y-4">
+          <Logbook chartOfAccounts={chartOfAccounts} transactions={transactions} onUpdate={fetchData} />
         </TabsContent>
       </Tabs>
     </div>
