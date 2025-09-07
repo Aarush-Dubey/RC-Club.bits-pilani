@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { PlusCircle, ShoppingBasket } from "lucide-react";
+import { PlusCircle, ShoppingBasket, ShoppingCart } from "lucide-react";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth, type AppUser } from "@/context/auth-context";
@@ -21,6 +21,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { markAsPurchased } from "./actions";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 async function getData(currentUser: AppUser | null) {
   if (!currentUser) return { requests: [] };
@@ -63,6 +66,35 @@ const StatusBadge = ({ status }: { status: string }) => {
     </TooltipProvider>
   );
 };
+
+function MarkAsPurchasedButton({ request, onUpdate }: { request: any; onUpdate: () => void }) {
+    const { user: currentUser } = useAuth();
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleMarkAsPurchased = async () => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        try {
+            await markAsPurchased(request.id, currentUser.uid);
+            toast({ title: "Item Marked as Purchased" });
+            onUpdate();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    if (request.status !== 'approved') return null;
+
+    return (
+        <Button size="sm" variant="outline" onClick={handleMarkAsPurchased} disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+            <span className="ml-2">Mark as Purchased</span>
+        </Button>
+    )
+}
 
 export default function ProcurementPage() {
   const [data, setData] = useState<{ requests: any[] }>({ requests: [] });
@@ -142,6 +174,7 @@ export default function ProcurementPage() {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Est. Cost</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -153,6 +186,9 @@ export default function ProcurementPage() {
                                         <StatusBadge status={req.status} />
                                     </TableCell>
                                     <TableCell className="text-right font-mono">₹{req.expectedCost.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <MarkAsPurchasedButton request={req} onUpdate={fetchData} />
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

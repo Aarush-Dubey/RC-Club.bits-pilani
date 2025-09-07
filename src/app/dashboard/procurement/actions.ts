@@ -86,3 +86,18 @@ export async function rejectNewItemRequest(requestId: string, rejectorId: string
     
     revalidatePath('/dashboard/procurement/approvals');
 }
+
+export async function markAsPurchased(requestId: string, userId: string) {
+    if (!userId) {
+        throw new Error("User must be authenticated.");
+    }
+    const requestRef = doc(db, "procurement_requests", requestId);
+
+    await updateDoc(requestRef, {
+        status: "purchased",
+        markedAsPurchasedAt: serverTimestamp(),
+        markedAsPurchasedById: userId
+    });
+
+    revalidatePath('/dashboard/procurement');
+}

@@ -1,12 +1,14 @@
 
 "use client"
 
-import React from "react";
+import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, HandCoins, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChartOfAccount } from "./actions";
+import { getPayableSummary } from "../reimbursements/actions";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface BalanceSheetProps {
     chartOfAccounts: ChartOfAccount[];
@@ -50,6 +52,59 @@ const calculateBalances = (accounts: ChartOfAccount[], transactions: any[]) => {
     });
 
     return balances;
+};
+
+const PayableSummaryDialog = () => {
+    const [summary, setSummary] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    const handleOpen = async () => {
+        setLoading(true);
+        try {
+            const payableSummary = await getPayableSummary();
+            setSummary(payableSummary);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    return (
+        <Dialog onOpenChange={(open) => open && handleOpen()}>
+            <DialogTrigger asChild>
+                <button className="text-left w-full hover:underline">Member Reimbursements Payable</button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Reimbursements Payable Summary</DialogTitle>
+                    <DialogDescription>A breakdown of approved reimbursements waiting to be paid.</DialogDescription>
+                </DialogHeader>
+                {loading ? (
+                    <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Member</TableHead>
+                                <TableHead className="text-right">Amount Owed</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {summary.length > 0 ? summary.map(item => (
+                                <TableRow key={item.userId}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="text-right font-mono">{formatCurrency(item.totalOwed * 100)}</TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={2} className="text-center h-24">No pending payments.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
 };
 
 export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceSheetProps) {
@@ -141,7 +196,9 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                         </TableRow>
                         {sections['Current Liabilities'].accounts.map(acc => (
                             <TableRow key={acc.id}>
-                                <TableCell className="pl-12">{acc.name}</TableCell>
+                                <TableCell className="pl-12">
+                                     {acc.id === '2020' ? <PayableSummaryDialog /> : acc.name}
+                                </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
                             </TableRow>
                         ))}

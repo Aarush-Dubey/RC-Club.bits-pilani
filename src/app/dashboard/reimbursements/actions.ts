@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/firebase"
-import { doc, serverTimestamp, updateDoc, addDoc, collection, runTransaction, getDoc, setDoc, writeBatch } from "firebase/firestore"
+import { doc, serverTimestamp, updateDoc, addDoc, collection, runTransaction, getDoc, setDoc, writeBatch, query, where, getDocs } from "firebase/firestore"
 import { addTransaction } from "../finance/actions"
 
 interface ReimbursementRequestData {
@@ -65,7 +65,7 @@ export async function createReimbursementRequest(data: ReimbursementRequestData)
     if (Math.abs(costDifference) > 0.01) { // If there's a meaningful difference
         const userSnap = await getDoc(doc(db, "users", data.submittedById));
         const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
-        const expenseAcct = procurementRequestData.itemType === 'consumable' ? '5030' : '5010';
+        const expenseAcct = procurementRequestData.itemType === 'consumable' ? '5030' : '1210';
         const narration = `Cost adjustment for ${procurementRequestData.itemName} purchased by ${userName}.`;
 
         const adjustmentTransaction = {
@@ -160,4 +160,44 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
     revalidatePath("/dashboard/reimbursements");
     revalidatePath("/dashboard/finance");
     revalidatePath("/dashboard/procurement");
+}
+
+
+export async function getPayableSummary() {
+    const q = query(
+        collection(db, 'reimbursements'),
+        where('status', '==', 'approved')
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        return [];
+    }
+    
+    const userIds = [...new Set(snapshot.docs.map(doc => doc.data().submittedById))];
+    const users: Record<string, any> = {};
+    if (userIds.length > 0) {
+        const usersQuery = query(collection(db, "users"), where("id", "in", userIds));
+        const usersSnap = await getDocs(usersQuery);
+        usersSnap.forEach(doc => {
+            users[doc.id] = doc.data();
+        });
+    }
+
+    const summary: Record<string, { total: number; name: string }> = {};
+
+    snapshot.docs.forEach(doc => {
+        const reimbursement = doc.data();
+        const userId = reimbursement.submittedById;
+        if (!summary[userId]) {
+            summary[userId] = { total: 0, name: users[userId]?.name || 'Unknown User' };
+        }
+        summary[userId].total += reimbursement.amount;
+    });
+
+    return Object.entries(summary).map(([userId, data]) => ({
+        userId,
+        name: data.name,
+        totalOwed: data.total,
+    }));
 }
