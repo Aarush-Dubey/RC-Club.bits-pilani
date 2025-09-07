@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { ArrowLeft, Inbox } from "lucide-react";
@@ -25,7 +25,7 @@ async function getApprovalData() {
     const snapshot = await getDocs(q);
     const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    const userIds = [...new Set(requests.flatMap(item => [item.requestedById, item.approvedById, item.rejectedById]))];
+    const userIds = [...new Set(requests.flatMap(item => [item.requestedById, item.approvedById, item.rejectedById]))].filter(Boolean);
     let users = [];
     if (userIds.length > 0) {
         const usersQuery = query(collection(db, "users"), where("id", "in", userIds));
@@ -170,7 +170,7 @@ export default function ApprovalsClient() {
                                     <TableRow key={item.id}>
                                         <TableCell>
                                             <div className="font-medium">{item.itemName}</div>
-                                            <div className="text-xs text-muted-foreground">{format(item.createdAt.toDate(), "MMM d, yyyy")}</div>
+                                            <div className="text-xs text-muted-foreground">{item.createdAt?.toDate ? format(item.createdAt.toDate(), "MMM d, yyyy") : 'N/A'}</div>
                                         </TableCell>
                                         <TableCell>{requestUser?.name || 'Unknown'}</TableCell>
                                         <TableCell>{reviewedByUser?.name || 'N/A'}</TableCell>
