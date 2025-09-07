@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, updateDoc, writeBatch, deleteDoc, orderBy, query, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, writeBatch, deleteDoc, orderBy, query, setDoc, getDoc } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // Helper to convert Firestore Timestamps to JSON-serializable strings
@@ -30,9 +30,9 @@ export async function getUsers() {
     const usersSnapshot = await getDocs(collection(db, "users"));
     const users = usersSnapshot.docs.map(serializeData);
     
-    // For simplicity, fetching all possible roles from the seed file.
-    // In a real app, this might come from a dedicated 'roles' collection.
-    const roles = ['admin', 'coordinator', 'treasurer', 'inventory_manager', 'drone_lead', 'plane_lead', 'member', 'probationary'];
+    // Fetch roles dynamically from the permissions collection
+    const permissionsSnapshot = await getDocs(query(collection(db, "permissions"), orderBy("__name__")));
+    const roles = permissionsSnapshot.docs.map(doc => doc.id);
     
     return { users, roles };
 }
