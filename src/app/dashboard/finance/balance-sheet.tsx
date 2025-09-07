@@ -113,7 +113,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                             <CardDescription>Verification of accounting equation integrity</CardDescription>
                         </div>
                         {isBalanced ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 Balanced
                             </Badge>
@@ -129,21 +129,21 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                     <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
                             <div className="text-2xl font-bold">{formatCurrency(totalAssets)}</div>
-                            <div className="text-sm text-gray-600">Total Assets</div>
+                            <div className="text-sm text-muted-foreground">Total Assets</div>
                         </div>
                         <div className="text-xl self-center">=</div>
                         <div>
                             <div className="text-2xl font-bold">{formatCurrency(totalLiabilitiesAndEquity)}</div>
-                            <div className="text-sm text-gray-600">Liabilities + Equity</div>
+                            <div className="text-sm text-muted-foreground">Liabilities + Equity</div>
                         </div>
                     </div>
                     {!isBalanced && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-                            <div className="flex items-center gap-2 text-red-700">
+                        <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded">
+                            <div className="flex items-center gap-2 text-destructive">
                                 <AlertTriangle className="h-4 w-4" />
                                 <span className="font-semibold">AUDIT ALERT: Balance Sheet Does Not Balance</span>
                             </div>
-                            <div className="text-sm text-red-600 mt-1">
+                            <div className="text-sm text-destructive/80 mt-1">
                                 Difference: {formatCurrency(totalAssets - totalLiabilitiesAndEquity)}
                             </div>
                         </div>
@@ -168,7 +168,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                             </TableHeader>
                             <TableBody>
                                 {/* Current Assets */}
-                                <TableRow className="bg-gray-50">
+                                <TableRow className="bg-muted/50">
                                     <TableCell className="font-semibold">Current Assets</TableCell>
                                     <TableCell className="text-right font-semibold">
                                         {formatCurrency(sections['Current Assets'].total)}
@@ -182,7 +182,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 ))}
                                 
                                 {/* Fixed Assets */}
-                                <TableRow className="bg-gray-50">
+                                <TableRow className="bg-muted/50">
                                     <TableCell className="font-semibold">Fixed Assets</TableCell>
                                     <TableCell className="text-right font-semibold">
                                         {formatCurrency(sections['Fixed Assets'].total)}
@@ -196,7 +196,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 ))}
                                 
                                 {/* Total Assets */}
-                                <TableRow className="border-t-2 border-gray-300">
+                                <TableRow className="border-t-2 border-border">
                                     <TableCell className="font-bold">TOTAL ASSETS</TableCell>
                                     <TableCell className="text-right font-bold text-lg">
                                         {formatCurrency(totalAssets)}
@@ -222,7 +222,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                             </TableHeader>
                             <TableBody>
                                 {/* Current Liabilities */}
-                                <TableRow className="bg-gray-50">
+                                <TableRow className="bg-muted/50">
                                     <TableCell className="font-semibold">Current Liabilities</TableCell>
                                     <TableCell className="text-right font-semibold">
                                         {formatCurrency(sections['Current Liabilities'].total)}
@@ -236,7 +236,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 ))}
                                 
                                 {/* Equity */}
-                                <TableRow className="bg-gray-50">
+                                <TableRow className="bg-muted/50">
                                     <TableCell className="font-semibold">Equity</TableCell>
                                     <TableCell className="text-right font-semibold">
                                         {formatCurrency(sections['Equity'].total)}
@@ -250,7 +250,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 ))}
                                 
                                 {/* Total Liabilities & Equity */}
-                                <TableRow className="border-t-2 border-gray-300">
+                                <TableRow className="border-t-2 border-border">
                                     <TableCell className="font-bold">TOTAL LIABILITIES & EQUITY</TableCell>
                                     <TableCell className="text-right font-bold text-lg">
                                         {formatCurrency(totalLiabilitiesAndEquity)}

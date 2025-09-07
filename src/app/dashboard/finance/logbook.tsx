@@ -109,7 +109,7 @@ const TransactionValidationWarning = ({ transaction }: { transaction: Transactio
     if (validation.isValid) return null;
     
     return (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded">
+        <div className="flex items-center gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 p-2 rounded">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-sm">AUDIT WARNING: {validation.errors.join('; ')}</span>
         </div>
@@ -241,7 +241,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                 const validation = validateTransaction(tx);
                                 return (
                                     <React.Fragment key={tx.id}>
-                                        <TableRow className={tx.isReversed ? 'bg-red-50' : (!validation.isValid ? 'bg-yellow-50' : '')}>
+                                        <TableRow className={tx.isReversed ? 'bg-red-50 dark:bg-red-900/20' : (!validation.isValid ? 'bg-yellow-50 dark:bg-yellow-900/20' : '')}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <span>{tx.entryNumber}</span>
@@ -252,7 +252,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                             <TableCell className="max-w-xs truncate">
                                                 {tx.narration}
                                                 {tx.reversalReason && (
-                                                    <div className="text-xs text-red-600 mt-1">
+                                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">
                                                         Reversal: {tx.reversalReason}
                                                     </div>
                                                 )}
@@ -261,7 +261,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                             <TableCell>
                                                 {tx.isReversed && <Badge variant="destructive">Reversed</Badge>}
                                                 {tx.reversalOf && <Badge variant="secondary">Reversal Entry</Badge>}
-                                                {!validation.isValid && <Badge variant="outline" className="text-yellow-600">Invalid</Badge>}
+                                                {!validation.isValid && <Badge variant="outline" className="text-yellow-600 border-yellow-300 dark:text-yellow-400 dark:border-yellow-700">Invalid</Badge>}
                                             </TableCell>
                                             <TableCell>
                                                 <Button variant="ghost" size="icon" onClick={() => setSelectedTxId(selectedTxId === tx.id ? null : tx.id)}>
@@ -299,16 +299,16 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                                                     const lineValidation = validateTransactionLine(line);
                                                                     
                                                                     return (
-                                                                        <TableRow key={index} className={!lineValidation.isValid ? 'bg-red-50' : ''}>
+                                                                        <TableRow key={index} className={!lineValidation.isValid ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                                                                             <TableCell>
                                                                                 <div className="flex items-center gap-2">
                                                                                     <span>{account?.name || line.acctCode}</span>
                                                                                     {!lineValidation.isValid && (
-                                                                                        <AlertTriangle className="h-3 w-3 text-red-600" />
+                                                                                        <AlertTriangle className="h-3 w-3 text-red-600 dark:text-red-400" />
                                                                                     )}
                                                                                 </div>
                                                                                 {line.description && (
-                                                                                    <div className="text-xs text-gray-500">{line.description}</div>
+                                                                                    <div className="text-xs text-muted-foreground">{line.description}</div>
                                                                                 )}
                                                                             </TableCell>
                                                                             <TableCell className="text-right font-mono">
@@ -332,7 +332,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                                             </TableBody>
                                                         </Table>
                                                         
-                                                        <div className="mt-2 text-xs text-gray-500">
+                                                        <div className="mt-2 text-xs text-muted-foreground">
                                                             Created: {format(new Date(tx.createdAt), "PPpp")} by {tx.createdBy}
                                                             {tx.modifiedAt && ` • Modified: ${format(new Date(tx.modifiedAt), "PPpp")}`}
                                                         </div>
