@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react";
@@ -143,12 +142,12 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                                                     </Button>
                                                 </FormControl>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                                <Command>
-                                                    <CommandInput placeholder="Search accounts..." />
-                                                    <CommandList className="max-h-60 overflow-y-auto">
-                                                        <CommandEmpty>No account found.</CommandEmpty>
-                                                        <CommandGroup>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px] overflow-hidden">
+                                                <Command className="w-full">
+                                                    <CommandInput placeholder="Search accounts..." className="h-9" />
+                                                    <CommandEmpty>No account found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        <CommandList className="max-h-[200px] overflow-y-auto">
                                                             {chartOfAccounts.map((acc) => (
                                                                 <CommandItem
                                                                     value={`${acc.name} ${acc.id}`}
@@ -161,8 +160,8 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                                                                     {acc.id} - {acc.name}
                                                                 </CommandItem>
                                                             ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
+                                                        </CommandList>
+                                                    </CommandGroup>
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
