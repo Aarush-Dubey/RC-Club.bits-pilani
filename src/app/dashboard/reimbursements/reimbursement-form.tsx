@@ -80,11 +80,16 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
   const authenticator = async () => {
     try {
       const response = await fetch('/api/upload-auth');
-      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
       const data = await response.json();
+      if (!response.ok) {
+          // If the server returns an error, try to parse it and throw
+          throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
       return { signature: data.signature, expire: data.expire, token: data.token };
     } catch (error) {
-      throw new Error("Authentication request failed. Check your server logs.");
+      console.error("Authenticator error:", error);
+      // Re-throw the error to be caught by the handleSubmit function
+      throw error;
     }
   };
 
@@ -259,3 +264,5 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
     </>
   )
 }
+
+    
