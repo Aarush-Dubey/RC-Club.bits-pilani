@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react";
@@ -87,20 +88,17 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
 
     const sections = {
         'Current Assets': generateSection('Current Assets'),
-        'Fixed Assets': generateSection('Fixed Assets'),
         'Current Liabilities': generateSection('Current Liabilities'),
-        'Equity': generateSection('Equity')
     };
 
-    const totalAssets = sections['Current Assets'].total + sections['Fixed Assets'].total;
-    const totalLiabilitiesAndEquity = sections['Current Liabilities'].total + sections['Equity'].total;
-    const isBalanced = Math.abs(totalAssets - totalLiabilitiesAndEquity) < 1;
+    const totalAssets = sections['Current Assets'].total;
+    const totalLiabilities = sections['Current Liabilities'].total;
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Balance Sheet</CardTitle>
-                <CardDescription>A snapshot of the club's financial position.</CardDescription>
+                <CardTitle>Current Assets & Liabilities</CardTitle>
+                <CardDescription>A snapshot of the club's short-term financial position.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -113,7 +111,7 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                     <TableBody>
                         {/* ASSETS */}
                         <TableRow className="bg-muted/50 font-bold">
-                            <TableCell>Assets</TableCell>
+                            <TableCell>Current Assets</TableCell>
                             <TableCell className="text-right">{formatCurrency(totalAssets)}</TableCell>
                         </TableRow>
                         {sections['Current Assets'].accounts.map(acc => (
@@ -122,17 +120,11 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
                             </TableRow>
                         ))}
-                         {sections['Fixed Assets'].accounts.map(acc => (
-                            <TableRow key={acc.id}>
-                                <TableCell className="pl-6">{acc.name}</TableCell>
-                                <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
-                            </TableRow>
-                        ))}
-
-                        {/* LIABILITIES & EQUITY */}
+                      
+                        {/* LIABILITIES */}
                          <TableRow className="bg-muted/50 font-bold">
-                            <TableCell>Liabilities & Equity</TableCell>
-                            <TableCell className="text-right">{formatCurrency(totalLiabilitiesAndEquity)}</TableCell>
+                            <TableCell>Current Liabilities</TableCell>
+                            <TableCell className="text-right">{formatCurrency(totalLiabilities)}</TableCell>
                         </TableRow>
                         {sections['Current Liabilities'].accounts.map(acc => (
                             <TableRow key={acc.id}>
@@ -140,38 +132,6 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
                                 <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
                             </TableRow>
                         ))}
-                        {sections['Equity'].accounts.map(acc => (
-                            <TableRow key={acc.id}>
-                                <TableCell className="pl-6">{acc.name}</TableCell>
-                                <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
-                            </TableRow>
-                        ))}
-                        
-                        {/* VERIFICATION */}
-                        <TableRow className="border-t-2 font-bold">
-                           <TableCell>
-                                <div className="flex items-center gap-2">
-                                     {isBalanced ? (
-                                        <CheckCircle className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                                    )}
-                                    <span>Verification (Assets = L+E)</span>
-                                </div>
-                           </TableCell>
-                           <TableCell className="text-right">
-                                {isBalanced ? (
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
-                                        Balanced
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="destructive">
-                                        Unbalanced by {formatCurrency(totalAssets - totalLiabilitiesAndEquity)}
-                                    </Badge>
-                                )}
-                           </TableCell>
-                        </TableRow>
-
                     </TableBody>
                 </Table>
             </CardContent>
