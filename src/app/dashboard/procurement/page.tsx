@@ -21,9 +21,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { markAsPurchased } from "./actions";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { PurchaseConfirmationForm } from "./purchase-confirmation-form";
 
 async function getData(currentUser: AppUser | null) {
   if (!currentUser) return { requests: [] };
@@ -69,30 +68,37 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 function MarkAsPurchasedButton({ request, onUpdate }: { request: any; onUpdate: () => void }) {
     const { user: currentUser } = useAuth();
-    const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
 
-    const handleMarkAsPurchased = async () => {
-        if (!currentUser) return;
-        setIsLoading(true);
-        try {
-            await markAsPurchased(request.id, currentUser.uid);
-            toast({ title: "Item Marked as Purchased" });
-            onUpdate();
-        } catch (error) {
-            toast({ variant: "destructive", title: "Action Failed", description: (error as Error).message });
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const handleFormSubmit = () => {
+        setIsFormOpen(false);
+        onUpdate();
+    }
     
     if (request.status !== 'approved') return null;
 
     return (
-        <Button size="sm" variant="outline" onClick={handleMarkAsPurchased} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-            <span className="ml-2">Mark as Purchased</span>
-        </Button>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                    <ShoppingCart className="h-4 w-4" />
+                    <span className="ml-2">Mark as Purchased</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                 <DialogHeader>
+                    <DialogTitle>Confirm Purchase: {request.itemName}</DialogTitle>
+                    <DialogDescription>
+                        Enter the final details of your purchase to create a reimbursement request.
+                    </DialogDescription>
+                </DialogHeader>
+                <PurchaseConfirmationForm
+                    procurementRequest={request}
+                    currentUser={currentUser}
+                    onFormSubmit={handleFormSubmit}
+                />
+            </DialogContent>
+        </Dialog>
     )
 }
 

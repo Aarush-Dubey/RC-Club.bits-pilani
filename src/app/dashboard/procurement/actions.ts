@@ -87,17 +87,86 @@ export async function rejectNewItemRequest(requestId: string, rejectorId: string
     revalidatePath('/dashboard/procurement/approvals');
 }
 
-export async function markAsPurchased(requestId: string, userId: string) {
-    if (!userId) {
+export async function markAsPurchased(data: {
+    procurementRequestId: string;
+    purchasedById: string;
+    actualCost: number;
+    vendor?: string;
+    receiptUrl: string;
+}) {
+    const { procurementRequestId, purchasedById, actualCost, vendor, receiptUrl } = data;
+
+    if (!purchasedById) {
         throw new Error("User must be authenticated.");
     }
-    const requestRef = doc(db, "procurement_requests", requestId);
+    
+    await runTransaction(db, async (transaction) => {
+        const procurementRequestRef = doc(db, "procurement_requests", procurementRequestId);
+        const procurementRequestSnap = await transaction.get(procurementRequestRef);
 
-    await updateDoc(requestRef, {
-        status: "purchased",
-        markedAsPurchasedAt: serverTimestamp(),
-        markedAsPurchasedById: userId
+        if (!procurementRequestSnap.exists()) {
+            throw new Error("Associated procurement request not found.");
+        }
+        const procurementRequestData = procurementRequestSnap.data();
+        
+        // --- Create Documents ---
+        const purchaseRef = doc(collection(db, "purchases"));
+        const reimbursementRef = doc(collection(db, "reimbursements"));
+        
+        // 1. Create the purchase document
+        transaction.set(purchaseRef, {
+            id: purchaseRef.id,
+            itemRequestId: procurementRequestId,
+            purchasedById: purchasedById,
+            purchasedAt: serverTimestamp(),
+            actualCost: actualCost,
+            vendor: vendor,
+            receiptUrl: receiptUrl,
+        });
+
+        // 2. Create the reimbursement document
+        transaction.set(reimbursementRef, {
+            id: reimbursementRef.id,
+            procurementRequestId: procurementRequestId,
+            purchaseId: purchaseRef.id,
+            submittedById: purchasedById,
+            amount: actualCost,
+            status: 'pending',
+            receiptUrl: receiptUrl,
+            vendor: vendor,
+            createdAt: serverTimestamp(),
+        });
+        
+        // 3. Update the procurement request status
+        transaction.update(procurementRequestRef, {
+            status: 'reimbursing', // New status indicating reimbursement is in progress
+            purchaseId: purchaseRef.id,
+            actualCost: actualCost,
+        });
+        
+        // 4. Adjust the liability if actual cost differs from expected cost
+        const expectedCost = procurementRequestData.expectedCost;
+        const costDifference = actualCost - expectedCost;
+
+        if (Math.abs(costDifference) > 0.01) { // If there's a meaningful difference
+            const userSnap = await getDoc(doc(db, "users", purchasedById));
+            const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
+            const expenseAcct = procurementRequestData.itemType === 'consumable' ? '5030' : '1210';
+            const narration = `Cost adjustment for ${procurementRequestData.itemName} purchased by ${userName}.`;
+
+            await addTransaction({
+                date: new Date().toISOString().split('T')[0],
+                narration,
+                createdById: purchasedById, // System/User action
+                lines: [
+                    { acctCode: expenseAcct, debitMinor: costDifference * 100, creditMinor: 0 },
+                    { acctCode: '2020', debitMinor: 0, creditMinor: costDifference * 100 }, // Adjust Reimbursements Payable
+                ]
+            }, transaction);
+        }
     });
 
-    revalidatePath('/dashboard/procurement');
+    revalidatePath("/dashboard/procurement");
+    revalidatePath("/dashboard/reimbursements");
+    revalidatePath("/dashboard/finance");
 }
