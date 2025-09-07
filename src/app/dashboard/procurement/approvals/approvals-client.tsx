@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { ArrowLeft, Inbox } from "lucide-react";
@@ -14,17 +14,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApprovalActions } from "./approval-actions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 async function getApprovalData() {
+    // Fetch all requests, ordered by date
     const q = query(
         collection(db, "procurement_requests"),
-        where("status", "==", "pending"),
         orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
     const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    const userIds = [...new Set(requests.map(item => item.requestedById))];
+    const userIds = [...new Set(requests.flatMap(item => [item.requestedById, item.approvedById, item.rejectedById]))];
     let users = [];
     if (userIds.length > 0) {
         const usersQuery = query(collection(db, "users"), where("id", "in", userIds));
@@ -81,6 +82,8 @@ export default function ApprovalsClient() {
     if (!data) return <div>Error loading data.</div>;
 
     const { requests, users } = data;
+    const pendingRequests = requests.filter(r => r.status === 'pending');
+    const pastRequests = requests.filter(r => r.status !== 'pending');
 
     return (
         <div className="space-y-8">
@@ -115,7 +118,7 @@ export default function ApprovalsClient() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {requests.length > 0 ? requests.map((item: any) => {
+                            {pendingRequests.length > 0 ? pendingRequests.map((item: any) => {
                                 const requestUser = users.find(u => u.id === item.requestedById);
                                 return (
                                     <TableRow key={item.id}>
@@ -136,6 +139,55 @@ export default function ApprovalsClient() {
                                     <TableCell colSpan={5} className="h-24 text-center">
                                         <Inbox className="mx-auto h-8 w-8 text-muted-foreground" />
                                         <p className="mt-2">No pending requests.</p>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Request History</CardTitle>
+                    <CardDescription>A log of all past procurement approvals and rejections.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Request</TableHead>
+                                <TableHead>Requested By</TableHead>
+                                <TableHead>Reviewed By</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {pastRequests.length > 0 ? pastRequests.map((item: any) => {
+                                const requestUser = users.find(u => u.id === item.requestedById);
+                                const reviewedByUser = users.find(u => u.id === (item.approvedById || item.rejectedById));
+                                return (
+                                    <TableRow key={item.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{item.itemName}</div>
+                                            <div className="text-xs text-muted-foreground">{format(item.createdAt.toDate(), "MMM d, yyyy")}</div>
+                                        </TableCell>
+                                        <TableCell>{requestUser?.name || 'Unknown'}</TableCell>
+                                        <TableCell>{reviewedByUser?.name || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={item.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">
+                                                {item.status}
+                                            </Badge>
+                                             {item.rejectionReason && (
+                                                <p className="text-xs text-muted-foreground mt-1 max-w-xs">{item.rejectionReason}</p>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            }) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No past requests found.
                                     </TableCell>
                                 </TableRow>
                             )}
