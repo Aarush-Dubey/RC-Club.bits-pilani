@@ -5,7 +5,7 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertTriangle, CheckCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { ChartOfAccount } from "./actions";
 
 interface BalanceSheetProps {
@@ -180,4 +180,3 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
         </Card>
     );
 }
-
