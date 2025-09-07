@@ -146,7 +146,7 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                                 <Command>
                                                     <CommandInput placeholder="Search accounts..." />
-                                                    <CommandList>
+                                                    <CommandList className="max-h-60">
                                                         <CommandEmpty>No account found.</CommandEmpty>
                                                         <CommandGroup>
                                                             {chartOfAccounts.map((acc) => (
