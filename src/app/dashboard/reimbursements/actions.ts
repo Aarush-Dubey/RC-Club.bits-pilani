@@ -52,14 +52,13 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
         
         // --- Create Transaction Entry ---
         await addTransaction({
-            type: 'expense',
-            category: "Reimbursements",
-            description: `Paid reimbursement to ${userName}`,
-            amount: reimbursementData.amount,
             date: new Date().toISOString().split('T')[0],
-            payee: reimbursementData.submittedById, // Use the ID of the person being paid
-            reimbursementId: reimbursementId, // Link to the reimbursement
-            createdBy: paidById, // The user who marks it as paid is the creator of the transaction
+            narration: `Paid reimbursement to ${userName} for "${reimbursementData.notes}"`,
+            createdById: paidById,
+            lines: [
+                { acctCode: '2020', debitMinor: reimbursementData.amount * 100, creditMinor: 0 }, // Debit Reimbursements Payable
+                { acctCode: '1010', debitMinor: 0, creditMinor: reimbursementData.amount * 100 }, // Credit Cash/Bank
+            ]
         });
 
         // --- Update Reimbursement Status ---

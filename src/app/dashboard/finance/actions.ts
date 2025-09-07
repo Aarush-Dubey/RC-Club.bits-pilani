@@ -28,15 +28,22 @@ export interface TransactionData {
 }
 
 const serializeObject = (obj: any): any => {
+    if (!obj) return obj;
     const serializedData: { [key: string]: any } = {};
     for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            if (obj[key]?.toDate) {
-                serializedData[key] = obj[key].toDate().toISOString();
-            } else if (obj[key] instanceof Timestamp) {
-                serializedData[key] = obj[key].toDate().toISOString();
-            } else {
-                serializedData[key] = obj[key];
+            const value = obj[key];
+            if (value?.toDate) {
+                serializedData[key] = value.toDate().toISOString();
+            } else if (value instanceof Timestamp) {
+                serializedData[key] = value.toDate().toISOString();
+            } else if (Array.isArray(value)) {
+                 serializedData[key] = value.map(serializeObject);
+            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                serializedData[key] = serializeObject(value);
+            }
+            else {
+                serializedData[key] = value;
             }
         }
     }
@@ -49,7 +56,7 @@ export async function getChartOfAccounts(): Promise<ChartOfAccount[]> {
 }
 
 export async function getTransactions() {
-    const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
+    const transactionsQuery = query(collection(db, "transactions"));
     const transactionsSnap = await getDocs(transactionsQuery);
     
     const linesCollection = collection(db, 'transaction_lines');
@@ -75,7 +82,7 @@ export async function getTransactions() {
     });
 
     // Sort by entryNumber in descending order after fetching
-    transactions.sort((a, b) => b.entryNumber - a.entryNumber);
+    transactions.sort((a, b) => (b.entryNumber || 0) - (a.entryNumber || 0));
 
     return JSON.parse(JSON.stringify(transactions));
 }
@@ -118,13 +125,15 @@ export async function addTransaction(data: TransactionData) {
 
         // 2. Create the transaction line documents
         data.lines.forEach(line => {
-            const lineRef = doc(collection(db, "transaction_lines"));
-            transaction.set(lineRef, {
-                transactionId: transactionRef.id,
-                acctCode: line.acctCode,
-                debitMinor: line.debitMinor,
-                creditMinor: line.creditMinor,
-            });
+            if(line.debitMinor > 0 || line.creditMinor > 0) {
+                const lineRef = doc(collection(db, "transaction_lines"));
+                transaction.set(lineRef, {
+                    transactionId: transactionRef.id,
+                    acctCode: line.acctCode,
+                    debitMinor: line.debitMinor,
+                    creditMinor: line.creditMinor,
+                });
+            }
         });
 
         // 3. Log the audit event
@@ -140,6 +149,7 @@ export async function addTransaction(data: TransactionData) {
         // 4. Update the counter
         transaction.set(counterRef, { lastNumber: newEntryNumber }, { merge: true });
 
+        revalidatePath('/dashboard/finance');
         return { transactionId: transactionRef.id, entryNumber: newEntryNumber };
     });
 }
@@ -148,13 +158,19 @@ export async function reverseTransaction(transactionId: string, reversedById: st
     if (!reversedById) {
         throw new Error("User must be authenticated.");
     }
+    if (!reason) {
+        throw new Error("A reason is required for reversal.");
+    }
 
     return await runTransaction(db, async (t) => {
         const originalTxRef = doc(db, "transactions", transactionId);
         const originalTxSnap = await t.get(originalTxRef);
 
-        if (!originalTxSnap.exists() || originalTxSnap.data().isReversed) {
-            throw new Error("Transaction not found or already reversed.");
+        if (!originalTxSnap.exists()) {
+            throw new Error("Transaction not found.");
+        }
+        if (originalTxSnap.data().isReversed) {
+             throw new Error("This transaction has already been reversed.");
         }
 
         // Get original lines
@@ -162,7 +178,7 @@ export async function reverseTransaction(transactionId: string, reversedById: st
         const linesSnap = await getDocs(linesQuery);
         const originalLines = linesSnap.docs.map(d => d.data());
 
-        // Create the reversing transaction
+        // Create the reversing transaction data
         const reversingLines: TransactionLine[] = originalLines.map(line => ({
             acctCode: line.acctCode,
             debitMinor: line.creditMinor, // Swap debit and credit
@@ -176,11 +192,14 @@ export async function reverseTransaction(transactionId: string, reversedById: st
             createdById: reversedById
         };
 
-        // Use the addTransaction logic within this transaction for consistency
+        // --- Use the addTransaction logic within this transaction for consistency ---
+        
+        // Get new entry number
         const counterRef = doc(db, 'system_counters', 'transactions');
         const counterDoc = await t.get(counterRef);
         const newEntryNumber = (counterDoc.data()?.lastNumber || 0) + 1;
 
+        // Create new transaction document for the reversal
         const newTxRef = doc(collection(db, "transactions"));
         t.set(newTxRef, {
             entryNumber: newEntryNumber,
@@ -188,16 +207,20 @@ export async function reverseTransaction(transactionId: string, reversedById: st
             narration: reversalData.narration,
             createdById: reversalData.createdById,
             createdAt: serverTimestamp(),
-            isReversed: false,
+            isReversed: false, // The reversal itself is not reversed
             reversesTransactionId: transactionId,
         });
 
+        // Create the corresponding lines
         reversalData.lines.forEach(line => {
             const lineRef = doc(collection(db, "transaction_lines"));
             t.set(lineRef, { ...line, transactionId: newTxRef.id });
         });
 
+        // Update the counter
         t.set(counterRef, { lastNumber: newEntryNumber });
+        
+        // --- End of addTransaction logic ---
 
         // Mark original transaction as reversed
         t.update(originalTxRef, {
@@ -216,6 +239,7 @@ export async function reverseTransaction(transactionId: string, reversedById: st
             newValue: `Reversed with new transaction ${newTxRef.id}`
         });
 
-        return { reversalTransactionId: newTxRef.id };
+        revalidatePath('/dashboard/finance');
+        return { reversalTransactionId: newTxRef.id, newEntryNumber };
     });
 }
