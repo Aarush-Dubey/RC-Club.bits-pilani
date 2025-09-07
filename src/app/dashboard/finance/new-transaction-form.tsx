@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react";
@@ -21,7 +22,16 @@ const transactionLineSchema = z.object({
   acctCode: z.string().min(1, "Account is required."),
   debit: z.string().optional(),
   credit: z.string().optional(),
+}).refine(line => {
+    const debit = parseFloat(line.debit || '0');
+    const credit = parseFloat(line.credit || '0');
+    // A line must have either a debit or a credit, but not both.
+    return (debit > 0 && credit === 0) || (credit > 0 && debit === 0);
+}, {
+    message: "Enter a debit or a credit.",
+    path: ['debit'] // Show error on one field for simplicity
 });
+
 
 const formSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date." }),
