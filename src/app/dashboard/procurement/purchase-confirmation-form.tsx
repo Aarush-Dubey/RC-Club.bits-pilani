@@ -45,6 +45,7 @@ export function PurchaseConfirmationForm({ onFormSubmit, currentUser, procuremen
     resolver: zodResolver(formSchema),
     defaultValues: {
         actualCost: procurementRequest.expectedCost,
+        vendor: "",
     }
   });
 
