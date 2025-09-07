@@ -12,9 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Loader2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PlusCircle, Trash2, Loader2, ChevronsUpDown, Check } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const transactionLineSchema = z.object({
   acctCode: z.string().min(1, "Account is required."),
@@ -128,16 +130,42 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                                 name={`lines.${index}.acctCode`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger><SelectValue placeholder="Select Account" /></SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {chartOfAccounts.map(acc => (
-                                                    <SelectItem key={acc.id} value={acc.id}>{acc.id} - {acc.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                                    >
+                                                        {field.value ? chartOfAccounts.find(acc => acc.id === field.value)?.name : "Select Account"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search accounts..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No account found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {chartOfAccounts.map((acc) => (
+                                                                <CommandItem
+                                                                    value={`${acc.name} ${acc.id}`}
+                                                                    key={acc.id}
+                                                                    onSelect={() => {
+                                                                        form.setValue(`lines.${index}.acctCode`, acc.id);
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn("mr-2 h-4 w-4", acc.id === field.value ? "opacity-100" : "opacity-0")} />
+                                                                    {acc.id} - {acc.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage/>
                                     </FormItem>
                                 )}
@@ -191,4 +219,3 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
         </Form>
     );
 }
-
