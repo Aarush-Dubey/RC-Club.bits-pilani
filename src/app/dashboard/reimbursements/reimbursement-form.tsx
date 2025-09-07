@@ -121,13 +121,13 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
 
     try {
       const authParams = await authenticator();
+      console.log('Hi :', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY);
       const uploadResponse = await upload({
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
         ...authParams,
         file: selectedFile,
         fileName: selectedFile.name,
       });
-
       const reimbursementData: any = {
         amount: parseFloat(amount),
         notes,

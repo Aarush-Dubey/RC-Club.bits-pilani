@@ -23,11 +23,8 @@ const formatCurrency = (minorAmount: number) => {
 
 const calculateBalances = (accounts: ChartOfAccount[], transactions: any[]) => {
     const balances: Record<string, number> = {};
-    const auditTrail: Record<string, { debits: number; credits: number; transactions: number }> = {};
-    
     accounts.forEach(acc => {
         balances[acc.id] = 0;
-        auditTrail[acc.id] = { debits: 0, credits: 0, transactions: 0 };
     });
 
     const validTransactions = transactions.filter(tx => !tx.isReversed);
@@ -36,7 +33,7 @@ const calculateBalances = (accounts: ChartOfAccount[], transactions: any[]) => {
         const totalDebits = tx.lines.reduce((sum: number, line: any) => sum + (line.debitMinor || 0), 0);
         const totalCredits = tx.lines.reduce((sum: number, line: any) => sum + (line.creditMinor || 0), 0);
         
-        if (totalDebits !== totalCredits) {
+        if (Math.abs(totalDebits - totalCredits) > 1) { // Allow for rounding differences
             console.warn(`Unbalanced transaction ${tx.entryNumber}: Debits ${totalDebits} ≠ Credits ${totalCredits}`);
             return;
         }
@@ -45,32 +42,18 @@ const calculateBalances = (accounts: ChartOfAccount[], transactions: any[]) => {
             const account = accounts.find(a => a.id === line.acctCode);
             if (!account) return;
             
-            const hasDebit = (line.debitMinor || 0) > 0;
-            const hasCredit = (line.creditMinor || 0) > 0;
+            const debit = line.debitMinor || 0;
+            const credit = line.creditMinor || 0;
             
-            if (hasDebit && hasCredit) {
-                console.warn(`Invalid line in transaction ${tx.entryNumber}: Line has both debit and credit`);
-                return;
-            }
-            
-            const debit = hasDebit ? line.debitMinor : 0;
-            const credit = hasCredit ? line.creditMinor : 0;
-            
-            auditTrail[line.acctCode].debits += debit;
-            auditTrail[line.acctCode].credits += credit;
-            auditTrail[line.acctCode].transactions += 1;
-            
-            balances[line.acctCode] = account.isDebitNormal
-                ? (balances[line.acctCode] || 0) + (debit - credit)
-                : (balances[line.acctCode] || 0) + (credit - debit);
+            balances[line.acctCode] = (balances[line.acctCode] || 0) + (account.isDebitNormal ? (debit - credit) : (credit - debit));
         });
     });
 
-    return { balances, auditTrail };
+    return balances;
 };
 
 export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceSheetProps) {
-    const { balances, auditTrail } = calculateBalances(chartOfAccounts, transactions);
+    const balances = calculateBalances(chartOfAccounts, transactions);
 
     const generateSection = (group: string) => {
         const accounts = chartOfAccounts.filter(acc => acc.group === group);
@@ -78,7 +61,6 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
             .map(acc => ({ 
                 ...acc, 
                 balance: balances[acc.id] || 0,
-                audit: auditTrail[acc.id]
             }))
             .filter(acc => acc.balance !== 0);
             
@@ -88,53 +70,114 @@ export default function BalanceSheet({ chartOfAccounts, transactions }: BalanceS
 
     const sections = {
         'Current Assets': generateSection('Current Assets'),
+        'Fixed Assets': generateSection('Fixed Assets'),
         'Current Liabilities': generateSection('Current Liabilities'),
+        'Equity': generateSection('Equity'),
     };
 
-    const totalAssets = sections['Current Assets'].total;
+    const totalAssets = sections['Current Assets'].total + sections['Fixed Assets'].total;
     const totalLiabilities = sections['Current Liabilities'].total;
+    const totalEquity = sections['Equity'].total;
+    const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
+
+    const isBalanced = Math.abs(totalAssets - totalLiabilitiesAndEquity) < 1;
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Current Assets & Liabilities</CardTitle>
-                <CardDescription>A snapshot of the club's short-term financial position.</CardDescription>
+                <CardTitle>Balance Sheet</CardTitle>
+                <CardDescription>A snapshot of the club's financial position as of today.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Account</TableHead>
+                            <TableHead className="w-[60%]">Account</TableHead>
                             <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {/* ASSETS */}
                         <TableRow className="bg-muted/50 font-bold">
-                            <TableCell>Current Assets</TableCell>
-                            <TableCell className="text-right">{formatCurrency(totalAssets)}</TableCell>
+                            <TableCell>Assets</TableCell>
+                            <TableCell></TableCell>
+                        </TableRow>
+                        <TableRow className="font-semibold">
+                            <TableCell className="pl-6">Current Assets</TableCell>
+                            <TableCell className="text-right">{formatCurrency(sections['Current Assets'].total)}</TableCell>
                         </TableRow>
                         {sections['Current Assets'].accounts.map(acc => (
                             <TableRow key={acc.id}>
-                                <TableCell className="pl-6">{acc.name}</TableCell>
+                                <TableCell className="pl-12">{acc.name}</TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
                             </TableRow>
                         ))}
+                        <TableRow className="font-semibold">
+                            <TableCell className="pl-6">Fixed Assets</TableCell>
+                            <TableCell className="text-right">{formatCurrency(sections['Fixed Assets'].total)}</TableCell>
+                        </TableRow>
+                        {sections['Fixed Assets'].accounts.map(acc => (
+                            <TableRow key={acc.id}>
+                                <TableCell className="pl-12">{acc.name}</TableCell>
+                                <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
+                            </TableRow>
+                        ))}
+                        <TableRow className="font-bold border-y-2 border-primary/50">
+                            <TableCell>Total Assets</TableCell>
+                            <TableCell className="text-right">{formatCurrency(totalAssets)}</TableCell>
+                        </TableRow>
+
+                        {/* SPACER */}
+                        <TableRow><TableCell colSpan={2}>&nbsp;</TableCell></TableRow>
                       
-                        {/* LIABILITIES */}
-                         <TableRow className="bg-muted/50 font-bold">
-                            <TableCell>Current Liabilities</TableCell>
+                        {/* LIABILITIES & EQUITY */}
+                        <TableRow className="bg-muted/50 font-bold">
+                            <TableCell>Liabilities & Equity</TableCell>
+                            <TableCell></TableCell>
+                        </TableRow>
+                         <TableRow className="font-semibold">
+                            <TableCell className="pl-6">Current Liabilities</TableCell>
                             <TableCell className="text-right">{formatCurrency(totalLiabilities)}</TableCell>
                         </TableRow>
                         {sections['Current Liabilities'].accounts.map(acc => (
                             <TableRow key={acc.id}>
-                                <TableCell className="pl-6">{acc.name}</TableCell>
+                                <TableCell className="pl-12">{acc.name}</TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
                             </TableRow>
                         ))}
+                         <TableRow className="font-semibold">
+                            <TableCell className="pl-6">Equity</TableCell>
+                            <TableCell className="text-right">{formatCurrency(totalEquity)}</TableCell>
+                        </TableRow>
+                        {sections['Equity'].accounts.map(acc => (
+                            <TableRow key={acc.id}>
+                                <TableCell className="pl-12">{acc.name}</TableCell>
+                                <TableCell className="text-right font-mono">{formatCurrency(acc.balance)}</TableCell>
+                            </TableRow>
+                        ))}
+                         <TableRow className="font-bold border-y-2 border-primary/50">
+                            <TableCell>Total Liabilities & Equity</TableCell>
+                            <TableCell className="text-right">{formatCurrency(totalLiabilitiesAndEquity)}</TableCell>
+                        </TableRow>
+
+                        {/* VERIFICATION */}
+                        <TableRow className="border-none">
+                            <TableCell colSpan={2} className="pt-6">
+                                <div className={cn(
+                                    "flex items-center justify-center gap-2 rounded-lg p-3 text-sm",
+                                    isBalanced ? "bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                )}>
+                                    {isBalanced ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                                    <span>
+                                        Assets ({formatCurrency(totalAssets)}) = Liabilities + Equity ({formatCurrency(totalLiabilitiesAndEquity)})
+                                    </span>
+                                </div>
+                            </TableCell>
+                        </TableRow>
                     </TableBody>
                 </Table>
             </CardContent>
         </Card>
     );
 }
+
