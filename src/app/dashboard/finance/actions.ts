@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, serverTimestamp, runTransaction, getDocs, writeBatch, query, orderBy, Timestamp, where } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, serverTimestamp, runTransaction, getDocs, writeBatch, query, orderBy, Timestamp, where, type Transaction as FirestoreTransaction } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // All monetary values are handled as integers in minor units (e.g., paise, cents)
@@ -88,7 +88,7 @@ export async function getTransactions() {
 }
 
 
-export async function addTransaction(data: TransactionData) {
+export async function addTransaction(data: TransactionData, existingTransaction?: FirestoreTransaction) {
     if (!data.createdById) {
         throw new Error("User must be authenticated.");
     }
@@ -105,8 +105,8 @@ export async function addTransaction(data: TransactionData) {
     if (totalDebits === 0) {
         throw new Error("Transaction amount cannot be zero.");
     }
-
-    return await runTransaction(db, async (transaction) => {
+    
+    const transactionLogic = async (transaction: FirestoreTransaction) => {
         // Get the latest entry number to increment it
         const counterRef = doc(db, 'system_counters', 'transactions');
         const counterDoc = await transaction.get(counterRef);
@@ -151,7 +151,13 @@ export async function addTransaction(data: TransactionData) {
 
         revalidatePath('/dashboard/finance');
         return { transactionId: transactionRef.id, entryNumber: newEntryNumber };
-    });
+    }
+
+    if (existingTransaction) {
+      return transactionLogic(existingTransaction);
+    } else {
+      return runTransaction(db, transactionLogic);
+    }
 }
 
 export async function reverseTransaction(transactionId: string, reversedById: string, reason: string) {
@@ -193,33 +199,7 @@ export async function reverseTransaction(transactionId: string, reversedById: st
         };
 
         // --- Use the addTransaction logic within this transaction for consistency ---
-        
-        // Get new entry number
-        const counterRef = doc(db, 'system_counters', 'transactions');
-        const counterDoc = await t.get(counterRef);
-        const newEntryNumber = (counterDoc.data()?.lastNumber || 0) + 1;
-
-        // Create new transaction document for the reversal
-        const newTxRef = doc(collection(db, "transactions"));
-        t.set(newTxRef, {
-            entryNumber: newEntryNumber,
-            date: Timestamp.now(),
-            narration: reversalData.narration,
-            createdById: reversalData.createdById,
-            createdAt: serverTimestamp(),
-            isReversed: false, // The reversal itself is not reversed
-            reversesTransactionId: transactionId,
-        });
-
-        // Create the corresponding lines
-        reversalData.lines.forEach(line => {
-            const lineRef = doc(collection(db, "transaction_lines"));
-            t.set(lineRef, { ...line, transactionId: newTxRef.id });
-        });
-
-        // Update the counter
-        t.set(counterRef, { lastNumber: newEntryNumber });
-        
+        await addTransaction(reversalData, t);
         // --- End of addTransaction logic ---
 
         // Mark original transaction as reversed
@@ -236,10 +216,9 @@ export async function reverseTransaction(transactionId: string, reversedById: st
             userId: reversedById,
             actionType: 'REVERSE_TRANSACTION',
             referenceId: transactionId,
-            newValue: `Reversed with new transaction ${newTxRef.id}`
+            newValue: `Reversed with new transaction`
         });
 
         revalidatePath('/dashboard/finance');
-        return { reversalTransactionId: newTxRef.id, newEntryNumber };
     });
 }
