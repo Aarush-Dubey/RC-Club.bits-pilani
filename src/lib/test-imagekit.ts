@@ -10,7 +10,7 @@
  */
 
 import 'dotenv/config';
-import { getUploadAuthParams } from "@imagekit/next/server";
+import { getUploadAuthParams } from "@imagekit/next/dist/src/getUploadAuthParams";
 import { randomUUID } from 'crypto';
 
 async function testImageKitAuth() {
