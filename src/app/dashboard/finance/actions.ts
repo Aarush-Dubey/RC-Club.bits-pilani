@@ -222,3 +222,52 @@ export async function reverseTransaction(transactionId: string, reversedById: st
         revalidatePath('/dashboard/finance');
     });
 }
+
+export async function retireAsset(assetId: string, reason: string, retiredById: string) {
+    if (!retiredById) throw new Error("User is not authenticated.");
+    if (!reason) throw new Error("A reason for retirement is required.");
+
+    await runTransaction(db, async (t) => {
+        const assetRef = doc(db, "procurement_requests", assetId);
+        const assetSnap = await t.get(assetRef);
+
+        if (!assetSnap.exists()) {
+            throw new Error("Asset not found.");
+        }
+
+        const assetData = assetSnap.data();
+
+        if (assetData.itemType !== 'asset') {
+            throw new Error("This item is not a capital asset and cannot be retired.");
+        }
+        if (assetData.status === 'retired') {
+            throw new Error("This asset has already been retired.");
+        }
+
+        const costMinor = (assetData.actualCost || assetData.expectedCost || 0) * 100;
+        if(costMinor <= 0) {
+            throw new Error("Asset cost is zero or unknown, cannot retire.");
+        }
+
+        // Create the retirement journal entry
+        await addTransaction({
+            date: new Date().toISOString().split('T')[0],
+            narration: `Retirement of asset: ${assetData.itemName}. Reason: ${reason}`,
+            createdById: retiredById,
+            lines: [
+                { acctCode: '5050', debitMinor: costMinor, creditMinor: 0 }, // Debit Loss on Asset Retirement
+                { acctCode: '1210', debitMinor: 0, creditMinor: costMinor }, // Credit General Equipment
+            ]
+        }, t);
+
+        // Update the asset (procurement request) status
+        t.update(assetRef, {
+            status: "retired",
+            retiredAt: serverTimestamp(),
+            retiredById,
+            retirementReason: reason,
+        });
+    });
+
+    revalidatePath("/dashboard/finance/assets");
+}

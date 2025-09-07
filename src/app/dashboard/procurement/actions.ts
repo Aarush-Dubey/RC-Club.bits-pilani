@@ -47,15 +47,15 @@ export async function approveNewItemRequest(requestId: string, approverId: strin
         const userSnap = await transaction.get(userRef);
         const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
 
-        const expenseAcct = requestData.itemType === 'consumable' ? '5030' : '5010'; // Consumables vs Equipment Expense
-        const narration = `Approved procurement request for ${requestData.itemName} by ${userName}.`;
+        const debitAcct = requestData.itemType === 'consumable' ? '5030' : '1210'; // 5030 for Consumables, 1210 for General Equipment (Asset)
+        const narration = `Approved procurement for ${requestData.itemName} by ${userName}.`;
 
         await addTransaction({
             date: new Date().toISOString().split('T')[0],
             narration,
             createdById: approverId,
             lines: [
-                { acctCode: expenseAcct, debitMinor: requestData.expectedCost * 100, creditMinor: 0 },
+                { acctCode: debitAcct, debitMinor: requestData.expectedCost * 100, creditMinor: 0 },
                 { acctCode: '2020', debitMinor: 0, creditMinor: requestData.expectedCost * 100 }, // Credit Reimbursements Payable
             ]
         }, transaction);

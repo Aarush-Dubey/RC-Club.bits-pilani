@@ -8,7 +8,6 @@ const chartOfAccounts = [
     { id: '1020', name: 'Accounts Receivable', group: 'Current Assets', isDebitNormal: true },
     { id: '1030', name: 'Inventory - Perishables', group: 'Current Assets', isDebitNormal: true },
     { id: '1210', name: 'General Equipment', group: 'Fixed Assets', isDebitNormal: true },
-    { id: '1220', name: 'Competition Equipment', group: 'Fixed Assets', isDebitNormal: true },
 
     // Liabilities
     { id: '2010', name: 'Accounts Payable', group: 'Current Liabilities', isDebitNormal: false },
@@ -23,10 +22,11 @@ const chartOfAccounts = [
     { id: '4020', name: 'Event Income', group: 'Revenue', isDebitNormal: false },
 
     // Expenses
-    { id: '5010', name: 'Equipment Purchase', group: 'Expenses', isDebitNormal: true },
+    { id: '5010', name: 'Equipment Purchase (Deprecated)', group: 'Expenses', isDebitNormal: true }, // Kept for historical data
     { id: '5020', name: 'Event Expenses', group: 'Expenses', isDebitNormal: true },
     { id: '5030', name: 'Consumables & Parts', group: 'Expenses', isDebitNormal: true },
     { id: '5040', name: 'Bank Fees', group: 'Expenses', isDebitNormal: true },
+    { id: '5050', name: 'Loss on Asset Retirement', group: 'Expenses', isDebitNormal: true },
 ];
 
 const seedCollection = async (collectionName: string, data: any[]) => {

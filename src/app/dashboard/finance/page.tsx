@@ -7,6 +7,7 @@ import BalanceSheet from "./balance-sheet";
 import Logbook from "./logbook";
 import { getChartOfAccounts, getTransactions, type ChartOfAccount } from './actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import AssetRegister from './asset-register';
 
 export default function FinancePage() {
   const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccount[]>([]);
@@ -57,6 +58,7 @@ export default function FinancePage() {
         <TabsList>
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
           <TabsTrigger value="logbook">Logbook</TabsTrigger>
+          <TabsTrigger value="assets">Asset Register</TabsTrigger>
         </TabsList>
         
         <TabsContent value="balance-sheet" className="space-y-4">
@@ -65,6 +67,10 @@ export default function FinancePage() {
         
         <TabsContent value="logbook" className="space-y-4">
           <Logbook chartOfAccounts={chartOfAccounts} transactions={transactions} onUpdate={fetchData} />
+        </TabsContent>
+
+        <TabsContent value="assets" className="space-y-4">
+          <AssetRegister onUpdate={fetchData} />
         </TabsContent>
       </Tabs>
     </div>
