@@ -26,10 +26,18 @@ const transactionLineSchema = z.object({
     const debit = parseFloat(line.debit || '0');
     const credit = parseFloat(line.credit || '0');
     // A line must have either a debit or a credit, but not both.
-    return (debit > 0 && credit === 0) || (credit > 0 && debit === 0);
+    return !((debit > 0) && (credit > 0));
 }, {
-    message: "Enter a debit or a credit.",
+    message: "Use one column.",
     path: ['debit'] // Show error on one field for simplicity
+}).refine(line => {
+    const debit = parseFloat(line.debit || '0');
+    const credit = parseFloat(line.credit || '0');
+    // A line must have a value.
+    return debit > 0 || credit > 0;
+}, {
+    message: "Entry required.",
+    path: ['debit']
 });
 
 
@@ -101,6 +109,7 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
     const lines = form.watch("lines");
     const totalDebits = lines.reduce((sum, line) => sum + parseFloat(line.debit || '0'), 0);
     const totalCredits = lines.reduce((sum, line) => sum + parseFloat(line.credit || '0'), 0);
+    const balanceError = form.formState.errors.lines?.root?.message;
 
 
     return (
@@ -152,26 +161,33 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                                                     </Button>
                                                 </FormControl>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px] overflow-hidden">
-                                                <Command className="w-full">
-                                                    <CommandInput placeholder="Search accounts..." className="h-9" />
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search accounts..." />
+                                                    <CommandList>
                                                     <CommandEmpty>No account found.</CommandEmpty>
                                                     <CommandGroup>
-                                                        <CommandList className="max-h-[200px] overflow-y-auto">
-                                                            {chartOfAccounts.map((acc) => (
-                                                                <CommandItem
-                                                                    value={`${acc.name} ${acc.id}`}
-                                                                    key={acc.id}
-                                                                    onSelect={() => {
-                                                                        form.setValue(`lines.${index}.acctCode`, acc.id);
-                                                                    }}
-                                                                >
-                                                                    <Check className={cn("mr-2 h-4 w-4", acc.id === field.value ? "opacity-100" : "opacity-0")} />
-                                                                    {acc.id} - {acc.name}
-                                                                </CommandItem>
-                                                            ))}
-                                                        </CommandList>
+                                                        {chartOfAccounts.map((acc) => (
+                                                        <CommandItem
+                                                            value={`${acc.name} ${acc.id}`}
+                                                            key={acc.id}
+                                                            onSelect={() => {
+                                                            form.setValue(`lines.${index}.acctCode`, acc.id)
+                                                            }}
+                                                        >
+                                                            <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                acc.id === field.value
+                                                                ? "opacity-100"
+                                                                : "opacity-0"
+                                                            )}
+                                                            />
+                                                            {acc.id} - {acc.name}
+                                                        </CommandItem>
+                                                        ))}
                                                     </CommandGroup>
+                                                    </CommandList>
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
@@ -215,8 +231,8 @@ export function NewTransactionForm({ chartOfAccounts, onFormSubmit }: { chartOfA
                         <p className="text-xs text-muted-foreground">Debits: {totalDebits.toFixed(2)}</p>
                          <p className="text-xs text-muted-foreground">Credits: {totalCredits.toFixed(2)}</p>
                     </div>
-                    {form.formState.errors.lines && (
-                         <span className="text-sm text-destructive">{form.formState.errors.lines.message}</span>
+                    {balanceError && (
+                         <span className="text-sm text-destructive">{balanceError}</span>
                     )}
                  </div>
 
