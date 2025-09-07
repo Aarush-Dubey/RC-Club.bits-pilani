@@ -22,18 +22,13 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
     
     await runTransaction(db, async (transaction) => {
         const reimbursementRef = doc(db, "reimbursements", reimbursementId);
+        
+        // --- 1. READ PHASE ---
         const reimbursementSnap = await transaction.get(reimbursementRef);
         if (!reimbursementSnap.exists() || reimbursementSnap.data().status !== 'pending') {
             throw new Error("Reimbursement must be in a pending state to be paid.");
         }
         const reimbursementData = reimbursementSnap.data();
-        
-        // Mark reimbursement as paid
-        transaction.update(reimbursementRef, {
-            status: "paid",
-            paidAt: serverTimestamp(),
-            paidById: paidById,
-        });
 
         const procurementRequestRef = doc(db, "procurement_requests", reimbursementData.procurementRequestId);
         const procurementRequestSnap = await transaction.get(procurementRequestRef);
@@ -41,6 +36,15 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
             throw new Error("Associated procurement request not found.");
         }
         const procurementData = procurementRequestSnap.data();
+
+        // --- 2. WRITE PHASE ---
+        
+        // Mark reimbursement as paid
+        transaction.update(reimbursementRef, {
+            status: "paid",
+            paidAt: serverTimestamp(),
+            paidById: paidById,
+        });
         
         // Update procurement request status
         transaction.update(procurementRequestRef, { status: "reimbursed" });
@@ -71,7 +75,7 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
 export async function getPayableSummary() {
     const q = query(
         collection(db, 'reimbursements'),
-        where('status', '==', 'approved') // This might need to be 'pending' now
+        where('status', '==', 'pending')
     );
     const snapshot = await getDocs(q);
 
