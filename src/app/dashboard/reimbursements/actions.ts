@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/firebase"
 import { doc, serverTimestamp, updateDoc, addDoc, collection, runTransaction, getDoc, setDoc, writeBatch, query, where, getDocs } from "firebase/firestore"
-import { addTransaction } from "../finance/actions"
+// import { addTransaction } from "../finance/actions"
 
 export async function approveReimbursement(reimbursementId: string, reviewedById: string) {
     if (!reviewedById) throw new Error("User is not authenticated.");
@@ -41,21 +41,8 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
             throw new Error("Reimbursement must be approved before it can be paid.");
         }
         const reimbursementData = reimbursementSnap.data();
-
-        const userRef = doc(db, "users", reimbursementData.submittedById);
-        const userSnap = await transaction.get(userRef);
-        const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
         
-        await addTransaction({
-            date: new Date().toISOString().split('T')[0],
-            narration: `Paid reimbursement to ${userName} for request ID ${reimbursementId.substring(0,5)}`,
-            createdById: paidById,
-            lines: [
-                { acctCode: '2020', debitMinor: reimbursementData.amount * 100, creditMinor: 0 },
-                { acctCode: '1010', debitMinor: 0, creditMinor: reimbursementData.amount * 100 },
-            ]
-        }, transaction);
-
+        // Mark reimbursement as paid
         transaction.update(reimbursementRef, {
             status: "paid",
             paidAt: serverTimestamp(),
@@ -63,12 +50,35 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
         });
 
         const procurementRequestRef = doc(db, "procurement_requests", reimbursementData.procurementRequestId);
+        const procurementRequestSnap = await transaction.get(procurementRequestRef);
+        if (!procurementRequestSnap.exists()) {
+            throw new Error("Associated procurement request not found.");
+        }
+        const procurementData = procurementRequestSnap.data();
+        
+        // Update procurement request status
         transaction.update(procurementRequestRef, { status: "reimbursed" });
+
+        // If the item was an asset, add it to the inventory
+        if (procurementData.itemType === 'asset') {
+            const newItemRef = doc(collection(db, "inventory_items"));
+            transaction.set(newItemRef, {
+                id: newItemRef.id,
+                name: procurementData.itemName,
+                description: `Procured on ${new Date().toLocaleDateString()}. Request: ${procurementData.id}`,
+                totalQuantity: 1, // Procured items are typically single assets
+                availableQuantity: 1,
+                checkedOutQuantity: 0,
+                isPerishable: false,
+                location: 'To be assigned',
+                createdAt: serverTimestamp(),
+            });
+        }
     });
 
     revalidatePath("/dashboard/reimbursements");
-    revalidatePath("/dashboard/finance");
     revalidatePath("/dashboard/procurement");
+    revalidatePath("/dashboard/inventory");
 }
 
 
