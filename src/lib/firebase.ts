@@ -6,8 +6,8 @@
  */
 // Import the functions you need from the SDKs you need
 
-import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+import { config } from 'dotenv';
+config();
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";

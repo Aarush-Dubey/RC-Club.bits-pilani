@@ -5,7 +5,8 @@
  * which are then sent to the client to authorize direct image uploads to ImageKit.
  * This prevents exposing the private API key in the browser.
  */
-import 'dotenv/config';
+import { config } from 'dotenv';
+config();
 import { getUploadAuthParams } from "@imagekit/next/server"
 
 export async function GET() {
