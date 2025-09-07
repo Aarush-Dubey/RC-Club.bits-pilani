@@ -27,6 +27,22 @@ export interface TransactionData {
     createdById: string;
 }
 
+const serializeObject = (obj: any): any => {
+    const serializedData: { [key: string]: any } = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            if (obj[key]?.toDate) {
+                serializedData[key] = obj[key].toDate().toISOString();
+            } else if (obj[key] instanceof Timestamp) {
+                serializedData[key] = obj[key].toDate().toISOString();
+            } else {
+                serializedData[key] = obj[key];
+            }
+        }
+    }
+    return serializedData;
+};
+
 export async function getChartOfAccounts(): Promise<ChartOfAccount[]> {
     const snapshot = await getDocs(query(collection(db, "chart_of_accounts"), orderBy("id")));
     return snapshot.docs.map(doc => doc.data() as ChartOfAccount);
@@ -50,11 +66,10 @@ export async function getTransactions() {
 
     const transactions = transactionsSnap.docs.map(doc => {
         const data = doc.data();
+        const serializedData = serializeObject(data);
         return {
             id: doc.id,
-            ...data,
-            date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+            ...serializedData,
             lines: linesByTransactionId[doc.id] || []
         }
     });
@@ -62,7 +77,7 @@ export async function getTransactions() {
     // Sort by entryNumber in descending order after fetching
     transactions.sort((a, b) => b.entryNumber - a.entryNumber);
 
-    return transactions;
+    return JSON.parse(JSON.stringify(transactions));
 }
 
 
