@@ -34,7 +34,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 const getStatusConfig = (status: string) => {
   switch (status) {
     case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' };
-    case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
     case 'paid': return { color: 'bg-green-500', tooltip: 'Paid' };
     case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
     default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
@@ -58,18 +57,32 @@ const StatusCircle = ({ status }: { status: string }) => {
   );
 };
 
+const serializeData = (data: any) => {
+    if (!data) return data;
+    if (data.toDate) return data.toDate().toISOString();
+    if (Array.isArray(data)) return data.map(serializeData);
+    if (typeof data === 'object') {
+        const res: { [key: string]: any } = {};
+        for (const key of Object.keys(data)) {
+            res[key] = serializeData(data[key]);
+        }
+        return res;
+    }
+    return data;
+};
+
 async function getData() {
     const reimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), orderBy("createdAt", "desc")));
-    const reimbursements = reimbursementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const reimbursements = reimbursementsSnapshot.docs.map(doc => serializeData({ id: doc.id, ...doc.data() }));
 
     const procurementRequestsSnapshot = await getDocs(collection(db, "procurement_requests"));
-    const procurementRequests = procurementRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const procurementRequests = procurementRequestsSnapshot.docs.map(doc => serializeData({ id: doc.id, ...doc.data() }));
 
     const userIds = [
       ...new Set([
         ...reimbursements.map((req: any) => req.submittedById),
-        ...reimbursements.map((req: any) => req.approvedById),
         ...reimbursements.map((req: any) => req.paidById),
+        ...reimbursements.map((req: any) => req.rejectedById),
         ...procurementRequests.map((item: any) => item.requestedById),
         ...procurementRequests.map((item: any) => item.approvedById)
       ].filter(Boolean))
@@ -106,15 +119,15 @@ function ReimbursementsPageContent() {
     setLoading(true);
     const fetchedData = await getData();
     
-    const statusOrder = { pending: 1, approved: 2, paid: 3, rejected: 4 };
+    const statusOrder = { pending: 1, paid: 2, rejected: 3 };
     fetchedData.reimbursements.sort((a, b) => {
-        const orderA = statusOrder[a.status as keyof typeof statusOrder] || 5;
-        const orderB = statusOrder[b.status as keyof typeof statusOrder] || 5;
+        const orderA = statusOrder[a.status as keyof typeof statusOrder] || 4;
+        const orderB = statusOrder[b.status as keyof typeof statusOrder] || 4;
         if (orderA !== orderB) {
             return orderA - orderB;
         }
-        const dateA = a.createdAt?.toDate() || 0;
-        const dateB = b.createdAt?.toDate() || 0;
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
         return dateB.getTime() - dateA.getTime();
     });
 
@@ -144,7 +157,7 @@ function ReimbursementsPageContent() {
     router.replace('/dashboard/reimbursements', {scroll: false});
   }
 
-  const canApprove = currentUser?.permissions?.canApproveReimbursements;
+  const canManage = currentUser?.role === 'treasurer';
   
   const procurementItem = selectedRequest?.procurementRequestId 
     ? data.procurementRequests.find(item => item.id === selectedRequest.procurementRequestId) 
@@ -158,10 +171,10 @@ function ReimbursementsPageContent() {
     ? data.users.find(u => u.id === procurementItem.approvedById)
     : null;
     
-  const reviewer = selectedRequest?.approvedById ? data.users.find(u => u.id === selectedRequest.approvedById) : null;
+  const reviewer = selectedRequest?.rejectedById ? data.users.find(u => u.id === selectedRequest.rejectedById) : null;
   const payer = selectedRequest?.paidById ? data.users.find(u => u.id === selectedRequest.paidById) : null;
 
-  const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
+  const shouldShowActions = canManage && selectedRequest?.status === 'pending';
 
   return (
     <div className="space-y-6">
@@ -177,7 +190,7 @@ function ReimbursementsPageContent() {
           <CardHeader>
             <CardTitle>Reimbursement Requests</CardTitle>
             <CardDescription>
-              {canApprove ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
+              {canManage ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -199,7 +212,7 @@ function ReimbursementsPageContent() {
                                   <StatusCircle status={req.status} />
                                   <div>
                                       <div className="font-medium">{item?.itemName || 'General Reimbursement'}</div>
-                                      <div className="text-xs text-muted-foreground">{user?.name} - {req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</div>
+                                      <div className="text-xs text-muted-foreground">{user?.name} - {req.createdAt ? format(new Date(req.createdAt), 'dd/MM/yy') : 'N/A'}</div>
                                   </div>
                               </div>
                           </TableCell>
@@ -235,9 +248,6 @@ function ReimbursementsPageContent() {
 
                       {selectedRequest.status !== 'pending' && (
                           <div className="text-xs text-muted-foreground">
-                            {selectedRequest.status === 'approved' && reviewer && (
-                                <p>Approved by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.approvedAt), { addSuffix: true })}</p>
-                            )}
                             {selectedRequest.status === 'rejected' && reviewer && (
                                 <p>Rejected by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.rejectedAt), { addSuffix: true })}</p>
                             )}

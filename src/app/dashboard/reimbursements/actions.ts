@@ -4,20 +4,6 @@
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/firebase"
 import { doc, serverTimestamp, updateDoc, addDoc, collection, runTransaction, getDoc, setDoc, writeBatch, query, where, getDocs } from "firebase/firestore"
-// import { addTransaction } from "../finance/actions"
-
-export async function approveReimbursement(reimbursementId: string, reviewedById: string) {
-    if (!reviewedById) throw new Error("User is not authenticated.");
-    
-    const reimbursementRef = doc(db, "reimbursements", reimbursementId);
-    await updateDoc(reimbursementRef, {
-        status: "approved",
-        approvedAt: serverTimestamp(),
-        approvedById: reviewedById,
-    });
-
-    revalidatePath("/dashboard/reimbursements");
-}
 
 export async function rejectReimbursement(reimbursementId: string, reviewedById: string) {
     if (!reviewedById)  throw new Error("User is not authenticated.");
@@ -37,8 +23,8 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
     await runTransaction(db, async (transaction) => {
         const reimbursementRef = doc(db, "reimbursements", reimbursementId);
         const reimbursementSnap = await transaction.get(reimbursementRef);
-        if (!reimbursementSnap.exists() || reimbursementSnap.data().status !== 'approved') {
-            throw new Error("Reimbursement must be approved before it can be paid.");
+        if (!reimbursementSnap.exists() || reimbursementSnap.data().status !== 'pending') {
+            throw new Error("Reimbursement must be in a pending state to be paid.");
         }
         const reimbursementData = reimbursementSnap.data();
         
@@ -85,7 +71,7 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
 export async function getPayableSummary() {
     const q = query(
         collection(db, 'reimbursements'),
-        where('status', '==', 'approved')
+        where('status', '==', 'approved') // This might need to be 'pending' now
     );
     const snapshot = await getDocs(q);
 
