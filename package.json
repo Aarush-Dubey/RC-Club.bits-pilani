@@ -11,8 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed": "tsx src/lib/seed.ts",
-    "test:imagekit": "tsx src/lib/test-imagekit.ts"
+    "seed": "tsx src/lib/seed.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.13.0",
