@@ -33,43 +33,14 @@ export async function createNewItemRequest(data: NewItemRequestData) {
 export async function approveNewItemRequest(requestId: string, approverId: string) {
     if (!approverId) throw new Error("User is not authenticated.");
 
-    await runTransaction(db, async (transaction) => {
-        const requestRef = doc(db, "procurement_requests", requestId);
-        const requestSnap = await transaction.get(requestRef);
-
-        if (!requestSnap.exists() || requestSnap.data().status !== 'pending') {
-            throw new Error("Request not found or not pending approval.");
-        }
-        const requestData = requestSnap.data();
-
-        // Accounting entry to recognize the expected liability
-        const userRef = doc(db, "users", requestData.requestedById);
-        const userSnap = await transaction.get(userRef);
-        const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
-
-        const debitAcct = requestData.itemType === 'consumable' ? '5030' : '1210'; // 5030 for Consumables, 1210 for General Equipment (Asset)
-        const narration = `Approved procurement for ${requestData.itemName} by ${userName}.`;
-
-        await addTransaction({
-            date: new Date().toISOString().split('T')[0],
-            narration,
-            createdById: approverId,
-            lines: [
-                { acctCode: debitAcct, debitMinor: requestData.expectedCost * 100, creditMinor: 0 },
-                { acctCode: '2020', debitMinor: 0, creditMinor: requestData.expectedCost * 100 }, // Credit Reimbursements Payable
-            ]
-        }, transaction);
-
-        // Update request status
-        transaction.update(requestRef, {
-            status: "approved",
-            approvedAt: serverTimestamp(),
-            approvedById: approverId,
-        });
+    const requestRef = doc(db, "procurement_requests", requestId);
+    await updateDoc(requestRef, {
+        status: "approved",
+        approvedAt: serverTimestamp(),
+        approvedById: approverId,
     });
-
+    
     revalidatePath('/dashboard/procurement/approvals');
-    revalidatePath("/dashboard/finance");
 }
 
 
@@ -148,6 +119,8 @@ export async function markAsPurchased(data: {
         const expectedCost = procurementRequestData.expectedCost;
         const costDifference = actualCost - expectedCost;
 
+        // Note: The accounting part is commented out as per user request to remove finance section for now.
+        /*
         if (Math.abs(costDifference) > 0.01) { // If there's a meaningful difference
             const userSnap = await getDoc(doc(db, "users", purchasedById));
             const userName = userSnap.exists() ? userSnap.data().name : "Unknown User";
@@ -164,9 +137,10 @@ export async function markAsPurchased(data: {
                 ]
             }, transaction);
         }
+        */
     });
 
     revalidatePath("/dashboard/procurement");
     revalidatePath("/dashboard/reimbursements");
-    revalidatePath("/dashboard/finance");
+    // revalidatePath("/dashboard/finance");
 }
