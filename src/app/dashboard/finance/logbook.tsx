@@ -187,7 +187,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                     </Table>
                 </CardContent>
             </Card>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-5xl">
                  <DialogHeader>
                     <DialogTitle>New Logbook Entry</DialogTitle>
                     <DialogDescription>Create a new double-entry transaction. Ensure debits equal credits.</DialogDescription>
