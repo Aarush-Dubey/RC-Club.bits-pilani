@@ -34,7 +34,7 @@ import { ThemeProvider } from "@/context/theme-provider"
 const baseMenuItems = [
   { href: "/dashboard", icon: LayoutGrid, label: "Dashboard", permission: null },
   { href: "/dashboard/projects", icon: ToyBrick, label: "Projects", permission: null },
-  { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory", permission: "canViewInventoryLogs" },
+  { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory", permission: "canViewInventory" },
   { href: "/dashboard/procurement", icon: Truck, label: "Procurement", permission: null },
   { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements", permission: null },
 ];
