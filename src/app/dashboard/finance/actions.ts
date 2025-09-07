@@ -53,8 +53,8 @@ export async function getTransactions() {
         return {
             id: doc.id,
             ...data,
-            date: data.date.toDate().toISOString(),
-            createdAt: data.createdAt.toDate().toISOString(),
+            date: data.date?.toDate ? data.date.toDate().toISOString() : data.date,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
             lines: linesByTransactionId[doc.id] || []
         }
     });
