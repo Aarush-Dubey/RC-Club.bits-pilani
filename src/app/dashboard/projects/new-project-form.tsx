@@ -226,6 +226,8 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
     }
   }
   
+  const canViewInventory = currentUser?.permissions?.canViewInventory;
+
   return (
     <Form {...form}>
        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -387,103 +389,106 @@ export function NewProjectForm({ onFormSubmit, users, inventory, currentUser }: 
               )}
             />
 
-            <div className="m-2 space-y-4">
-                <FormLabel>Requested Inventory</FormLabel>
-                <div className="space-y-2">
-                  {fields.map((field, index) => (
-                      <div key={field.id} className="flex items-end gap-2 rounded-md border bg-muted/20 p-2">
-                          <FormField
-                              control={form.control}
-                              name={`requestedInventory.${index}.itemId`}
-                              render={({ field }) => (
-                                  <FormItem className="flex-1">
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <FormControl>
-                                            <Button
-                                              variant="outline"
-                                              role="combobox"
-                                              className={cn(
-                                                "w-full justify-between",
-                                                !field.value && "text-muted-foreground"
-                                              )}
-                                            >
-                                              {field.value
-                                                ? inventory.find(
-                                                    (item) => item.id === field.value
-                                                  )?.name
-                                                : "Select item"}
-                                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                          </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                          <Command>
-                                            <CommandInput placeholder="Search inventory..." />
-                                            <CommandList>
-                                              <CommandEmpty>No item found.</CommandEmpty>
-                                              <CommandGroup>
-                                                {inventory.map((item) => (
-                                                  <CommandItem
-                                                    value={item.name}
-                                                    key={item.id}
-                                                    onSelect={() => {
-                                                      form.setValue(`requestedInventory.${index}.itemId`, item.id)
-                                                    }}
-                                                  >
-                                                    <Check
-                                                      className={cn(
-                                                        "mr-2 h-4 w-4",
-                                                        item.id === field.value
-                                                          ? "opacity-100"
-                                                          : "opacity-0"
-                                                      )}
-                                                    />
-                                                    <div className="flex justify-between w-full">
-                                                        <span>{item.name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            ({item.availableQuantity} avail.)
-                                                        </span>
-                                                    </div>
-                                                  </CommandItem>
-                                                ))}
-                                              </CommandGroup>
-                                            </CommandList>
-                                          </Command>
-                                        </PopoverContent>
-                                      </Popover>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField
-                              control={form.control}
-                              name={`requestedInventory.${index}.quantity`}
-                              render={({ field }) => (
-                                  <FormItem className="w-24">
-                                      <FormControl>
-                                          <Input type="number" placeholder="Qty" {...field} min={1} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                      </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ itemId: "", quantity: 1 })}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Item
-                    </Button>
-                    <Button type="button" variant="link" className="text-primary p-0 h-auto" disabled>
-                        or Request a New Item
-                    </Button>
-                </div>
-            </div>
+            {canViewInventory && (
+              <div className="m-2 space-y-4">
+                  <FormLabel>Requested Inventory</FormLabel>
+                  <div className="space-y-2">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-end gap-2 rounded-md border bg-muted/20 p-2">
+                            <FormField
+                                control={form.control}
+                                name={`requestedInventory.${index}.itemId`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <FormControl>
+                                              <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                className={cn(
+                                                  "w-full justify-between",
+                                                  !field.value && "text-muted-foreground"
+                                                )}
+                                              >
+                                                {field.value
+                                                  ? inventory.find(
+                                                      (item) => item.id === field.value
+                                                    )?.name
+                                                  : "Select item"}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                              </Button>
+                                            </FormControl>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                            <Command>
+                                              <CommandInput placeholder="Search inventory..." />
+                                              <CommandList>
+                                                <CommandEmpty>No item found.</CommandEmpty>
+                                                <CommandGroup>
+                                                  {inventory.map((item) => (
+                                                    <CommandItem
+                                                      value={item.name}
+                                                      key={item.id}
+                                                      onSelect={() => {
+                                                        form.setValue(`requestedInventory.${index}.itemId`, item.id)
+                                                      }}
+                                                      disabled={item.availableQuantity === 0}
+                                                    >
+                                                      <Check
+                                                        className={cn(
+                                                          "mr-2 h-4 w-4",
+                                                          item.id === field.value
+                                                            ? "opacity-100"
+                                                            : "opacity-0"
+                                                        )}
+                                                      />
+                                                      <div className="flex justify-between w-full">
+                                                          <span>{item.name}</span>
+                                                          <span className="text-xs text-muted-foreground">
+                                                              ({item.availableQuantity} avail.)
+                                                          </span>
+                                                      </div>
+                                                    </CommandItem>
+                                                  ))}
+                                                </CommandGroup>
+                                              </CommandList>
+                                            </Command>
+                                          </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`requestedInventory.${index}.quantity`}
+                                render={({ field }) => (
+                                    <FormItem className="w-24">
+                                        <FormControl>
+                                            <Input type="number" placeholder="Qty" {...field} min={1} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length < 1}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4">
+                      <Button type="button" variant="outline" size="sm" onClick={() => append({ itemId: "", quantity: 1 })}>
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Item
+                      </Button>
+                      <Button type="button" variant="link" className="text-primary p-0 h-auto" disabled>
+                          or Request a New Item
+                      </Button>
+                  </div>
+              </div>
+            )}
 
 
             <FormField
