@@ -1,307 +1,184 @@
+
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { useAuth } from "@/context/auth-context"
-import Image from "next/image"
-import { format, formatDistanceToNow } from "date-fns"
-
-import { Button } from "@/components/ui/button"
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { upload } from "@imagekit/next";
+import Image from 'next/image';
+import { Loader2, Upload } from 'lucide-react';
+import { type AppUser } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import { ReimbursementActions } from "./reimbursement-actions"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { createReimbursementRequest } from './actions';
+import { Textarea } from '@/components/ui/textarea';
 
-const getStatusConfig = (status: string) => {
-  switch (status) {
-    case 'pending': return { color: 'bg-yellow-500', tooltip: 'Pending' };
-    case 'approved': return { color: 'bg-blue-500', tooltip: 'Approved' };
-    case 'paid': return { color: 'bg-green-500', tooltip: 'Paid' };
-    case 'rejected': return { color: 'bg-red-500', tooltip: 'Rejected' };
-    default: return { color: 'bg-gray-400', tooltip: 'Unknown' };
-  }
-};
+const formSchema = z.object({
+  amount: z.coerce.number().min(0.01, "Please enter the amount."),
+  reason: z.string().min(5, "A reason is required."),
+  receipt: z.instanceof(File, { message: "A receipt image is required." }),
+});
 
-const StatusCircle = ({ status }: { status: string }) => {
-  const config = getStatusConfig(status);
+type FormValues = z.infer<typeof formSchema>;
 
-  return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger>
-          <div className={cn("h-2.5 w-2.5 rounded-full", config.color)}></div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{config.tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
-
-async function getData() {
-    const reimbursementsSnapshot = await getDocs(query(collection(db, "reimbursements"), orderBy("createdAt", "desc")));
-    const reimbursements = reimbursementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const procurementRequestsSnapshot = await getDocs(collection(db, "procurement_requests"));
-    const procurementRequests = procurementRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const userIds = [
-      ...new Set([
-        ...reimbursements.map((req: any) => req.submittedById),
-        ...reimbursements.map((req: any) => req.approvedById),
-        ...reimbursements.map((req: any) => req.paidById),
-        ...procurementRequests.map((item: any) => item.requestedById),
-        ...procurementRequests.map((item: any) => item.approvedById)
-      ].filter(Boolean))
-    ];
-    
-    let users: any[] = [];
-    if (userIds.length > 0) {
-        const userChunks = [];
-        for (let i = 0; i < userIds.length; i += 30) {
-            userChunks.push(userIds.slice(i, i + 30));
-        }
-
-        for (const chunk of userChunks) {
-            if(chunk.length > 0) {
-                const usersQuery = query(collection(db, "users"), where("id", "in", chunk));
-                const usersSnap = await getDocs(usersQuery);
-                users.push(...usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            }
-        }
-    }
-    
-    return { reimbursements, users, procurementRequests };
+interface ReimbursementFormProps {
+  onFormSubmit: () => void;
+  currentUser: AppUser | null;
 }
 
-function ReimbursementsPageContent() {
-  const [data, setData] = useState<{ reimbursements: any[], users: any[], procurementRequests: any[] }>({ reimbursements: [], users: [], procurementRequests: [] });
-  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user: currentUser } = useAuth();
-  
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const fetchedData = await getData();
-    
-    const statusOrder = { pending: 1, approved: 2, paid: 3, rejected: 4 };
-    fetchedData.reimbursements.sort((a, b) => {
-        const orderA = statusOrder[a.status as keyof typeof statusOrder] || 5;
-        const orderB = statusOrder[b.status as keyof typeof statusOrder] || 5;
-        if (orderA !== orderB) {
-            return orderA - orderB;
-        }
-        const dateA = a.createdAt?.toDate() || 0;
-        const dateB = b.createdAt?.toDate() || 0;
-        return dateB.getTime() - dateA.getTime();
-    });
+export function ReimbursementForm({ onFormSubmit, currentUser }: ReimbursementFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState('');
+  const { toast } = useToast();
 
-    setData(fetchedData);
-    setLoading(false);
-
-    const reimbursementId = searchParams.get('id');
-    if (reimbursementId) {
-        const request = fetchedData.reimbursements.find(r => r.id === reimbursementId);
-        if (request) {
-            setSelectedRequest(request);
-        }
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      amount: 0,
+      reason: "",
     }
-  }, [searchParams]);
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const authenticator = async () => {
+    try {
+      const response = await fetch('/api/upload-auth');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Authentication request failed: ${errorText}`);
+      }
+      const data = await response.json();
+      return { signature: data.signature, expire: data.expire, token: data.token };
+    } catch (error: any) {
+      console.error("Authenticator error:", error);
+      throw new Error(`Failed to get upload signature: ${error.message}`);
+    }
+  };
 
-  const handleActionComplete = useCallback(() => {
-    fetchData();
-    setSelectedRequest(null);
-  }, [fetchData]);
-  
-  const handleDialogClose = () => {
-    setSelectedRequest(null);
-    router.replace('/dashboard/reimbursements', {scroll: false});
-  }
+  const onSubmit = async (data: FormValues) => {
+    if (!currentUser) {
+        toast({ variant: 'destructive', title: 'Not authenticated.' });
+        return;
+    }
+    if (!data.receipt) {
+        toast({ variant: 'destructive', title: 'Receipt image is required.' });
+        return;
+    }
 
-  const canApprove = currentUser?.permissions?.canApproveReimbursements;
-  
-  const procurementItem = selectedRequest?.procurementRequestId 
-    ? data.procurementRequests.find(item => item.id === selectedRequest.procurementRequestId) 
-    : null;
+    setIsSubmitting(true);
+    try {
+      const authParams = await authenticator();
+      const uploadResponse = await upload({
+        publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
+        ...authParams,
+        file: data.receipt,
+        fileName: data.receipt.name,
+      });
 
-  const procurementRequester = procurementItem
-    ? data.users.find(u => u.id === procurementItem.requestedById)
-    : null;
-
-  const procurementApprover = procurementItem
-    ? data.users.find(u => u.id === procurementItem.approvedById)
-    : null;
-    
-  const reviewer = selectedRequest?.approvedById ? data.users.find(u => u.id === selectedRequest.approvedById) : null;
-  const payer = selectedRequest?.paidById ? data.users.find(u => u.id === selectedRequest.paidById) : null;
-
-  const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
+      await createReimbursementRequest({
+        submittedById: currentUser.uid,
+        amount: data.amount,
+        reason: data.reason,
+        receiptUrl: uploadResponse.url,
+      });
+      
+      toast({ title: 'Success', description: 'Your reimbursement request has been submitted.' });
+      onFormSubmit();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Submission Failed', description: (error as Error).message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-h1">Reimbursements</h1>
-        <p className="text-base text-muted-foreground mt-2">
-          Submit and track expense reimbursement requests.
-        </p>
-      </div>
-
-      <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Reimbursement Requests</CardTitle>
-            <CardDescription>
-              {canApprove ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                  <TableRow>
-                    <TableHead>Request</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {data.reimbursements.map((req: any) => {
-                    const user = data.users.find((u: any) => u.id === req.submittedById);
-                    const item = req.procurementRequestId ? data.procurementRequests.find(p => p.id === req.procurementRequestId) : null;
-                    return (
-                        <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
-                          <TableCell>
-                              <div className="flex items-center gap-3">
-                                  <StatusCircle status={req.status} />
-                                  <div>
-                                      <div className="font-medium">{item?.itemName || 'General Reimbursement'}</div>
-                                      <div className="text-xs text-muted-foreground">{user?.name} - {req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</div>
-                                  </div>
-                              </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
-                        </TableRow>
-                    )
-                  })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <DialogContent className="sm:max-w-sm">
-          {selectedRequest && (
-            <>
-              <DialogHeader>
-                  <DialogTitle>Reimbursement Details</DialogTitle>
-                  <p className="text-2xl font-bold font-mono pt-2">₹{selectedRequest.amount.toFixed(2)}</p>
-              </DialogHeader>
-              <ScrollArea className="max-h-[60vh] -mx-6">
-                  <div className="px-6 space-y-4">
-                      <div className="text-sm">
-                          <span className="text-muted-foreground">Submitted by: </span>
-                          <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Status</span>
-                        <div className="flex items-center gap-2">
-                          <StatusCircle status={selectedRequest.status} />
-                          <span className="font-medium capitalize">{selectedRequest.status.replace(/_/g, ' ')}</span>
-                        </div>
-                      </div>
-
-                      {selectedRequest.status !== 'pending' && (
-                          <div className="text-xs text-muted-foreground">
-                            {selectedRequest.status === 'approved' && reviewer && (
-                                <p>Approved by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.approvedAt), { addSuffix: true })}</p>
-                            )}
-                            {selectedRequest.status === 'rejected' && reviewer && (
-                                <p>Rejected by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.rejectedAt), { addSuffix: true })}</p>
-                            )}
-                            {selectedRequest.status === 'paid' && payer && (
-                                  <p>Paid by {payer.name} {formatDistanceToNow(new Date(selectedRequest.paidAt), { addSuffix: true })}</p>
-                            )}
-                        </div>
-                      )}
-
-                        {procurementItem && (
-                        <Card className="bg-secondary">
-                          <CardHeader className="p-4">
-                            <CardTitle className="text-base">Associated Procurement</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0 text-sm space-y-2">
-                              <p><span className="font-medium text-muted-foreground">Item:</span> {procurementItem.itemName}</p>
-                              <p><span className="font-medium text-muted-foreground">Justification:</span> {procurementItem.justification}</p>
-                              <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
-                              <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
-                          </CardContent>
-                        </Card>
-                      )}
-                      
-                      {selectedRequest.vendor && (
-                          <div>
-                              <h4 className="font-medium mb-1 text-sm text-muted-foreground">Vendor</h4>
-                              <p className="text-sm">{selectedRequest.vendor}</p>
-                          </div>
-                      )}
-
-                      <div>
-                          <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
-                          {selectedRequest.receiptUrl ? (
-                          <a href={selectedRequest.receiptUrl} target="_blank" rel="noopener noreferrer">
-                              <Image 
-                              src={selectedRequest.receiptUrl}
-                              alt="Receipt"
-                              width={400}
-                              height={400}
-                              className="w-full h-auto border object-contain"
-                              />
-                          </a>
-                          ) : (
-                          <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
-                          )}
-                      </div>
-                  </div>
-              </ScrollArea>
-                {shouldShowActions && (
-                  <div className="pt-4 border-t">
-                      <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
-                  </div>
-              )}
-            </>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="amount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Amount (₹) *</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-export default function ReimbursementsPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ReimbursementsPageContent />
-        </Suspense>
-    );
+        />
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Reason *</FormLabel>
+              <FormControl>
+                <Textarea placeholder="e.g., Purchased snacks for club meeting" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="receipt"
+          render={({ field: { onChange, value, ...rest } }) => (
+            <FormItem>
+              <FormLabel>Receipt Image *</FormLabel>
+              <FormControl>
+                 <label
+                    htmlFor="receipt-upload-general"
+                    className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+                  >
+                     <input
+                      id="receipt-upload-general"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onChange(file);
+                          setPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      {...rest}
+                    />
+                    {preview ? (
+                      <Image
+                        src={preview}
+                        alt="Receipt Preview"
+                        width={200}
+                        height={160}
+                        className="h-full w-full object-contain rounded-md p-1"
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Upload className="mx-auto h-8 w-8" />
+                        <p className="mt-2 text-sm">Click to select an image</p>
+                      </div>
+                    )}
+                  </label>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Submit Request
+        </Button>
+      </form>
+    </Form>
+  );
 }

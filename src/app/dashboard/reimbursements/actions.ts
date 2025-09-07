@@ -5,6 +5,33 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/lib/firebase"
 import { doc, serverTimestamp, updateDoc, addDoc, collection, runTransaction, getDoc, setDoc, writeBatch, query, where, getDocs } from "firebase/firestore"
 
+export async function createReimbursementRequest(data: {
+    submittedById: string;
+    amount: number;
+    reason: string;
+    receiptUrl: string;
+}) {
+    if (!data.submittedById) {
+        throw new Error("User must be authenticated.");
+    }
+    const requestRef = doc(collection(db, "reimbursements"));
+    
+    await setDoc(requestRef, {
+        id: requestRef.id,
+        procurementRequestId: null,
+        purchaseId: null,
+        submittedById: data.submittedById,
+        amount: data.amount,
+        status: 'pending',
+        receiptUrl: data.receiptUrl,
+        vendor: null, // No vendor for general requests
+        reason: data.reason, // Use reason field
+        createdAt: serverTimestamp(),
+    });
+
+    revalidatePath("/dashboard/reimbursements");
+}
+
 export async function rejectReimbursement(reimbursementId: string, reviewedById: string) {
     if (!reviewedById)  throw new Error("User is not authenticated.");
     
@@ -30,12 +57,15 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
         }
         const reimbursementData = reimbursementSnap.data();
 
-        const procurementRequestRef = doc(db, "procurement_requests", reimbursementData.procurementRequestId);
-        const procurementRequestSnap = await transaction.get(procurementRequestRef);
-        if (!procurementRequestSnap.exists()) {
-            throw new Error("Associated procurement request not found.");
+        let procurementData: any = null;
+        if (reimbursementData.procurementRequestId) {
+            const procurementRequestRef = doc(db, "procurement_requests", reimbursementData.procurementRequestId);
+            const procurementRequestSnap = await transaction.get(procurementRequestRef);
+            if (!procurementRequestSnap.exists()) {
+                throw new Error("Associated procurement request not found.");
+            }
+            procurementData = procurementRequestSnap.data();
         }
-        const procurementData = procurementRequestSnap.data();
 
         // --- 2. WRITE PHASE ---
         
@@ -46,23 +76,25 @@ export async function markAsPaid(reimbursementId: string, paidById: string) {
             paidById: paidById,
         });
         
-        // Update procurement request status
-        transaction.update(procurementRequestRef, { status: "reimbursed" });
+        // Update procurement request status if it exists
+        if (procurementData) {
+            transaction.update(doc(db, "procurement_requests", reimbursementData.procurementRequestId), { status: "reimbursed" });
 
-        // If the item was an asset, add it to the inventory
-        if (procurementData.itemType === 'asset') {
-            const newItemRef = doc(collection(db, "inventory_items"));
-            transaction.set(newItemRef, {
-                id: newItemRef.id,
-                name: procurementData.itemName,
-                description: `Procured on ${new Date().toLocaleDateString()}. Request: ${procurementData.id}`,
-                totalQuantity: 1, // Procured items are typically single assets
-                availableQuantity: 1,
-                checkedOutQuantity: 0,
-                isPerishable: false,
-                location: 'To be assigned',
-                createdAt: serverTimestamp(),
-            });
+            // If the item was an asset, add it to the inventory
+            if (procurementData.itemType === 'asset') {
+                const newItemRef = doc(collection(db, "inventory_items"));
+                transaction.set(newItemRef, {
+                    id: newItemRef.id,
+                    name: procurementData.itemName,
+                    description: `Procured on ${new Date().toLocaleDateString()}. Request: ${procurementData.id}`,
+                    totalQuantity: 1, // Procured items are typically single assets
+                    availableQuantity: 1,
+                    checkedOutQuantity: 0,
+                    isPerishable: false,
+                    location: 'To be assigned',
+                    createdAt: serverTimestamp(),
+                });
+            }
         }
     });
 

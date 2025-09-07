@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
 import Image from "next/image"
 import { format, formatDistanceToNow } from "date-fns"
+import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +17,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Table,
@@ -30,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { ReimbursementActions } from "./reimbursement-actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { ReimbursementForm } from "./reimbursement-form"
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -61,7 +64,7 @@ const serializeData = (data: any) => {
     if (!data) return data;
     if (data.toDate) return data.toDate().toISOString();
     if (Array.isArray(data)) return data.map(serializeData);
-    if (typeof data === 'object') {
+    if (typeof data === 'object' && data !== null) {
         const res: { [key: string]: any } = {};
         for (const key of Object.keys(data)) {
             res[key] = serializeData(data[key]);
@@ -110,6 +113,7 @@ async function getData() {
 function ReimbursementsPageContent() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], procurementRequests: any[] }>({ reimbursements: [], users: [], procurementRequests: [] });
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [isNewRequestFormOpen, setIsNewRequestFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,6 +155,11 @@ function ReimbursementsPageContent() {
     fetchData();
     setSelectedRequest(null);
   }, [fetchData]);
+
+  const handleFormSubmit = () => {
+    fetchData();
+    setIsNewRequestFormOpen(false);
+  }
   
   const handleDialogClose = () => {
     setSelectedRequest(null);
@@ -178,11 +187,30 @@ function ReimbursementsPageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-h1">Reimbursements</h1>
-        <p className="text-base text-muted-foreground mt-2">
-          Submit and track expense reimbursement requests.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1">Reimbursements</h1>
+          <p className="text-base text-muted-foreground mt-2">
+            Submit and track expense reimbursement requests.
+          </p>
+        </div>
+        <Dialog open={isNewRequestFormOpen} onOpenChange={setIsNewRequestFormOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Submit a Request
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>New Reimbursement Request</DialogTitle>
+                    <DialogDescription>
+                        Submit a request for an expense you paid for out-of-pocket.
+                    </DialogDescription>
+                </DialogHeader>
+                <ReimbursementForm currentUser={currentUser} onFormSubmit={handleFormSubmit} />
+            </DialogContent>
+        </Dialog>
       </div>
 
       <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
@@ -204,7 +232,7 @@ function ReimbursementsPageContent() {
               <TableBody>
                   {data.reimbursements.map((req: any) => {
                     const user = data.users.find((u: any) => u.id === req.submittedById);
-                    const item = req.procurementRequestId ? data.procurementRequests.find(p => p.id === req.procurementRequestId) : null;
+                    const item = req.procurementRequestId ? data.procurementRequests.find(p => p.id === req.procurementRequestId) : {itemName: req.reason};
                     return (
                         <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
                           <TableCell>
@@ -257,19 +285,26 @@ function ReimbursementsPageContent() {
                         </div>
                       )}
 
-                        {procurementItem && (
-                        <Card className="bg-secondary">
-                          <CardHeader className="p-4">
-                            <CardTitle className="text-base">Associated Procurement</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0 text-sm space-y-2">
-                              <p><span className="font-medium text-muted-foreground">Item:</span> {procurementItem.itemName}</p>
-                              <p><span className="font-medium text-muted-foreground">Justification:</span> {procurementItem.justification}</p>
-                              <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
-                              <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
-                          </CardContent>
-                        </Card>
-                      )}
+                        {procurementItem ? (
+                          <Card className="bg-secondary">
+                            <CardHeader className="p-4">
+                              <CardTitle className="text-base">Associated Procurement</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 text-sm space-y-2">
+                                <p><span className="font-medium text-muted-foreground">Item:</span> {procurementItem.itemName}</p>
+                                <p><span className="font-medium text-muted-foreground">Justification:</span> {procurementItem.justification}</p>
+                                <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
+                                <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          selectedRequest.reason && (
+                              <div>
+                                  <h4 className="font-medium mb-1 text-sm text-muted-foreground">Reason</h4>
+                                  <p className="text-sm">{selectedRequest.reason}</p>
+                              </div>
+                          )
+                        )}
                       
                       {selectedRequest.vendor && (
                           <div>
