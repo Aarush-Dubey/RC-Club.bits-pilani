@@ -2,7 +2,7 @@
 "use server"
 
 import { db } from "@/lib/firebase";
-import { collection, doc, addDoc, updateDoc, serverTimestamp, runTransaction, getDocs, writeBatch, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, serverTimestamp, runTransaction, getDocs, writeBatch, query, orderBy, Timestamp, where } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 
 // All monetary values are handled as integers in minor units (e.g., paise, cents)
@@ -33,7 +33,7 @@ export async function getChartOfAccounts(): Promise<ChartOfAccount[]> {
 }
 
 export async function getTransactions() {
-    const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"), orderBy("entryNumber", "desc"));
+    const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
     const transactionsSnap = await getDocs(transactionsQuery);
     
     const linesCollection = collection(db, 'transaction_lines');
@@ -58,6 +58,9 @@ export async function getTransactions() {
             lines: linesByTransactionId[doc.id] || []
         }
     });
+
+    // Sort by entryNumber in descending order after fetching
+    transactions.sort((a, b) => b.entryNumber - a.entryNumber);
 
     return transactions;
 }
