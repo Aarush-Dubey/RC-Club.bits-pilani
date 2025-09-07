@@ -32,11 +32,11 @@ import {
 import { ThemeProvider } from "@/context/theme-provider"
 
 const baseMenuItems = [
-  { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
-  { href: "/dashboard/projects", icon: ToyBrick, label: "Projects" },
-  { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
-  { href: "/dashboard/procurement", icon: Truck, label: "Procurement" },
-  { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements" },
+  { href: "/dashboard", icon: LayoutGrid, label: "Dashboard", permission: null },
+  { href: "/dashboard/projects", icon: ToyBrick, label: "Projects", permission: null },
+  { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory", permission: "canViewInventoryLogs" },
+  { href: "/dashboard/procurement", icon: Truck, label: "Procurement", permission: null },
+  { href: "/dashboard/reimbursements", icon: HandCoins, label: "Reimbursements", permission: null },
 ];
 
 const adminMenuItems = [
@@ -80,9 +80,17 @@ export default function DashboardLayout({
     )
   }
 
+  const visibleBaseItems = baseMenuItems.filter(item => 
+    !item.permission || user.permissions?.[item.permission as keyof typeof user.permissions]
+  );
+  
+  const visibleAdminItems = adminMenuItems.filter(item => 
+      user.permissions?.[item.permission as keyof typeof user.permissions]
+  );
+
   const menuItems = [
-      ...baseMenuItems,
-      ...adminMenuItems.filter(item => user.permissions?.[item.permission as keyof typeof user.permissions]),
+      ...visibleBaseItems,
+      ...visibleAdminItems,
   ]
 
   return (
