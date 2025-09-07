@@ -1,82 +1,75 @@
 
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react'
-import { upload } from "@imagekit/next"
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { upload } from "@imagekit/next";
 import Image from 'next/image';
+import { Loader2, Upload } from 'lucide-react';
+import { useAuth, type AppUser } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { createReimbursementRequest } from './actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
-import { db } from '@/lib/firebase'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import type { AppUser } from '@/context/auth-context'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+const formSchema = z.object({
+  procurementRequestId: z.string().min(1, "Please select the item you purchased."),
+  actualCost: z.coerce.number().min(0.01, "Please enter the actual cost."),
+  vendor: z.string().optional(),
+  receipt: z.instanceof(File, { message: "A receipt image is required." }),
+});
 
+type FormValues = z.infer<typeof formSchema>;
 
 interface ReimbursementFormProps {
-  mode: 'procurement' | 'manual';
   onFormSubmit: () => void;
-  onCancel: () => void;
   currentUser: AppUser | null;
-  procurementItems: any[];
-  procurementBuckets: any[];
+  procurementRequests: any[];
 }
 
-export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, procurementItems, procurementBuckets }: ReimbursementFormProps) {
-  const [amount, setAmount] = useState('')
-  const [notes, setNotes] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' | 'info' | '' }>({ text: '', type: '' });
-  const [selectedItemId, setSelectedItemId] = useState("");
+export function ReimbursementForm({ onFormSubmit, currentUser, procurementRequests }: ReimbursementFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState('');
   const { toast } = useToast();
 
-  const orderedItems = procurementItems.filter(item => {
-    if (!item.linkedBucketId && item.status === 'approved' && item.requestedById === currentUser?.uid) {
-        return true;
-    }
-    if(item.linkedBucketId) {
-        const bucket = procurementBuckets.find(b => b.id === item.linkedBucketId);
-        if (bucket && ['ordered', 'received'].includes(bucket.status) && item.status === 'approved' && bucket.createdBy === currentUser?.uid) {
-            return true;
-        }
-    }
-    return false;
+  const userPurchasedItems = procurementRequests.filter(
+    (req) => req.requestedById === currentUser?.uid && req.status === 'approved'
+  );
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
   });
 
+  const selectedRequestId = form.watch("procurementRequestId");
+
   useEffect(() => {
-    if (mode === 'procurement' && selectedItemId) {
-      const item = orderedItems.find(item => item.id === selectedItemId);
+    if (selectedRequestId) {
+      const item = userPurchasedItems.find(req => req.id === selectedRequestId);
       if (item) {
-        setAmount((item.estimatedCost * item.quantity).toString());
-        setNotes(`Reimbursement for: ${item.itemName} (x${item.quantity})`);
+        form.setValue("actualCost", item.expectedCost);
       }
     }
-  }, [selectedItemId, mode, orderedItems]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        setSelectedFile(file)
-        setPreview(URL.createObjectURL(file))
-        setMessage({ text: '', type: '' })
-      } else {
-        setMessage({ text: 'Please select a valid image file.', type: 'error' })
-        setSelectedFile(null)
-        setPreview('')
-      }
-    }
-  }
-
+  }, [selectedRequestId, userPurchasedItems, form]);
+  
   const authenticator = async () => {
     try {
         const response = await fetch('/api/upload-auth');
@@ -87,7 +80,6 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
                 const errorJson = JSON.parse(errorText);
                 errorMessage = errorJson.error || errorMessage;
             } catch (e) {
-                // If parsing fails, use the raw text
                 errorMessage = errorText || errorMessage;
             }
             throw new Error(errorMessage);
@@ -101,174 +93,138 @@ export function ReimbursementForm({ mode, onFormSubmit, onCancel, currentUser, p
   };
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) {
-        toast({ variant: "destructive", title: "Not Authenticated" });
-        return;
-    }
-     if (!amount || !selectedFile) {
-      setMessage({ text: 'Amount and receipt image are required.', type: 'error' })
-      return
-    }
-    if (mode === 'procurement' && !selectedItemId) {
-        setMessage({ text: 'Please select the procured item.', type: 'error' })
-        return
-    }
+  const onSubmit = async (data: FormValues) => {
+    if (!currentUser) return;
 
-    setIsSubmitting(true)
-    setMessage({ text: 'Submitting request...', type: 'info' })
-
+    setIsSubmitting(true);
     try {
       const authParams = await authenticator();
-      console.log('Hi :', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY);
       const uploadResponse = await upload({
         publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
         ...authParams,
-        file: selectedFile,
-        fileName: selectedFile.name,
+        file: data.receipt,
+        fileName: data.receipt.name,
       });
-      const reimbursementData: any = {
-        amount: parseFloat(amount),
-        notes,
-        proofImageUrls: [uploadResponse.url],
-        status: 'pending',
+
+      await createReimbursementRequest({
+        ...data,
+        receiptUrl: uploadResponse.url,
         submittedById: currentUser.uid,
-        createdAt: serverTimestamp(),
-        isProcurement: mode === 'procurement',
-      };
+      });
       
-      if (mode === 'procurement' && selectedItemId) {
-        reimbursementData.newItemRequestId = selectedItemId;
-      }
-
-      await addDoc(collection(db, 'reimbursements'), reimbursementData);
-
-      setMessage({ text: 'Reimbursement request submitted successfully!', type: 'success' })
-      setTimeout(() => onFormSubmit(), 1500)
-
+      toast({ title: 'Success', description: 'Reimbursement request submitted.' });
+      onFormSubmit();
     } catch (error) {
-        const errorMessage = (error instanceof Error) ? error.message : 'An unknown error occurred.';
-        setMessage({ text: errorMessage, type: 'error' })
+      toast({ variant: 'destructive', title: 'Submission Failed', description: (error as Error).message });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
-
-  const title = mode === 'procurement' ? "Pre-approved Item" : "New Reimbursement";
-  const description = mode === 'procurement' ? "Select your ordered item to auto-fill details." : "Fill out the details for your expense.";
+  };
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <ScrollArea className="max-h-[60vh] -mx-4">
-        <form onSubmit={handleSubmit} className="space-y-4 px-4">
-          {mode === 'procurement' && (
-            <div>
-              <Label htmlFor="procurement-item">Procurement Item *</Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger id="procurement-item" className="mt-1">
-                    <SelectValue placeholder="Select an ordered item" />
-                </SelectTrigger>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="procurementRequestId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Purchased Item *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an approved item" />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
-                    {orderedItems.length > 0 ? orderedItems.map(item => (
-                        <SelectItem key={item.id} value={item.id}>
-                            {item.itemName} (₹{(item.estimatedCost * item.quantity).toFixed(2)})
-                        </SelectItem>
-                    )) : (
-                        <SelectItem value="none" disabled>No items awaiting reimbursement.</SelectItem>
-                    )}
+                  {userPurchasedItems.length > 0 ? userPurchasedItems.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.itemName} (Est: ₹{item.expectedCost.toFixed(2)})
+                    </SelectItem>
+                  )) : <SelectItem value="none" disabled>No approved items to reimburse</SelectItem>}
                 </SelectContent>
               </Select>
-            </div>
+              <FormMessage />
+            </FormItem>
           )}
-
-          <div>
-            <Label htmlFor="amount">Amount (INR) *</Label>
-            <Input
-              id="amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              required
-              className="mt-1"
-              disabled={mode === 'procurement'}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g., Purchase of new servos for Project Phoenix"
-              className="mt-1"
-              disabled={mode === 'procurement'}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="receipt-upload">Receipt Image *</Label>
-            <div className="mt-1">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="receipt-upload"
-              />
-              <label
-                htmlFor="receipt-upload"
-                className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
-              >
-                {preview ? (
-                  <Image
-                    src={preview}
-                    alt="Receipt Preview"
-                    width={200}
-                    height={160}
-                    className="h-full w-full object-contain rounded-md p-1"
-                  />
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <Upload className="mx-auto h-8 w-8" />
-                    <p className="mt-2 text-sm">Click to select an image</p>
-                  </div>
-                )}
-              </label>
-            </div>
-          </div>
-          
-           {message.text && (
-            <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
-              {message.type === 'error' && <AlertCircle className="h-4 w-4" />}
-              {message.type === 'success' && <CheckCircle className="h-4 w-4" />}
-              <AlertTitle>
-                {message.type === 'error' ? 'Error' : message.type === 'success' ? 'Success' : 'Info'}
-              </AlertTitle>
-              <AlertDescription>
-                {message.text}
-              </AlertDescription>
-            </Alert>
+        />
+        <FormField
+          control={form.control}
+          name="actualCost"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Actual Cost (₹) *</FormLabel>
+              <FormControl>
+                <Input type="number" step="0.01" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </form>
-      </ScrollArea>
-      <div className="pt-4 border-t flex gap-2">
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full">Back</Button>
-            <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full"
-                onClick={handleSubmit}
-            >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Submit Request'}
-            </Button>
-        </div>
-    </>
-  )
+        />
+        <FormField
+          control={form.control}
+          name="vendor"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vendor (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Amazon, Robu.in" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="receipt"
+          render={({ field: { onChange, value, ...rest } }) => (
+            <FormItem>
+              <FormLabel>Receipt Image *</FormLabel>
+              <FormControl>
+                 <label
+                    htmlFor="receipt-upload"
+                    className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors"
+                  >
+                     <input
+                      id="receipt-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          onChange(file);
+                          setPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      {...rest}
+                    />
+                    {preview ? (
+                      <Image
+                        src={preview}
+                        alt="Receipt Preview"
+                        width={200}
+                        height={160}
+                        className="h-full w-full object-contain rounded-md p-1"
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Upload className="mx-auto h-8 w-8" />
+                        <p className="mt-2 text-sm">Click to select an image</p>
+                      </div>
+                    )}
+                  </label>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Submit Reimbursement
+        </Button>
+      </form>
+    </Form>
+  );
 }
+

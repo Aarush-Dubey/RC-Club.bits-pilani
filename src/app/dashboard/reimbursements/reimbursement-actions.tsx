@@ -23,6 +23,9 @@ export function ReimbursementActions({ request, onActionComplete }: { request: a
   const [isLoading, setIsLoading] = useState<"approve" | "reject" | "pay" | null>(null)
   const { toast } = useToast()
   const { user: currentUser } = useAuth();
+  
+  const canApprove = currentUser?.permissions?.canApproveReimbursements;
+  const canPay = currentUser?.role === 'treasurer';
 
   const handleAction = async (actionFn: () => Promise<void>, type: "approve" | "reject" | "pay") => {
     if (!currentUser) {
@@ -33,9 +36,7 @@ export function ReimbursementActions({ request, onActionComplete }: { request: a
     setIsLoading(type);
     try {
       await actionFn();
-      toast({
-        title: `Request ${type === "approve" ? "Approved" : type === "reject" ? "Rejected" : "Paid"}`,
-      });
+      toast({ title: `Request ${type === "approve" ? "Approved" : type === "reject" ? "Rejected" : "Paid"}` });
       onActionComplete();
     } catch (error) {
       toast({
@@ -52,7 +53,7 @@ export function ReimbursementActions({ request, onActionComplete }: { request: a
   const onReject = () => handleAction(() => rejectReimbursement(request.id, currentUser!.uid), "reject");
   const onPay = () => handleAction(() => markAsPaid(request.id, currentUser!.uid), "pay");
 
-  if (request.status === 'pending') {
+  if (request.status === 'pending' && canApprove) {
     return (
       <div className="flex w-full justify-end gap-2">
          <AlertDialog>
@@ -82,7 +83,7 @@ export function ReimbursementActions({ request, onActionComplete }: { request: a
     )
   }
   
-  if (request.status === 'approved') {
+  if (request.status === 'approved' && canPay) {
      return (
         <div className="flex w-full justify-end">
             <Button onClick={onPay} disabled={!!isLoading} size="sm">

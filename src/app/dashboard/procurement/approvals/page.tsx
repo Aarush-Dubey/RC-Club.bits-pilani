@@ -1,6 +1,6 @@
 
 import ApprovalsClient from "./approvals-client";
 
-export default async function ProcurementApprovalsPage() {
+export default function ProcurementApprovalsPage() {
     return <ApprovalsClient />;
 }

@@ -2,15 +2,18 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Sparkles } from "lucide-react";
-
+import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { createNewItemRequest } from "./actions";
+import { enhanceJustification } from "@/ai/flows/enhance-justification";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -19,42 +22,38 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { AppUser } from "@/context/auth-context";
-import { addRequestToBucket } from "./actions";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { enhanceJustification } from "@/ai/flows/enhance-justification";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 const formSchema = z.object({
   itemName: z.string().min(3, "Item name must be at least 3 characters."),
   justification: z.string().min(10, "Please provide a brief justification."),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-  estimatedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
-  isPerishable: z.boolean().default(false),
+  itemType: z.enum(["consumable", "asset"], { required_error: "Please select an item type." }),
+  expectedCost: z.coerce.number().min(0.01, "Please provide an estimated cost."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface NewItemRequestFormProps {
-  bucketId?: string | null;
-  currentUser: AppUser | null;
-  setOpen: (open: boolean) => void;
-  onFormSubmit: () => void;
-}
-
-export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFormSubmit }: NewItemRequestFormProps) {
+export function NewItemRequestForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: "",
       justification: "",
-      quantity: 1,
-      estimatedCost: 0,
-      isPerishable: false,
+      itemType: "consumable",
+      expectedCost: 0,
     },
   });
 
@@ -90,139 +89,112 @@ export function NewItemRequestForm({ bucketId = null, currentUser, setOpen, onFo
     }
   };
 
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+  const onSubmit = async (data: FormValues) => {
     if (!currentUser) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: "You must be logged in to add a request.",
-      });
+      toast({ variant: "destructive", title: "Authentication Error" });
       return;
     }
     setIsSubmitting(true);
     try {
-      await addRequestToBucket(bucketId, {
-        requests: [data],
-        requestedById: currentUser.uid,
-      });
-
+      await createNewItemRequest({ ...data, requestedById: currentUser.uid });
       toast({
-        title: "Item Request Added",
-        description: bucketId 
-          ? "Your request has been added to the bucket."
-          : "Your standalone request has been submitted.",
+        title: "Request Submitted",
+        description: "Your request for a new item has been submitted for approval.",
       });
-      onFormSubmit();
-      setOpen(false);
+      router.push("/dashboard/procurement");
     } catch (error) {
-      console.error("Error adding request:", error);
+      console.error("Error creating request:", error);
       toast({
         variant: "destructive",
         title: "Submission Failed",
-        description: "Could not add your request. Please try again.",
+        description: (error as Error).message,
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
-  const submitButtonText = bucketId ? "Add Item to Bucket" : "Submit Single Request";
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-        <div className="flex-grow space-y-4 pr-1 overflow-y-auto p-1">
-            <FormField
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="itemName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Item Name</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
             control={form.control}
-            name="itemName"
+            name="expectedCost"
             render={({ field }) => (
-                <FormItem>
-                <FormLabel>Item Name</FormLabel>
+              <FormItem>
+                <FormLabel>Estimated Cost (₹)</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g., RunCam Phoenix 2 FPV Camera" {...field} />
+                  <Input type="number" step="0.01" placeholder="1500.00" {...field} />
                 </FormControl>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-            <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                    <Input type="number" {...field} min={1} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="estimatedCost"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Cost / piece (₹)</FormLabel>
-                    <FormControl>
-                    <Input type="number" step="0.01" placeholder="1500.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            </div>
-            <FormField
+          />
+           <FormField
             control={form.control}
-            name="justification"
+            name="itemType"
             render={({ field }) => (
-                <FormItem>
-                <div className="flex justify-between items-center">
-                    <FormLabel>Justification</FormLabel>
-                    <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceJustification} disabled={isEnhancing || isSubmitting}>
-                        {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Enhance
-                    </Button>
-                </div>
-                <FormControl>
-                    <Textarea
-                    placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
-                    {...field}
-                    rows={3}
-                    />
-                </FormControl>
+              <FormItem>
+                <FormLabel>Item Type</FormLabel>
+                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="consumable">Consumable (e.g., props, filament)</SelectItem>
+                      <SelectItem value="asset">Asset (e.g., tools, drones)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
-            control={form.control}
-            name="isPerishable"
-            render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                    <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                    <FormLabel>
-                    This item is perishable/consumable
-                    </FormLabel>
-                </div>
-                </FormItem>
-            )}
-            />
+          />
         </div>
-        <div className="pt-6 border-t mt-auto flex-shrink-0">
-          <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {submitButtonText}
-          </Button>
-        </div>
+        <FormField
+          control={form.control}
+          name="justification"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex justify-between items-center">
+                <FormLabel>Justification</FormLabel>
+                <Button type="button" variant="ghost" size="sm" onClick={handleEnhanceJustification} disabled={isEnhancing || isSubmitting}>
+                  {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Enhance
+                </Button>
+              </div>
+              <FormControl>
+                <Textarea
+                  placeholder="Why is this item needed? e.g., 'To replace a broken camera on Project Phoenix.'"
+                  {...field}
+                  rows={3}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting || isEnhancing} className="w-full">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Submit Request for Approval
+        </Button>
       </form>
     </Form>
   );
 }
+

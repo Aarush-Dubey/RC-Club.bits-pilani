@@ -2,7 +2,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Check, X, Loader2, Sparkles } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
@@ -24,12 +23,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { enhanceRejectionReason } from "@/ai/flows/enhance-rejection-reason"
 
-
-export function ApprovalActions({ requestId, itemName }: { requestId: string, itemName: string }) {
+export function ApprovalActions({ requestId, itemName, onAction }: { requestId: string, itemName: string, onAction: () => void }) {
   const [isLoading, setIsLoading] = useState<"approve" | "reject" | null>(null)
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
-  const router = useRouter()
   const { toast } = useToast()
   const { user: currentUser } = useAuth();
 
@@ -47,10 +44,8 @@ export function ApprovalActions({ requestId, itemName }: { requestId: string, it
     setIsLoading(type);
     try {
       await actionFn();
-      toast({
-        title: `Request ${type === "approve" ? "Approved" : "Rejected"}`,
-      });
-      router.refresh();
+      toast({ title: `Request ${type === "approve" ? "Approved" : "Rejected"}` });
+      onAction();
     } catch (error) {
       toast({
         variant: "destructive",
@@ -74,7 +69,7 @@ export function ApprovalActions({ requestId, itemName }: { requestId: string, it
       toast({ title: "Reason Enhanced", description: "The rejection reason has been updated with AI." });
     } catch (error) {
       console.error("Error enhancing reason:", error);
-      toast({ variant: "destructive", title: "Enhancement Failed", description: "Could not enhance the reason." });
+      toast({ variant: "destructive", title: "Enhancement Failed" });
     } finally {
       setIsEnhancing(false);
     }
@@ -99,10 +94,8 @@ export function ApprovalActions({ requestId, itemName }: { requestId: string, it
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to reject this request?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Please provide a reason for the rejection.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Reject this request?</AlertDialogTitle>
+            <AlertDialogDescription>Please provide a reason for the rejection.</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">
             <div className="flex justify-between items-center">
