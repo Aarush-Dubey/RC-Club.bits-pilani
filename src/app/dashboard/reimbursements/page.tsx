@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { PlusCircle } from "lucide-react"
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/auth-context"
@@ -17,7 +16,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Table,
@@ -27,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ReimbursementForm } from "./reimbursement-form"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { ReimbursementActions } from "./reimbursement-actions"
@@ -99,7 +96,6 @@ async function getData() {
 
 function ReimbursementsPageContent() {
   const [data, setData] = useState<{ reimbursements: any[], users: any[], procurementRequests: any[] }>({ reimbursements: [], users: [], procurementRequests: [] });
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -138,11 +134,6 @@ function ReimbursementsPageContent() {
     fetchData();
   }, [fetchData]);
 
-  const onFormSubmit = useCallback(() => {
-    fetchData(); 
-    setIsFormOpen(false);
-  }, [fetchData]);
-  
   const handleActionComplete = useCallback(() => {
     fetchData();
     setSelectedRequest(null);
@@ -173,158 +164,138 @@ function ReimbursementsPageContent() {
   const shouldShowActions = canApprove || (selectedRequest?.status === 'approved' && currentUser?.role === 'treasurer');
 
   return (
-    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-       <div className="space-y-6">
-        <div>
-          <h1 className="text-h1">Reimbursements</h1>
-          <p className="text-base text-muted-foreground mt-2">
-            Submit and track expense reimbursement requests.
-          </p>
-        </div>
-        <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> New Reimbursement
-            </Button>
-        </DialogTrigger>
-        
-        <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Reimbursement Requests</CardTitle>
-              <CardDescription>
-                {canApprove ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                    <TableRow>
-                      <TableHead>Request</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.reimbursements.map((req: any) => {
-                      const user = data.users.find((u: any) => u.id === req.submittedById);
-                      const item = req.procurementRequestId ? data.procurementRequests.find(p => p.id === req.procurementRequestId) : null;
-                      return (
-                          <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
-                            <TableCell>
-                                <div className="flex items-center gap-3">
-                                    <StatusCircle status={req.status} />
-                                    <div>
-                                        <div className="font-medium">{item?.itemName || req.notes}</div>
-                                        <div className="text-xs text-muted-foreground">{user?.name} - {req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</div>
-                                    </div>
-                                </div>
-                            </TableCell>
-                            <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
-                          </TableRow>
-                      )
-                    })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-           <DialogContent className="sm:max-w-sm">
-            {selectedRequest && (
-              <>
-                <DialogHeader>
-                    <DialogTitle>Reimbursement Details</DialogTitle>
-                    <p className="text-2xl font-bold font-mono pt-2">₹{selectedRequest.amount.toFixed(2)}</p>
-                </DialogHeader>
-                <ScrollArea className="max-h-[60vh] -mx-6">
-                    <div className="px-6 space-y-4">
-                        <div className="text-sm">
-                            <span className="text-muted-foreground">Submitted by: </span>
-                            <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-h1">Reimbursements</h1>
+        <p className="text-base text-muted-foreground mt-2">
+          Submit and track expense reimbursement requests.
+        </p>
+      </div>
+
+      <Dialog open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Reimbursement Requests</CardTitle>
+            <CardDescription>
+              {canApprove ? "Click a request to view details and take action." : "A log of all reimbursement requests."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                  <TableRow>
+                    <TableHead>Request</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {data.reimbursements.map((req: any) => {
+                    const user = data.users.find((u: any) => u.id === req.submittedById);
+                    const item = req.procurementRequestId ? data.procurementRequests.find(p => p.id === req.procurementRequestId) : null;
+                    return (
+                        <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
+                          <TableCell>
+                              <div className="flex items-center gap-3">
+                                  <StatusCircle status={req.status} />
+                                  <div>
+                                      <div className="font-medium">{item?.itemName || 'General Reimbursement'}</div>
+                                      <div className="text-xs text-muted-foreground">{user?.name} - {req.createdAt?.toDate() ? format(req.createdAt.toDate(), 'dd/MM/yy') : 'N/A'}</div>
+                                  </div>
+                              </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">₹{req.amount.toFixed(2)}</TableCell>
+                        </TableRow>
+                    )
+                  })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <DialogContent className="sm:max-w-sm">
+          {selectedRequest && (
+            <>
+              <DialogHeader>
+                  <DialogTitle>Reimbursement Details</DialogTitle>
+                  <p className="text-2xl font-bold font-mono pt-2">₹{selectedRequest.amount.toFixed(2)}</p>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh] -mx-6">
+                  <div className="px-6 space-y-4">
+                      <div className="text-sm">
+                          <span className="text-muted-foreground">Submitted by: </span>
+                          <span className="font-medium">{data.users.find((u: any) => u.id === selectedRequest.submittedById)?.name}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Status</span>
+                        <div className="flex items-center gap-2">
+                          <StatusCircle status={selectedRequest.status} />
+                          <span className="font-medium capitalize">{selectedRequest.status.replace(/_/g, ' ')}</span>
                         </div>
-                        
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Status</span>
-                          <div className="flex items-center gap-2">
-                            <StatusCircle status={selectedRequest.status} />
-                            <span className="font-medium capitalize">{selectedRequest.status.replace(/_/g, ' ')}</span>
-                          </div>
-                        </div>
+                      </div>
 
-                        {selectedRequest.status !== 'pending' && (
-                           <div className="text-xs text-muted-foreground">
-                              {selectedRequest.status === 'approved' && reviewer && (
-                                  <p>Approved by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.approvedAt), { addSuffix: true })}</p>
-                              )}
-                              {selectedRequest.status === 'rejected' && reviewer && (
-                                  <p>Rejected by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.rejectedAt), { addSuffix: true })}</p>
-                              )}
-                              {selectedRequest.status === 'paid' && payer && (
-                                   <p>Paid by {payer.name} {formatDistanceToNow(new Date(selectedRequest.paidAt), { addSuffix: true })}</p>
-                              )}
-                          </div>
-                        )}
-
-                         {procurementItem && (
-                          <Card className="bg-secondary">
-                            <CardHeader className="p-4">
-                              <CardTitle className="text-base">Associated Procurement</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0 text-sm space-y-2">
-                               <p><span className="font-medium text-muted-foreground">Item:</span> {procurementItem.itemName}</p>
-                               <p><span className="font-medium text-muted-foreground">Justification:</span> {procurementItem.justification}</p>
-                               <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
-                               <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
-                            </CardContent>
-                          </Card>
-                        )}
-                        
-                        {!procurementItem && (
-                          <div>
-                              <h4 className="font-medium mb-1 text-sm text-muted-foreground">Notes/Reason</h4>
-                              <p className="text-sm">{selectedRequest.notes || 'No notes provided.'}</p>
-                          </div>
-                        )}
-
-                        <div>
-                            <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
-                            {selectedRequest.receiptUrl ? (
-                            <a href={selectedRequest.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                <Image 
-                                src={selectedRequest.receiptUrl}
-                                alt="Receipt"
-                                width={400}
-                                height={400}
-                                className="w-full h-auto border object-contain"
-                                />
-                            </a>
-                            ) : (
-                            <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                      {selectedRequest.status !== 'pending' && (
+                          <div className="text-xs text-muted-foreground">
+                            {selectedRequest.status === 'approved' && reviewer && (
+                                <p>Approved by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.approvedAt), { addSuffix: true })}</p>
+                            )}
+                            {selectedRequest.status === 'rejected' && reviewer && (
+                                <p>Rejected by {reviewer.name} {formatDistanceToNow(new Date(selectedRequest.rejectedAt), { addSuffix: true })}</p>
+                            )}
+                            {selectedRequest.status === 'paid' && payer && (
+                                  <p>Paid by {payer.name} {formatDistanceToNow(new Date(selectedRequest.paidAt), { addSuffix: true })}</p>
                             )}
                         </div>
-                    </div>
-                </ScrollArea>
-                 {shouldShowActions && (
-                    <div className="pt-4 border-t">
-                        <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
-                    </div>
-                )}
-              </>
-            )}
-           </DialogContent>
-        </Dialog>
-      </div>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Reimbursement Request</DialogTitle>
-          <DialogDescription>
-            Submit a reimbursement request for an approved and purchased item.
-          </DialogDescription>
-        </DialogHeader>
-        <ReimbursementForm
-            onFormSubmit={onFormSubmit}
-            currentUser={currentUser}
-            procurementRequests={data.procurementRequests}
-        />
-      </DialogContent>
-    </Dialog>
+                      )}
+
+                        {procurementItem && (
+                        <Card className="bg-secondary">
+                          <CardHeader className="p-4">
+                            <CardTitle className="text-base">Associated Procurement</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0 text-sm space-y-2">
+                              <p><span className="font-medium text-muted-foreground">Item:</span> {procurementItem.itemName}</p>
+                              <p><span className="font-medium text-muted-foreground">Justification:</span> {procurementItem.justification}</p>
+                              <p><span className="font-medium text-muted-foreground">Requested by:</span> {procurementRequester?.name || 'N/A'}</p>
+                              <p><span className="font-medium text-muted-foreground">Approved by:</span> {procurementApprover?.name || 'N/A'}</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {selectedRequest.vendor && (
+                          <div>
+                              <h4 className="font-medium mb-1 text-sm text-muted-foreground">Vendor</h4>
+                              <p className="text-sm">{selectedRequest.vendor}</p>
+                          </div>
+                      )}
+
+                      <div>
+                          <h4 className="font-medium mb-1 text-sm text-muted-foreground">Receipt</h4>
+                          {selectedRequest.receiptUrl ? (
+                          <a href={selectedRequest.receiptUrl} target="_blank" rel="noopener noreferrer">
+                              <Image 
+                              src={selectedRequest.receiptUrl}
+                              alt="Receipt"
+                              width={400}
+                              height={400}
+                              className="w-full h-auto border object-contain"
+                              />
+                          </a>
+                          ) : (
+                          <p className="text-sm text-muted-foreground">No receipt image uploaded.</p>
+                          )}
+                      </div>
+                  </div>
+              </ScrollArea>
+                {shouldShowActions && (
+                  <div className="pt-4 border-t">
+                      <ReimbursementActions request={selectedRequest} onActionComplete={handleActionComplete} />
+                  </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 
@@ -335,4 +306,3 @@ export default function ReimbursementsPage() {
         </Suspense>
     );
 }
-
