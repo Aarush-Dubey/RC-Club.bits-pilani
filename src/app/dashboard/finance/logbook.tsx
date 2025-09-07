@@ -138,7 +138,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                            {tx.isReversed && <Badge variant="destructive">Reversed</Badge>}
                                         </div>
                                     </TableCell>
-                                    <TableCell>{format(new Date(tx.date), "MMM d, yyyy")}</TableCell>
+                                    <TableCell>{tx.date ? format(new Date(tx.date), "MMM d, yyyy") : 'N/A'}</TableCell>
                                     <TableCell className="max-w-xs truncate">{tx.narration}</TableCell>
                                     <TableCell>
                                         <Button variant="ghost" size="icon" onClick={() => setSelectedTx(selectedTx?.id === tx.id ? null : tx)}>
@@ -146,7 +146,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                                         </Button>
                                     </TableCell>
                                      <TableCell>
-                                        {isTreasurer && (
+                                        {isTreasurer && !tx.isReversed && (
                                             <ReverseTransactionDialog transaction={tx} onSuccess={onUpdate} />
                                         )}
                                     </TableCell>
@@ -187,7 +187,7 @@ export default function Logbook({ chartOfAccounts, transactions, onUpdate }: Log
                     </Table>
                 </CardContent>
             </Card>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl">
                  <DialogHeader>
                     <DialogTitle>New Logbook Entry</DialogTitle>
                     <DialogDescription>Create a new double-entry transaction. Ensure debits equal credits.</DialogDescription>
